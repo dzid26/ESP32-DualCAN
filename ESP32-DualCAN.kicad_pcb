@@ -21042,6 +21042,30 @@
 		(layer "Edge.Cuts")
 		(uuid "45167453-dc7f-4c4f-aebc-d1a44a302469")
 	)
+	(gr_text "Vin G  1L  1H  0H 0L"
+		(at 139.05 117.8 0)
+		(layer "B.SilkS")
+		(uuid "11c657df-10c8-4c2c-8f5a-8e297a807438")
+		(effects
+			(font
+				(size 1 1.15)
+				(thickness 0.15)
+			)
+			(justify left bottom mirror)
+		)
+	)
+	(gr_text "3.3\nG\nTX0\nRX0\nTX1\nRX1"
+		(at 136.3 86.6 0)
+		(layer "B.SilkS")
+		(uuid "cf291c35-f950-41cd-abac-622de076c8f5")
+		(effects
+			(font
+				(size 0.6 0.4)
+				(thickness 0.1)
+			)
+			(justify left bottom mirror)
+		)
+	)
 	(gr_text "${REVISION}"
 		(at 135.1 98.9 90)
 		(layer "B.SilkS")
