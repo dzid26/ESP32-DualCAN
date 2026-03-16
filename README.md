@@ -1,8 +1,10 @@
 # ESP32-DualCAN
-Dorky Commander - open source alternative to S3XY Commander 
+Dorky Commander - open source alternative to S3XY Commander. 
+
+Uses Molex connector compatible with Enhauto harnesses.
 
 ## ICs
-- ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers)
+- ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
 - 2x CAN transceivers TCAN1044
 - TI LV2862 DC/DC converter
 
@@ -11,3 +13,16 @@ Dorky Commander - open source alternative to S3XY Commander
 - Dual CAN
 - BLE + WiFi
 - USB-C for programming and debugging
+
+## Images
+- ESP32-C6-SuperMini chiplet and Molex connector:
+
+<img width="555"  alt="image" src="https://github.com/user-attachments/assets/e7944936-6bc0-426c-abbd-16756143bc65" />
+
+- On the other side there are components and optional pads to solder cables with a female [connector](https://duckduckgo.com/?q=MX2.54+cable+6p) to daisy chain with s3xy buttons or a strip:
+
+<img width="555"  alt="image" src="https://github.com/user-attachments/assets/ee9b6ce6-31f2-4482-b2f9-33cd198f49b7" />
+
+- It can accommodate optional female 2.54mm headers for custom extensions:
+
+<img width="555"  alt="image" src="https://github.com/user-attachments/assets/9e17bd57-dd31-4ff6-aa68-23c3a0acd12d" />
