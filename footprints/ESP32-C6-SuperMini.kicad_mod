@@ -1,0 +1,291 @@
+(footprint "ESP32-C6-SuperMini"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at -10.5 11 90)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "88c5d041-284f-46c8-aee8-b198a38f6351")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "ESP32-C6-SuperMini"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "0cb76e24-8d19-4c6a-9080-d90d5ab783ab")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at -8.5 -11.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "5e66fc69-d11c-4b3e-b190-6e9e42fbd134")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at -8.5 -11.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "15f708cb-2c48-46af-a86a-e29821b58f32")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_rect
+		(start -8.5 -11.5)
+		(end 9.5 14.5)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "cd21da96-de71-4205-ac11-4a656813f697")
+	)
+	(fp_rect
+		(start -3.85 -11.5)
+		(end 4.83 -13)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "015dca34-5bda-4f7a-a888-5a742e263a14")
+	)
+	(fp_rect
+		(start -9.5 -13.5)
+		(end 10.5 14.5)
+		(stroke
+			(width 0.12)
+			(type default)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "e120f30c-f028-4bc1-9e00-b3fef09e79c3")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "2329b01c-9757-4a43-ba39-1aad0b5c633f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd rect
+		(at 8.75 -9.91)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "e1c2caaf-bf42-48c2-9b75-cd11190eb210")
+	)
+	(pad "2" smd rect
+		(at 8.75 -7.37)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "53de2155-60d0-4857-8b8f-46ef7af2ecb7")
+	)
+	(pad "3" smd rect
+		(at 8.75 -4.83)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "69d7e8e9-fd3d-45b6-99b5-b745003c9e79")
+	)
+	(pad "4" smd rect
+		(at 8.75 -2.29)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "6713f1c8-a73f-48d0-81a6-be00a8b30b1f")
+	)
+	(pad "5" smd rect
+		(at 8.75 0.25)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "31113771-5c54-4c84-aa0c-fa89cdfa85ad")
+	)
+	(pad "6" smd rect
+		(at 8.75 2.79)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "7cc4bd83-5df7-4002-a12a-bba8960e9320")
+	)
+	(pad "7" smd rect
+		(at 8.75 5.33)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "2896550e-4937-4baa-8cca-34e3d4aff501")
+	)
+	(pad "8" smd rect
+		(at 8.75 7.87)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "d0313ab8-348c-4d4d-8a82-daee6c85964e")
+	)
+	(pad "9" smd rect
+		(at 8.75 10.41)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "b423d21b-345a-4af3-b872-d6a302399919")
+	)
+	(pad "10" smd rect
+		(at 8.74 13)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "29aaed1a-882b-477c-bba1-44c501bb0ef5")
+	)
+	(pad "11" smd rect
+		(at -7.75 13)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "cebe94ea-676e-4cb5-9908-36a88f5b1c59")
+	)
+	(pad "12" smd rect
+		(at -7.74 10.41)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "6137cd92-a1d5-48f2-b087-0b3ca822c306")
+	)
+	(pad "13" smd rect
+		(at -7.74 7.87)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "fc11b503-6b1b-41b7-9126-fdebf40a87c0")
+	)
+	(pad "14" smd rect
+		(at -7.74 5.33)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "c3f0aa6e-b493-46f6-8a4a-036034cab30c")
+	)
+	(pad "15" smd rect
+		(at -7.74 2.79)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "52e8508a-477b-420f-97a9-e3220747cbd1")
+	)
+	(pad "16" smd rect
+		(at -7.74 0.25)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "8354e44c-52cc-4b55-8c5b-2d239e298817")
+	)
+	(pad "17" smd rect
+		(at -7.74 -2.29)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "697ccfc0-93f5-4e47-b66a-ab7bec4a0566")
+	)
+	(pad "18" smd rect
+		(at -7.74 -4.83)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "e9574eec-e040-4368-b8db-e73d2e13ecde")
+	)
+	(pad "19" smd rect
+		(at -7.74 -7.37)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "7743d68a-8721-4ed7-bf21-68b254c83adb")
+	)
+	(pad "20" smd rect
+		(at -7.74 -9.91)
+		(size 3 1.5)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(thermal_bridge_angle 45)
+		(uuid "142f6863-25c2-45cb-9674-6d017cdfff4d")
+	)
+	(zone
+		(net 0)
+		(net_name "")
+		(layers "F.Cu" "B.Cu" "In1.Cu" "In2.Cu" "In3.Cu" "In4.Cu" "In5.Cu" "In6.Cu"
+			"In7.Cu" "In8.Cu" "In9.Cu" "In10.Cu" "In11.Cu" "In12.Cu" "In13.Cu" "In14.Cu"
+			"In15.Cu" "In16.Cu" "In17.Cu" "In18.Cu" "In19.Cu" "In20.Cu" "In21.Cu"
+			"In22.Cu" "In23.Cu" "In24.Cu" "In25.Cu" "In26.Cu" "In27.Cu" "In28.Cu"
+			"In29.Cu" "In30.Cu"
+		)
+		(uuid "029907e4-d1c5-444f-a108-bcbacdffd810")
+		(hatch edge 0.5)
+		(connect_pads
+			(clearance 0)
+		)
+		(min_thickness 0.25)
+		(filled_areas_thickness no)
+		(keepout
+			(tracks allowed)
+			(vias allowed)
+			(pads allowed)
+			(copperpour not_allowed)
+			(footprints allowed)
+		)
+		(placement
+			(enabled no)
+			(sheetname "")
+		)
+		(fill
+			(thermal_gap 0.5)
+			(thermal_bridge_width 0.5)
+		)
+		(polygon
+			(pts
+				(xy -3.553339 10) (xy 4.446661 10) (xy 4.446661 14.5) (xy -3.553339 14.5)
+			)
+		)
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/KiCad-Waveshare-ESP32/Waveshare-ESP32.pretty/3d/Waveshare-ESP32-C6-Zero.step"
+		(offset
+			(xyz 8.1005 2.3 1.5)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

@@ -2,8 +2,8 @@
 Dorky Commander - open source alternative to S3XY Commander 
 
 ## ICs
-- ESP32-C6-Mini (integrated antenna, 2x TWAI CAN2.0 controllers)
-- 2x CAN transceivers SN65HVD230
+- ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers)
+- 2x CAN transceivers TCAN1044
 - TI LV2862 DC/DC converter
 
 ## Characteristics
