@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "esp")(type "KiCad")(uri "${KIPRJMOD}/KiCad-Waveshare-ESP32/Waveshare-ESP32.kicad_sym")(options "")(descr ""))
+)
