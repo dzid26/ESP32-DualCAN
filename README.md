@@ -1,5 +1,7 @@
 # ESP32-DualCAN
-Dorky Commander - open source alternative to S3XY Commander 
+Dorky Commander - open source alternative to S3XY Commander
+<img width="608" alt="image" src="https://github.com/user-attachments/assets/6c514031-2e6d-4aca-9ecd-f31fe79d3e7b" />
+
 
 ## ICs
 - ESP32-C6-Mini (integrated antenna, 2x TWAI CAN2.0 controllers)
