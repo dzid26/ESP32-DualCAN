@@ -5,6 +5,7 @@ Uses Molex connector compatible with Enhauto harnesses.
 
 ## ICs
 - ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
+    - alternatively ESP32-C6-Zero 
 - 2x CAN transceivers TCAN1044
 - TI LV2862 DC/DC converter
 
