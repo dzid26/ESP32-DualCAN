@@ -1,6 +1,0 @@
-[submodule "KiCad-Waveshare-ESP32"]
-	path = PCB/KiCad-Waveshare-ESP32
-	url = https://github.com/jonathanadams/KiCad-Waveshare-ESP32
-[submodule "PCB/KiCad-Waveshare-ESP32"]
-	path = PCB/KiCad-Waveshare-ESP32
-	url = https://github.com/jonathanadams/KiCad-Waveshare-ESP32
