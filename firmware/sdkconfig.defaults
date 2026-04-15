@@ -1,0 +1,11 @@
+# Project-level sdkconfig overrides. Applied on top of IDF defaults when
+# PlatformIO regenerates the per-env sdkconfig (sdkconfig.esp32-c6).
+# Keep this file minimal — only values we want to lock in.
+
+# Route ESP_LOG / printf / stdout to the hardware USB-Serial-JTAG
+# peripheral so log output appears on /dev/ttyACM0. UART0 (GPIO16/17) is
+# not broken out on the ESP32-C6-SuperMini, so UART console is useless.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+# CONFIG_ESP_CONSOLE_UART_DEFAULT is not set
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+# CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG is not set
