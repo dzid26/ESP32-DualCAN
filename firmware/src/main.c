@@ -119,7 +119,13 @@ void app_main(void)
 
         gpio_set_level(LED_GPIO, tick & 1);
         if ((tick % 100) == 0) {
-            ESP_LOGI(TAG, "tick %" PRIu32, tick);
+            ESP_LOGI(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
+                     tick, (uint32_t)esp_get_free_heap_size());
+#if configGENERATE_RUN_TIME_STATS
+            static char stats[512];
+            vTaskGetRunTimeStats(stats);
+            printf("--- CPU usage ---\n%s\n", stats);
+#endif
         }
         tick++;
         vTaskDelay(pdMS_TO_TICKS(100));
