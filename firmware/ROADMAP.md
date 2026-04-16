@@ -193,6 +193,8 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 
 1. **Browser-rendered engine sound emulation**. ESP32-C6 has no BT Classic, so on-device A2DP is out. Instead, the web UI streams `{speed, torque, rpm_est}` from the firmware over WS/BLE at ~50 Hz and synthesizes engine audio in the browser via Web Audio API (AudioWorklet granular playback of sample loops, pitch-shifted by a derived rpm, load/coast layers crossfaded by torque sign). The phone's existing A2DP pairing to the car stereo plays it — no extra BT stack on the device. Engine profiles (V8, I4 turbo, EV whine) are JSON + sample packs hot-loaded in the UI. Accuracy doesn't matter; it just has to feel dumb and fun. Known caveats to punt on: iOS Safari background audio suspension (workaround: PWA + `MediaSession` + silent keep-alive), WS latency over WiFi (fine), phone screen-on drain (user problem).
 
+2. 
+- **AI-assisted script editor** (client-side only). Chat panel in the web UI where the user describes an automation in plain English; an LLM (Claude API, user's own key stored in localStorage) generates the Berry script. System prompt includes the Berry API reference, the user's loaded DBC signals, and example scripts as few-shot context. Error logs fed back automatically for self-correction. No cloud backend — the API call happens in the browser. Berry's small, purpose-built API surface makes this a well-constrained code-gen problem. Depends on: stable Berry API, DBC signal browser, example gallery, web UI script deployment.
 ---
 
 ## Out of roadmap (parking lot)
