@@ -499,43 +499,77 @@ Target (on-device) tests are not part of CI because they require hardware. A man
 
 ## 15. Repository layout
 
+### Current (phase 0)
+
 ```
 ESP32-DualCAN/
 ├── README.md
-├── LICENSE.txt                  # CERN-OHL-W, hardware
-├── hardware/                    # KiCad project (PCB + footprints)
-├── firmware/
-│   ├── LICENSE                  # GPLv3
-│   ├── ARCHITECTURE.md          # this file
-│   ├── ROADMAP.md               # phased plan
-│   ├── platformio.ini
-│   ├── sdkconfig.defaults
-│   ├── partitions.csv
-│   ├── src/
-│   │   ├── main.c
-│   │   ├── can/                 # TWAI wrappers, dispatcher, rate limiter
-│   │   ├── dbc/                 # binary DBC loader, decode, encode
-│   │   ├── scripting/           # Berry VM integration + native bindings
-│   │   ├── ble/                 # GATT server, transport
-│   │   ├── http/                # WiFi, HTTP server, WebSocket
-│   │   ├── storage/             # LittleFS, NVS helpers
-│   │   ├── tesla_ble/           # optional, phase 3
-│   │   └── ota/
-│   ├── lib/berry/               # vendored Berry interpreter
-│   ├── dbc/                     # source DBCs (for reference and defaults)
-│   │   ├── tesla_model3_vehicle.dbc
-│   │   └── tesla_model3_y_dedup.dbc
-│   ├── scripts_examples/        # .be example automations
-│   └── data/                    # populated by build, flashed to LittleFS
-│       └── webui/               # copied from webui/dist
-├── webui/
-│   ├── package.json
-│   ├── src/
-│   └── dist/                    # build output (gitignored)
-├── scripts/
-│   └── build-webui.sh           # npm build + copy into firmware/data/webui
-└── .github/workflows/
-    ├── firmware.yml             # pio build
+├── LICENSE.txt                     # CERN-OHL-W (hardware)
+├── .gitmodules                     # Berry submodule (optional, for updating)
+├── hardware/                       # KiCad project (PCB + footprints)
+└── firmware/
+    ├── ARCHITECTURE.md             # this file
+    ├── ROADMAP.md                  # phased plan
+    ├── platformio.ini              # 4 envs: esp32-c6, esp32-c6-debug,
+    │                               #   esp32-c6-tests-arduino, tests-native
+    ├── CMakeLists.txt              # ESP-IDF project-level cmake
+    ├── sdkconfig.defaults          # USB-Serial-JTAG console, etc.
+    ├── .gitignore
+    ├── src/
+    │   ├── CMakeLists.txt          # main component (REQUIRES driver berry)
+    │   ├── main.c                  # app_main: CAN init, Berry REPL
+    │   └── can/
+    │       ├── can_bus.h           # thin TWAI v2 wrapper API
+    │       └── can_bus.c
+    ├── components/
+    │   └── berry/                  # Berry scripting engine
+    │       ├── CMakeLists.txt      # ESP-IDF component
+    │       ├── LICENSE.berry       # MIT (upstream)
+    │       ├── src/                # vendored upstream berry/src/ (38 .c files)
+    │       ├── generate/           # coc-generated headers (23 files, committed)
+    │       ├── port/
+    │       │   ├── berry_conf.h    # our ESP32-C6 config
+    │       │   ├── be_port.c       # print→ESP_LOGI, FS stubs
+    │       │   └── be_modtab.c     # module table
+    │       ├── scripts/
+    │       │   └── update_berry.sh # regenerate from submodule
+    │       └── berry/              # optional git submodule (not needed to build)
+    ├── dbc/
+    │   ├── tesla_model3_vehicle.dbc
+    │   └── tesla_model3_y_dedup.dbc
+    └── test/
+        ├── unity_config.{h,cpp}        # HWCDC serial fix for test output
+        ├── test_hw_led/test_led.cpp    # Arduino: RGB + GPIO15 LED smoke test
+        ├── test_hw_loopback/           # Arduino: dual-TWAI loopback
+        │   └── test_loopback.cpp
+        └── test_native_checksum/       # host: Tesla CAN checksum algorithm
+            └── test_checksum.c
+```
+
+### Planned additions (phase 1+)
+
+```
+firmware/
+    ├── src/
+    │   ├── dbc/                 # binary DBC loader, signal decode/encode
+    │   ├── scripting/           # Berry native bindings (can, led, timer, state)
+    │   ├── ble/                 # GATT server, transport
+    │   ├── http/                # WiFi, HTTP server, WebSocket
+    │   ├── storage/             # LittleFS, NVS helpers
+    │   ├── tesla_ble/           # optional, phase 3
+    │   └── ota/
+    ├── partitions.csv           # OTA + LittleFS layout
+    ├── scripts_examples/        # .be example automations
+    └── data/                    # populated by build, flashed to LittleFS
+        └── webui/               # copied from webui/dist
+webui/                           # Svelte app (independent project)
+    ├── package.json
+    ├── src/
+    └── dist/                    # build output (gitignored)
+scripts/
+    └── build-webui.sh           # npm build + copy into firmware/data/webui
+.github/workflows/
+    ├── firmware.yml             # pio build + host tests
     ├── webui.yml                # npm build + GH Pages deploy
     └── release.yml              # firmware binaries to releases
 ```
@@ -544,7 +578,6 @@ ESP32-DualCAN/
 
 ## 16. Open questions
 
-- Exact Berry build integration with ESP-IDF (component vs. in-tree source).
 - Final CBOR schema for the transport protocol.
 - Whether the Berry compiler runs in the browser (WASM build) or on device for inline error reporting in Monaco.
 - Merge strategy for the two DBC files — which one becomes canonical per bus, and whether we maintain our own curated Tesla DBC fork.

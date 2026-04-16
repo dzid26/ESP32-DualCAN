@@ -1,0 +1,4 @@
+[submodule "firmware/components/berry/berry"]
+	path = firmware/components/berry/berry
+	url = https://github.com/berry-lang/berry.git
+	ignore = dirty

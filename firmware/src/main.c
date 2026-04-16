@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "berry.h"
 #include "can/can_bus.h"
 
 static const char *TAG = "dorky";
@@ -58,6 +59,13 @@ void app_main(void)
 
     led_init();
     buses_init();
+
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    bvm *vm = be_vm_new();
+    be_dostring(vm, "print('Berry VM alive on Dorky Commander')");
+    be_dostring(vm, "print('1 + 2 = ' .. str(1 + 2))");
+    be_vm_delete(vm);
 
     uint32_t tick = 0;
     bool led_on = false;
