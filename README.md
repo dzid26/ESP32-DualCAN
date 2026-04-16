@@ -3,6 +3,34 @@ Dorky Commander - open source alternative to S3XY Commander.
 
 Uses Molex connector compatible with Enhauto harnesses.
 
+## Development
+
+### Firmware
+
+Requires [PlatformIO](https://platformio.org/).
+
+```bash
+cd firmware
+pio run                              # build production firmware
+pio run -t upload                    # flash to board
+pio device monitor                   # serial console
+pio test -e tests-native             # run host unit tests (needs gcc)
+pio test -e esp32-c6-tests-arduino   # run hardware smoke tests (board connected)
+```
+
+### Web UI
+
+Requires [Node.js](https://nodejs.org/).
+
+```bash
+cd webui
+npm install
+npm run dev       # dev server at http://localhost:5173
+npm run build     # production build to dist/
+```
+
+Open in Chrome (required for Web Bluetooth). The DBC upload/parse works offline. BLE connect requires the board powered and flashed.
+
 ## ICs
 - ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
     - alternatively ESP32-C6-Zero 
