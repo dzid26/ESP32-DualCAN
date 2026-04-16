@@ -4,6 +4,7 @@
 
 #include "can/can_bus.h"
 #include "led/led_rgb.h"
+#include "storage/state.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -296,6 +297,43 @@ static int l_led_off(bvm *vm)
     be_return_nil(vm);
 }
 
+/* ---- State (NVS) bindings ---- */
+
+/* state_set(key:str, value:str) -> nil */
+static int l_state_set(bvm *vm)
+{
+    if (be_top(vm) >= 2 && be_isstring(vm, 1) && be_isstring(vm, 2)) {
+        state_set("script", be_tostring(vm, 1), be_tostring(vm, 2));
+    }
+    be_return_nil(vm);
+}
+
+/* state_get(key:str [, default:str]) -> str | nil */
+static int l_state_get(bvm *vm)
+{
+    if (be_top(vm) >= 1 && be_isstring(vm, 1)) {
+        static char buf[256];
+        if (state_get("script", be_tostring(vm, 1), buf, sizeof(buf)) == ESP_OK) {
+            be_pushstring(vm, buf);
+            be_return(vm);
+        }
+        if (be_top(vm) >= 2) {
+            be_pushvalue(vm, 2);
+            be_return(vm);
+        }
+    }
+    be_return_nil(vm);
+}
+
+/* state_remove(key:str) -> nil */
+static int l_state_remove(bvm *vm)
+{
+    if (be_top(vm) >= 1 && be_isstring(vm, 1)) {
+        state_remove("script", be_tostring(vm, 1));
+    }
+    be_return_nil(vm);
+}
+
 /* ---- Registration ---- */
 
 void berry_register_bindings(bvm *vm)
@@ -318,4 +356,9 @@ void berry_register_bindings(bvm *vm)
     /* LED */
     be_regfunc(vm, "led_set", l_led_set);
     be_regfunc(vm, "led_off", l_led_off);
+
+    /* State (NVS) */
+    be_regfunc(vm, "state_set", l_state_set);
+    be_regfunc(vm, "state_get", l_state_get);
+    be_regfunc(vm, "state_remove", l_state_remove);
 }

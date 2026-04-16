@@ -17,6 +17,7 @@
 #include "scripting/berry_bindings.h"
 #include "dbc/vehicle_dbc_embedded.h"
 #include "storage/fs.h"
+#include "storage/state.h"
 #include "scripting/script_loader.h"
 
 static const char *TAG = "dorky";
@@ -55,6 +56,7 @@ static void hw_init(void)
     can_engine_init(&engine0, 0, vehicle_dbc_bin, vehicle_dbc_bin_len);
     can_engine_init(&engine1, 1, NULL, 0);
 
+    state_nvs_init();
     fs_init();
 }
 
