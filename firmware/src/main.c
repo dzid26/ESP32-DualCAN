@@ -6,13 +6,16 @@
 #include "driver/gpio.h"
 #include "driver/twai.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "berry.h"
 #include "can/can_bus.h"
+#include "can/can_engine.h"
 #include "led/led_rgb.h"
 #include "scripting/berry_bindings.h"
+#include "dbc/vehicle_dbc_embedded.h"
 
 static const char *TAG = "dorky";
 
@@ -28,14 +31,14 @@ static const char *TAG = "dorky";
 
 #define BITRATE_KBPS    500
 
-static void led_init(void)
+static can_engine_t engine0, engine1;
+
+static void hw_init(void)
 {
     gpio_reset_pin(LED_GPIO);
     gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
-}
+    led_rgb_init();
 
-static void buses_init(void)
-{
     can_bus_config_t c0 = {
         .bus_id = 0, .tx_pin = PIN_CAN0_TX, .rx_pin = PIN_CAN0_RX,
         .stb_pin = PIN_CAN0_STB, .bitrate_kbps = BITRATE_KBPS,
@@ -46,16 +49,11 @@ static void buses_init(void)
     };
     ESP_ERROR_CHECK(can_bus_install(&c0));
     ESP_ERROR_CHECK(can_bus_install(&c1));
+
+    can_engine_init(&engine0, 0, vehicle_dbc_bin, vehicle_dbc_bin_len);
+    can_engine_init(&engine1, 1, NULL, 0);
 }
 
-/* Berry demo script: loopback test with LED feedback.
- *
- * Every call to loop():
- *   - TX a frame on CAN0 with incrementing counter
- *   - Poll CAN1 for received frames
- *   - Green LED on rx, red on no rx
- *   - Any frame received on CAN0 is forwarded to CAN1 (bridge)
- */
 static const char *DEMO_SCRIPT =
     "var tick = 0\n"
     "def loop()\n"
@@ -71,9 +69,9 @@ static const char *DEMO_SCRIPT =
     "  # Check CAN1 for loopback\n"
     "  var rx = can_receive(1)\n"
     "  if rx != nil\n"
-    "    led_set(0, 32, 0)\n"   /* green */
+    "    led_set(0, 32, 0)\n"
     "  else\n"
-    "    led_set(32, 0, 0)\n"   /* red */
+    "    led_set(32, 0, 0)\n"
     "  end\n"
     "\n"
     "  # Bridge: forward CAN0 rx to CAN1\n"
@@ -87,17 +85,14 @@ static const char *DEMO_SCRIPT =
 void app_main(void)
 {
     ESP_LOGI(TAG, "Dorky Commander starting (version %s)", DORKY_FIRMWARE_VERSION);
-
     vTaskDelay(pdMS_TO_TICKS(2000));
 
-    led_init();
-    led_rgb_init();
-    buses_init();
+    hw_init();
 
     bvm *vm = be_vm_new();
+    berry_set_engines(&engine0, &engine1);
     berry_register_bindings(vm);
 
-    /* Load the demo script (defines loop()). */
     if (be_loadstring(vm, DEMO_SCRIPT) != 0 || be_pcall(vm, 0) != 0) {
         ESP_LOGE(TAG, "Berry load error: %s", be_tostring(vm, -1));
         be_pop(vm, 1);
@@ -108,7 +103,10 @@ void app_main(void)
 
     uint32_t tick = 0;
     while (1) {
-        /* Call Berry loop() */
+        uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
+        can_engine_poll(&engine0, now);
+        can_engine_poll(&engine1, now);
+
         if (be_getglobal(vm, "loop")) {
             if (be_pcall(vm, 0) != 0) {
                 ESP_LOGE(TAG, "Berry error: %s", be_tostring(vm, -1));
