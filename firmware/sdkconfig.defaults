@@ -10,6 +10,11 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 # CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG is not set
 
+# LittleFS for scripts, DBC binaries, and web UI assets.
+# Uses the "spiffs" subtype in the partition table (LittleFS mounts on it).
+CONFIG_ESP_PARTITION_TABLE_CUSTOM=y
+CONFIG_ESP_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
 # FreeRTOS runtime stats (for CPU usage reporting)
 CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
 CONFIG_FREERTOS_USE_TRACE_FACILITY=y

@@ -1,0 +1,8 @@
+# Name,       Type, SubType,  Offset,   Size,     Flags
+# Total flash: 4 MB (0x400000). Bootloader occupies 0x0000-0x8FFF.
+nvs,          data, nvs,      0x9000,   0x4000,
+otadata,      data, ota,      0xd000,   0x2000,
+phy_init,     data, phy,      0xf000,   0x1000,
+app0,         app,  ota_0,    0x10000,  0x180000,
+app1,         app,  ota_1,    ,         0x180000,
+littlefs,     data, spiffs,   ,         0xF0000,
