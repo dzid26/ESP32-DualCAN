@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <inttypes.h>
+
 #include "esp_log.h"
+#include "esp_timer.h"
 
 static const char *TAG = "can";
 
@@ -32,6 +35,8 @@ int can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
         free(c->messages);
         return -1;
     }
+
+    rate_limiter_init(&c->rate_limiter, RATE_LIMIT_DEFAULT_HZ);
 
     c->loaded = true;
     ESP_LOGI(TAG, "bus%d: %d messages, %d signals",
@@ -124,7 +129,26 @@ void can_encode(const can_t *c, int sig_idx, uint8_t *data, float value)
 int can_send(can_t *c, int msg_idx, uint8_t *data, uint8_t dlc)
 {
     if (!c->loaded) return -1;
+
+    uint32_t id = c->dbc.msgs[msg_idx].id;
+    uint32_t now_us = (uint32_t)(esp_timer_get_time());
+    if (!rate_limiter_allow(&c->rate_limiter, id, now_us)) {
+        ESP_LOGD(TAG, "bus%d: rate-limited id=0x%03" PRIx32, c->bus_id, id);
+        return -1;
+    }
+
     msg_finalize_tx(&c->dbc, msg_idx, &c->messages[msg_idx].counter,
                     data, c->finalize_fn);
-    return can_bus_send(c->bus_id, c->dbc.msgs[msg_idx].id, data, dlc, 50);
+
+    if (c->sim_mode) {
+        ESP_LOGI(TAG, "SIM bus%d tx id=0x%03" PRIx32 " dlc=%d", c->bus_id, id, dlc);
+        return 0;
+    }
+    return can_bus_send(c->bus_id, id, data, dlc, 50);
+}
+
+void can_set_sim_mode(can_t *c, bool enabled)
+{
+    c->sim_mode = enabled;
+    ESP_LOGI(TAG, "bus%d: simulation mode %s", c->bus_id, enabled ? "ON" : "OFF");
 }
