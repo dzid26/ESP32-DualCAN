@@ -9,3 +9,7 @@
 # Ignore every sdkconfig.* except the committed defaults file.
 sdkconfig.*
 !sdkconfig.defaults
+
+# ESP-IDF Component Manager (auto-downloaded, like node_modules)
+managed_components/
+dependencies.lock

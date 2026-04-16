@@ -1,5 +1,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "driver/gpio.h"
 #include "driver/twai.h"
@@ -9,6 +11,8 @@
 
 #include "berry.h"
 #include "can/can_bus.h"
+#include "led/led_rgb.h"
+#include "scripting/berry_bindings.h"
 
 static const char *TAG = "dorky";
 
@@ -44,46 +48,80 @@ static void buses_init(void)
     ESP_ERROR_CHECK(can_bus_install(&c1));
 }
 
-static void drain_rx(int bus_id)
-{
-    twai_message_t rx;
-    while (can_bus_receive(bus_id, &rx, 0) == ESP_OK) {
-        ESP_LOGI(TAG, "bus%d rx id=0x%03" PRIx32 " dlc=%d",
-                 bus_id, (uint32_t)rx.identifier, (int)rx.data_length_code);
-    }
-}
+/* Berry demo script: loopback test with LED feedback.
+ *
+ * Every call to loop():
+ *   - TX a frame on CAN0 with incrementing counter
+ *   - Poll CAN1 for received frames
+ *   - Green LED on rx, red on no rx
+ *   - Any frame received on CAN0 is forwarded to CAN1 (bridge)
+ */
+static const char *DEMO_SCRIPT =
+    "var tick = 0\n"
+    "def loop()\n"
+    "  # TX on CAN0\n"
+    "  var b = bytes()\n"
+    "  b.add(tick & 0xFF)\n"
+    "  b.add((tick >> 8) & 0xFF)\n"
+    "  b.add((tick >> 16) & 0xFF)\n"
+    "  b.add((tick >> 24) & 0xFF)\n"
+    "  can_send(0, 0x123, b)\n"
+    "  tick += 1\n"
+    "\n"
+    "  # Check CAN1 for loopback\n"
+    "  var rx = can_receive(1)\n"
+    "  if rx != nil\n"
+    "    led_set(0, 32, 0)\n"   /* green */
+    "  else\n"
+    "    led_set(32, 0, 0)\n"   /* red */
+    "  end\n"
+    "\n"
+    "  # Bridge: forward CAN0 rx to CAN1\n"
+    "  rx = can_receive(0)\n"
+    "  while rx != nil\n"
+    "    can_send(1, rx[0], rx[1])\n"
+    "    rx = can_receive(0)\n"
+    "  end\n"
+    "end\n";
 
 void app_main(void)
 {
     ESP_LOGI(TAG, "Dorky Commander starting (version %s)", DORKY_FIRMWARE_VERSION);
 
-    led_init();
-    buses_init();
-
     vTaskDelay(pdMS_TO_TICKS(2000));
 
+    led_init();
+    led_rgb_init();
+    buses_init();
+
     bvm *vm = be_vm_new();
-    be_dostring(vm, "print('Berry VM alive on Dorky Commander')");
-    be_dostring(vm, "print('1 + 2 = ' .. str(1 + 2))");
-    be_vm_delete(vm);
+    berry_register_bindings(vm);
+
+    /* Load the demo script (defines loop()). */
+    if (be_loadstring(vm, DEMO_SCRIPT) != 0 || be_pcall(vm, 0) != 0) {
+        ESP_LOGE(TAG, "Berry load error: %s", be_tostring(vm, -1));
+        be_pop(vm, 1);
+    }
+    be_pop(vm, 1);
+
+    ESP_LOGI(TAG, "Berry demo loaded, entering main loop");
 
     uint32_t tick = 0;
-    bool led_on = false;
     while (1) {
-        uint8_t payload[4] = {
-            (uint8_t)(tick),       (uint8_t)(tick >> 8),
-            (uint8_t)(tick >> 16), (uint8_t)(tick >> 24),
-        };
-        esp_err_t tx_err = can_bus_send(0, 0x123, payload, sizeof(payload), 50);
+        /* Call Berry loop() */
+        if (be_getglobal(vm, "loop")) {
+            if (be_pcall(vm, 0) != 0) {
+                ESP_LOGE(TAG, "Berry error: %s", be_tostring(vm, -1));
+                be_pop(vm, 1);
+            }
+            be_pop(vm, 1);
+        }
 
-        drain_rx(0);
-        drain_rx(1);
-
-        led_on = !led_on;
-        gpio_set_level(LED_GPIO, led_on);
-
-        ESP_LOGI(TAG, "tick %" PRIu32 " tx=%s",
-                 tick++, tx_err == ESP_OK ? "ok" : esp_err_to_name(tx_err));
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        gpio_set_level(LED_GPIO, tick & 1);
+        if ((tick % 100) == 0) {
+            ESP_LOGI(TAG, "tick %" PRIu32, tick);
+        }
+        tick++;
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
