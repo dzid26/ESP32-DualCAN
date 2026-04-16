@@ -15,6 +15,7 @@
 #include "can/can_engine.h"
 #include "led/led_rgb.h"
 #include "scripting/berry_bindings.h"
+#include "ble/ble_transport.h"
 #include "dbc/vehicle_dbc_embedded.h"
 #include "storage/fs.h"
 #include "storage/state.h"
@@ -58,6 +59,7 @@ static void hw_init(void)
 
     state_nvs_init();
     fs_init();
+    dorky_ble_init(NULL, NULL);
 }
 
 static const char *DEMO_SCRIPT =
