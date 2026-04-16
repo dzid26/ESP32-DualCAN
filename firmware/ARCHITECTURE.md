@@ -491,7 +491,7 @@ Target (on-device) tests are not part of CI because they require hardware. A man
 
 ## 15. Licensing
 
-- Hardware (`PCB/LICENSE.txt` at repo root): **CERN-OHL-W v2**, already in place.
+- Hardware (`hardware/LICENSE.txt` at repo root): **CERN-OHL-W v2**, already in place.
 - Firmware (`firmware/LICENSE`): **GPLv3**. Matches the ethos of an open alternative to a closed commercial product. Compatible with Berry (MIT), ESP-IDF (Apache 2.0 + others), and typical ESP32 component licenses.
 - Web UI (`webui/LICENSE`): **GPLv3** to match firmware, or MIT if we want the UI reusable by others. To be decided.
 
@@ -503,7 +503,7 @@ Target (on-device) tests are not part of CI because they require hardware. A man
 ESP32-DualCAN/
 ├── README.md
 ├── LICENSE.txt                  # CERN-OHL-W, hardware
-├── PCB/                         # existing KiCad project
+├── hardware/                    # KiCad project (PCB + footprints)
 ├── firmware/
 │   ├── LICENSE                  # GPLv3
 │   ├── ARCHITECTURE.md          # this file
