@@ -2,25 +2,25 @@
 
 #include <string.h>
 
-#include "can/can_bus.h"
+#include "can/can_driver.h"
 #include "led/led_rgb.h"
 #include "storage/state.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
-static can_engine_t *s_eng[2];
+static can_t *s_bus[2];
 static bvm *s_vm;
 
-void berry_set_engines(can_engine_t *eng0, can_engine_t *eng1)
+void berry_set_buses(can_t *eng0, can_t *eng1)
 {
-    s_eng[0] = eng0;
-    s_eng[1] = eng1;
+    s_bus[0] = eng0;
+    s_bus[1] = eng1;
 }
 
-static can_engine_t *get_engine(int bus)
+static can_t *get_bus(int bus)
 {
-    if (bus < 0 || bus > 1 || !s_eng[bus]) return NULL;
-    return s_eng[bus];
+    if (bus < 0 || bus > 1 || !s_bus[bus]) return NULL;
+    return s_bus[bus];
 }
 
 /* ---- Raw CAN bindings (kept from phase 0) ---- */
@@ -68,10 +68,10 @@ static int l_can_signal(bvm *vm)
     if (be_top(vm) >= 1 && be_isstring(vm, 1)) {
         const char *name = be_tostring(vm, 1);
         int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
-        can_engine_t *eng = get_engine(bus);
+        can_t *eng = get_bus(bus);
         if (!eng) { be_return_nil(vm); }
 
-        const sig_cache_entry_t *e = can_engine_signal(eng, name);
+        const signal_state_t *e = can_signal(eng, name);
         if (e) {
             be_newobject(vm, "map");
             be_pushstring(vm, "value");
@@ -143,7 +143,7 @@ static int l_can_on(bvm *vm)
     if (be_top(vm) >= 2 && be_isstring(vm, 1) && be_isfunction(vm, 2)) {
         const char *name = be_tostring(vm, 1);
         int bus = (be_top(vm) >= 3 && be_isint(vm, 3)) ? be_toint(vm, 3) : 0;
-        can_engine_t *eng = get_engine(bus);
+        can_t *eng = get_bus(bus);
         if (!eng || s_berry_cb_count >= MAX_BERRY_CBS) { be_return_nil(vm); }
 
         /* Store the function in a global refs list so it won't be GC'd. */
@@ -160,7 +160,7 @@ static int l_can_on(bvm *vm)
         int ref = be_data_size(vm, -1) - 1;
         be_pop(vm, 1);
 
-        can_engine_on_change(eng, name, berry_signal_trampoline,
+        can_on_change(eng, name, berry_signal_trampoline,
                              (void *)(intptr_t)ref);
         s_berry_cb_count++;
     }
@@ -175,11 +175,11 @@ static int l_can_msg_draft(bvm *vm)
     if (be_top(vm) >= 1 && be_isint(vm, 1)) {
         uint32_t msg_id = (uint32_t)be_toint(vm, 1);
         int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
-        can_engine_t *eng = get_engine(bus);
+        can_t *eng = get_bus(bus);
         if (!eng) { be_return_nil(vm); }
 
         uint8_t data[8], dlc;
-        int idx = can_engine_draft(eng, msg_id, data, &dlc);
+        int idx = can_draft(eng, msg_id, data, &dlc);
         if (idx < 0) { be_return_nil(vm); }
 
         be_newobject(vm, "map");
@@ -219,7 +219,7 @@ static int l_can_msg_set(bvm *vm)
         int bus = be_toint(vm, -1);
         be_pop(vm, 1);
 
-        can_engine_t *eng = get_engine(bus);
+        can_t *eng = get_bus(bus);
         if (!eng) { be_return_nil(vm); }
 
         const char *sig_name = be_tostring(vm, 2);
@@ -236,7 +236,7 @@ static int l_can_msg_set(bvm *vm)
         memcpy(data, old_data, len > 8 ? 8 : len);
         be_pop(vm, 1);
 
-        can_engine_encode(eng, si, data, val);
+        can_encode(eng, si, data, val);
 
         be_pushstring(vm, "data");
         be_pushbytes(vm, data, len > 8 ? 8 : len);
@@ -262,7 +262,7 @@ static int l_can_msg_send(bvm *vm)
         int dlc = be_toint(vm, -1);
         be_pop(vm, 1);
 
-        can_engine_t *eng = get_engine(bus);
+        can_t *eng = get_bus(bus);
         if (!eng) { be_return_nil(vm); }
 
         be_getmember(vm, 1, "data");
@@ -272,7 +272,7 @@ static int l_can_msg_send(bvm *vm)
         memcpy(data, draft_data, len > 8 ? 8 : len);
         be_pop(vm, 1);
 
-        can_engine_send(eng, idx, data, (uint8_t)dlc);
+        can_send(eng, idx, data, (uint8_t)dlc);
     }
     be_return_nil(vm);
 }

@@ -11,8 +11,9 @@
 #include "freertos/task.h"
 
 #include "berry.h"
-#include "can/can_bus.h"
-#include "can/can_engine.h"
+#include "can/can.h"
+#include "can/can_driver.h"
+#include "can/tesla.h"
 #include "led/led_rgb.h"
 #include "scripting/berry_bindings.h"
 #include "ble/ble_transport.h"
@@ -35,7 +36,7 @@ static const char *TAG = "dorky";
 
 #define BITRATE_KBPS    500
 
-static can_engine_t engine0, engine1;
+static can_t bus0, bus1;
 
 static void hw_init(void)
 {
@@ -54,8 +55,8 @@ static void hw_init(void)
     ESP_ERROR_CHECK(can_bus_install(&c0));
     ESP_ERROR_CHECK(can_bus_install(&c1));
 
-    can_engine_init(&engine0, 0, vehicle_dbc_bin, vehicle_dbc_bin_len);
-    can_engine_init(&engine1, 1, NULL, 0);
+    can_init(&bus0, 0, vehicle_dbc_bin, vehicle_dbc_bin_len, tesla_finalize_tx);
+    can_init(&bus1, 1, NULL, 0, NULL);
 
     state_nvs_init();
     fs_init();
@@ -98,7 +99,7 @@ void app_main(void)
     hw_init();
 
     bvm *vm = be_vm_new();
-    berry_set_engines(&engine0, &engine1);
+    berry_set_buses(&bus0, &bus1);
     berry_register_bindings(vm);
 
     if (be_loadstring(vm, DEMO_SCRIPT) != 0 || be_pcall(vm, 0) != 0) {
@@ -112,8 +113,8 @@ void app_main(void)
     uint32_t tick = 0;
     while (1) {
         uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-        can_engine_poll(&engine0, now);
-        can_engine_poll(&engine1, now);
+        can_poll(&bus0, now);
+        can_poll(&bus1, now);
 
         if (be_getglobal(vm, "loop")) {
             if (be_pcall(vm, 0) != 0) {
