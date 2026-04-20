@@ -174,6 +174,18 @@ static void handle_script_disable(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
+static void handle_script_delete(int id, cJSON *req)
+{
+    const cJSON *fn = cJSON_GetObjectItem(req, "filename");
+    if (!cJSON_IsString(fn)) { send_err(id, "missing filename"); return; }
+
+    if (script_loader_delete(s_loader, fn->valuestring) != 0) {
+        send_err(id, "delete failed");
+        return;
+    }
+    send_ok(id, NULL);
+}
+
 /* ---- frame parser / dispatch ---- */
 
 static void dispatch_frame(const uint8_t *payload, size_t len)
@@ -203,6 +215,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "script.read") == 0)    handle_script_read(id, req);
     else if (strcmp(op_s, "script.enable") == 0)  handle_script_enable(id, req);
     else if (strcmp(op_s, "script.disable") == 0) handle_script_disable(id, req);
+    else if (strcmp(op_s, "script.delete") == 0)  handle_script_delete(id, req);
     else send_err(id, "unknown op");
 
     cJSON_Delete(req);

@@ -2,7 +2,7 @@
   import type { Transport } from '../transport/types';
   import type { Protocol } from '../transport/protocol';
 
-  let { transport, proto: _proto }: { transport: Transport; proto: Protocol } = $props();
+  let { transport, proto: _proto, connected: _connected }: { transport: Transport; proto: Protocol; connected: boolean } = $props();
 </script>
 
 <div class="dashboard">

@@ -24,3 +24,9 @@ CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=512
 # FreeRTOS runtime stats (for CPU usage reporting)
 CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
 CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+
+CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
+
+# Berry VM + LittleFS dir traversal + DBC decode saturate the 3584-byte
+# default main_task stack. 16 KB gives comfortable headroom.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384

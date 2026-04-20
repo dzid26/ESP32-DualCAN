@@ -11,30 +11,30 @@ export class BleTransport implements Transport {
   private rxChar: BluetoothRemoteGATTCharacteristic | null = null;
   private txChar: BluetoothRemoteGATTCharacteristic | null = null;
   private receiveCb: ((data: Uint8Array) => void) | null = null;
+  private changeCbs: Array<(connected: boolean) => void> = [];
   private _connected = false;
 
   get connected(): boolean {
     return this._connected;
   }
 
-  async connect(): Promise<void> {
-    if (!navigator.bluetooth) {
-      throw new Error(
-        'Web Bluetooth not available. Use Chrome/Edge on localhost or HTTPS.'
-      );
-    }
+  private setConnected(val: boolean) {
+    this._connected = val;
+    this.changeCbs.forEach(cb => cb(val));
+  }
 
-    this.device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }],
-      optionalServices: [SERVICE_UUID],
-    });
+  /** Subscribe to connection state changes (fires on connect, disconnect, and unexpected drop). */
+  onConnectionChange(cb: (connected: boolean) => void): void {
+    this.changeCbs.push(cb);
+  }
 
-    this.device.addEventListener('gattserverdisconnected', () => {
-      this._connected = false;
+  private async setupDevice(device: BluetoothDevice): Promise<void> {
+    device.addEventListener('gattserverdisconnected', () => {
+      this.setConnected(false);
       console.log('BLE disconnected');
     });
 
-    this.server = await this.device.gatt!.connect();
+    this.server = await device.gatt!.connect();
     const service = await this.server.getPrimaryService(SERVICE_UUID);
 
     this.rxChar = await service.getCharacteristic(RX_CHAR_UUID);
@@ -48,15 +48,54 @@ export class BleTransport implements Transport {
       }
     });
 
-    this._connected = true;
-    console.log('BLE connected to', this.device.name);
+    this.device = device;
+    this.setConnected(true);
+    console.log('BLE connected to', device.name);
+  }
+
+  /** Try to silently reconnect to a previously authorized device (no user prompt).
+   *  Returns true if reconnected, false otherwise. */
+  async tryAutoConnect(): Promise<boolean> {
+    if (!navigator.bluetooth) return false;
+    const getDevices = (navigator.bluetooth as any).getDevices?.bind(navigator.bluetooth);
+    if (!getDevices) return false;
+    try {
+      const devices: BluetoothDevice[] = await getDevices();
+      for (const device of devices) {
+        if (!device.gatt) continue;
+        try {
+          await this.setupDevice(device);
+          return true;
+        } catch {
+          // device out of range or unavailable — try next
+        }
+      }
+    } catch {
+      // getDevices not permitted or unavailable
+    }
+    return false;
+  }
+
+  async connect(): Promise<void> {
+    if (!navigator.bluetooth) {
+      throw new Error(
+        'Web Bluetooth not available. Use Chrome/Edge on localhost or HTTPS.'
+      );
+    }
+
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE_UUID] }],
+      optionalServices: [SERVICE_UUID],
+    });
+
+    await this.setupDevice(device);
   }
 
   async disconnect(): Promise<void> {
     if (this.server?.connected) {
       this.server.disconnect();
     }
-    this._connected = false;
+    this.setConnected(false);
   }
 
   async send(data: Uint8Array): Promise<void> {

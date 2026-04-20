@@ -8,9 +8,24 @@
 #include "esp_log.h"
 
 static const char *TAG = "scripts";
+static script_entry_t s_scan_existing[SCRIPT_MAX_COUNT];
+
+static const script_entry_t *find_existing_script(
+    const script_entry_t *scripts, int count, const char *filename)
+{
+    for (int i = 0; i < count; i++) {
+        if (strcmp(scripts[i].filename, filename) == 0) {
+            return &scripts[i];
+        }
+    }
+    return NULL;
+}
 
 int script_loader_scan(script_loader_t *loader, bvm *vm)
 {
+    int existing_count = loader->count;
+
+    memcpy(s_scan_existing, loader->scripts, sizeof(s_scan_existing));
     loader->vm = vm;
     loader->count = 0;
 
@@ -33,8 +48,16 @@ int script_loader_scan(script_loader_t *loader, bvm *vm)
             continue;
         }
         script_entry_t *s = &loader->scripts[loader->count++];
+        const script_entry_t *prev =
+            find_existing_script(s_scan_existing, existing_count, ent->d_name);
+
         memset(s, 0, sizeof(*s));
-        strncpy(s->filename, ent->d_name, SCRIPT_MAX_NAME - 1);
+        if (prev) {
+            *s = *prev;
+        } else {
+            strncpy(s->filename, ent->d_name, SCRIPT_MAX_NAME - 1);
+        }
+        ESP_LOGI(TAG, "  [%d] %s", loader->count - 1, s->filename);
     }
     closedir(dir);
 
@@ -91,18 +114,19 @@ int script_loader_enable(script_loader_t *loader, int idx)
     be_pop(vm, 1);
     free(code);
 
-    /* Call setup() if defined. */
-    if (be_getglobal(vm, "setup")) {
+    /* Call setup() if defined. be_getglobal always pushes; only call if function. */
+    be_getglobal(vm, "setup");
+    if (be_isfunction(vm, -1)) {
         if (be_pcall(vm, 0) != 0) {
             snprintf(s->error, sizeof(s->error), "%.*s",
                      (int)(sizeof(s->error) - 1), be_tostring(vm, -1));
-            be_pop(vm, 1);
             s->errored = true;
             ESP_LOGE(TAG, "%s setup() error: %s", s->filename, s->error);
+            be_pop(vm, 1);
             return -1;
         }
-        be_pop(vm, 1);
     }
+    be_pop(vm, 1);
 
     s->loaded = true;
     s->enabled = true;
@@ -119,19 +143,40 @@ int script_loader_disable(script_loader_t *loader, int idx)
 
     bvm *vm = loader->vm;
 
-    /* Call teardown() if defined. */
-    if (be_getglobal(vm, "teardown")) {
+    /* Call teardown() if defined. be_getglobal always pushes; only call if function. */
+    be_getglobal(vm, "teardown");
+    if (be_isfunction(vm, -1)) {
         if (be_pcall(vm, 0) != 0) {
             ESP_LOGW(TAG, "%s teardown() error: %s",
                      s->filename, be_tostring(vm, -1));
-            be_pop(vm, 1);
         }
-        be_pop(vm, 1);
     }
+    be_pop(vm, 1);
 
     s->loaded = false;
     s->enabled = false;
     ESP_LOGI(TAG, "Disabled: %s", s->filename);
+    return 0;
+}
+
+int script_loader_delete(script_loader_t *loader, const char *filename)
+{
+    /* Disable first if loaded. */
+    for (int i = 0; i < loader->count; i++) {
+        if (strcmp(loader->scripts[i].filename, filename) == 0) {
+            script_loader_disable(loader, i);
+            break;
+        }
+    }
+
+    char path[128];
+    snprintf(path, sizeof(path), "%s/%s", SCRIPT_DIR, filename);
+    if (remove(path) != 0) {
+        ESP_LOGE(TAG, "Delete failed: %s", path);
+        return -1;
+    }
+    ESP_LOGI(TAG, "Deleted: %s", path);
+    script_loader_scan(loader, loader->vm);
     return 0;
 }
 

@@ -1,8 +1,7 @@
 <script lang="ts">
-  import type { Transport } from '../transport/types';
   import type { Protocol, ScriptInfo } from '../transport/protocol';
 
-  let { transport, proto }: { transport: Transport; proto: Protocol } = $props();
+  let { proto, connected }: { proto: Protocol; connected: boolean } = $props();
 
   let code = $state('# Write your Berry script here\ndef setup()\n  print("hello")\nend\n\ndef loop()\n  # Runs every 100ms on the device\nend\n');
   let filename = $state('my_script.be');
@@ -11,7 +10,7 @@
   let busy = $state(false);
 
   async function refresh() {
-    if (!transport.connected) return;
+    if (!connected) return;
     try {
       const res = await proto.listScripts();
       scripts = res.scripts;
@@ -71,6 +70,20 @@
     }
   }
 
+  async function deleteScript(fn: string) {
+    busy = true;
+    status = `deleting ${fn}...`;
+    try {
+      await proto.deleteScript(fn);
+      status = `deleted ${fn}`;
+      await refresh();
+    } catch (e: any) {
+      status = `delete failed: ${e.message}`;
+    } finally {
+      busy = false;
+    }
+  }
+
   async function loadForEdit(fn: string) {
     try {
       const res = await proto.readScript(fn);
@@ -83,7 +96,7 @@
   }
 
   $effect(() => {
-    if (transport.connected) refresh();
+    if (connected) refresh();
   });
 </script>
 
@@ -93,9 +106,7 @@
 
   <div class="row">
     <input type="text" bind:value={filename} placeholder="filename.be" />
-    <button onclick={upload} disabled={!transport.connected || busy}>Upload</button>
-    <button onclick={() => enable(filename)} disabled={!transport.connected || busy}>Enable</button>
-    <button onclick={() => disable(filename)} disabled={!transport.connected || busy}>Disable</button>
+    <button onclick={upload} disabled={!connected || busy}>Upload</button>
   </div>
 
   <textarea bind:value={code} rows="16" spellcheck="false"></textarea>
@@ -111,11 +122,12 @@
           {#if s.enabled}<span class="tag on">enabled</span>{/if}
           {#if s.errored}<span class="tag err" title={s.error}>error</span>{/if}
           <button class="small" onclick={() => loadForEdit(s.filename)}>edit</button>
+          <button class="small danger" onclick={() => deleteScript(s.filename)} disabled={!connected || busy}>del</button>
           <label class="toggle">
             <input
               type="checkbox"
               checked={s.enabled}
-              disabled={!transport.connected || busy}
+              disabled={!connected || busy}
               onchange={(e) => toggleScript(s, (e.currentTarget as HTMLInputElement).checked)}
             />
             <span>{s.enabled ? 'on' : 'off'}</span>
@@ -168,6 +180,10 @@
   button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+  button.danger {
+    background: #4a1a1a;
+    border-color: #a44;
   }
   .status {
     color: #888;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { BleTransport } from './transport/ble';
   import { Protocol } from './transport/protocol';
   import ScriptsView from './views/Scripts.svelte';
@@ -9,8 +10,18 @@
   const proto = new Protocol(ble);
   let activeView = $state('scripts');
   let connected = $state(false);
-
   let error = $state('');
+
+  ble.onConnectionChange(c => { connected = c; });
+
+  onMount(async () => {
+    // Silently reconnect to previously paired device after page refresh.
+    const ok = await ble.tryAutoConnect();
+    if (!ok) {
+      // Not an error — device may just be out of range or not yet paired.
+      console.log('No previous BLE device to auto-connect');
+    }
+  });
 
   async function toggleConnect() {
     error = '';
@@ -20,11 +31,9 @@
       } else {
         await ble.connect();
       }
-      connected = ble.connected;
     } catch (e: any) {
       error = e?.message || String(e);
       console.error('BLE error:', e);
-      connected = false;
     }
   }
 </script>
@@ -46,11 +55,11 @@
 
   <div class="content">
     {#if activeView === 'scripts'}
-      <ScriptsView transport={ble} {proto} />
+      <ScriptsView {proto} {connected} />
     {:else if activeView === 'dbc'}
-      <DbcView transport={ble} {proto} />
+      <DbcView transport={ble} {proto} {connected} />
     {:else}
-      <DashboardView transport={ble} {proto} />
+      <DashboardView transport={ble} {proto} {connected} />
     {/if}
   </div>
 </main>

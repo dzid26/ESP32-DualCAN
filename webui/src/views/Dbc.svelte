@@ -3,7 +3,7 @@
   import type { Protocol } from '../transport/protocol';
   import { parseDbc, compileDbc, type Message } from '../dbc/parser';
 
-  let { transport, proto: _proto }: { transport: Transport; proto: Protocol } = $props();
+  let { transport, proto: _proto, connected: _connected }: { transport: Transport; proto: Protocol; connected: boolean } = $props();
   let messages = $state<Message[]>([]);
   let status = $state('No DBC loaded');
 

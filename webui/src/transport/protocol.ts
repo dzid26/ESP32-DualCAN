@@ -126,4 +126,8 @@ export class Protocol {
   disableScript(filename: string): Promise<void> {
     return this.call('script.disable', { filename });
   }
+
+  deleteScript(filename: string): Promise<void> {
+    return this.call('script.delete', { filename });
+  }
 }

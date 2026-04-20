@@ -40,3 +40,6 @@ int script_loader_write(const char *filename, const char *code, size_t len);
 /* Read a script file from SCRIPT_DIR into a caller-provided buffer.
  * Returns the number of bytes read, or -1 on error. */
 int script_loader_read(const char *filename, char *buf, size_t buf_size);
+
+/* Delete a script file from SCRIPT_DIR. Disables it first if loaded. */
+int script_loader_delete(script_loader_t *loader, const char *filename);

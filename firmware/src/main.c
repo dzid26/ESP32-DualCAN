@@ -83,13 +83,21 @@ void app_main(void)
         can_poll(&bus0, now);
         can_poll(&bus1, now);
 
-        /* be_getglobal always pushes (value or nil); pop unconditionally. */
-        if (be_getglobal(vm, "loop")) {
-            if (be_pcall(vm, 0) != 0) {
-                ESP_LOGE(TAG, "Berry error: %s", be_tostring(vm, -1));
-            }
+        /* Only call loop() if at least one script is loaded.
+         * Avoids calling stale functions from disabled scripts. */
+        bool any_loaded = false;
+        for (int i = 0; i < loader.count; i++) {
+            if (loader.scripts[i].loaded) { any_loaded = true; break; }
         }
-        be_pop(vm, 1);
+        if (any_loaded) {
+            be_getglobal(vm, "loop");
+            if (be_isfunction(vm, -1)) {
+                if (be_pcall(vm, 0) != 0) {
+                    ESP_LOGE(TAG, "Berry error: %s", be_tostring(vm, -1));
+                }
+            }
+            be_pop(vm, 1);
+        }
 
         gpio_set_level(LED_GPIO, tick & 1);
         if ((tick % 100) == 0) {
