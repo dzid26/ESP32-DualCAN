@@ -1,7 +1,5 @@
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "driver/gpio.h"
 #include "driver/twai.h"
@@ -21,6 +19,7 @@
 #include "storage/fs.h"
 #include "storage/state.h"
 #include "scripting/script_loader.h"
+#include "protocol/protocol.h"
 
 static const char *TAG = "dorky";
 
@@ -60,36 +59,7 @@ static void hw_init(void)
 
     state_nvs_init();
     fs_init();
-    dorky_ble_init(NULL, NULL);
 }
-
-static const char *DEMO_SCRIPT =
-    "var tick = 0\n"
-    "def loop()\n"
-    "  # TX on CAN0\n"
-    "  var b = bytes()\n"
-    "  b.add(tick & 0xFF)\n"
-    "  b.add((tick >> 8) & 0xFF)\n"
-    "  b.add((tick >> 16) & 0xFF)\n"
-    "  b.add((tick >> 24) & 0xFF)\n"
-    "  can_send(0, 0x123, b)\n"
-    "  tick += 1\n"
-    "\n"
-    "  # Check CAN1 for loopback\n"
-    "  var rx = can_receive(1)\n"
-    "  if rx != nil\n"
-    "    led_set(0, 32, 0)\n"
-    "  else\n"
-    "    led_set(32, 0, 0)\n"
-    "  end\n"
-    "\n"
-    "  # Bridge: forward CAN0 rx to CAN1\n"
-    "  rx = can_receive(0)\n"
-    "  while rx != nil\n"
-    "    can_send(1, rx[0], rx[1])\n"
-    "    rx = can_receive(0)\n"
-    "  end\n"
-    "end\n";
 
 void app_main(void)
 {
@@ -102,13 +72,10 @@ void app_main(void)
     berry_set_buses(&bus0, &bus1);
     berry_register_bindings(vm);
 
-    if (be_loadstring(vm, DEMO_SCRIPT) != 0 || be_pcall(vm, 0) != 0) {
-        ESP_LOGE(TAG, "Berry load error: %s", be_tostring(vm, -1));
-        be_pop(vm, 1);
-    }
-    be_pop(vm, 1);
-
-    ESP_LOGI(TAG, "Berry demo loaded, entering main loop");
+    static script_loader_t loader;
+    script_loader_scan(&loader, vm);
+    protocol_init(&loader);
+    dorky_ble_init(protocol_on_ble_write, NULL);
 
     uint32_t tick = 0;
     while (1) {
@@ -116,23 +83,18 @@ void app_main(void)
         can_poll(&bus0, now);
         can_poll(&bus1, now);
 
+        /* be_getglobal always pushes (value or nil); pop unconditionally. */
         if (be_getglobal(vm, "loop")) {
             if (be_pcall(vm, 0) != 0) {
                 ESP_LOGE(TAG, "Berry error: %s", be_tostring(vm, -1));
-                be_pop(vm, 1);
             }
-            be_pop(vm, 1);
         }
+        be_pop(vm, 1);
 
         gpio_set_level(LED_GPIO, tick & 1);
         if ((tick % 100) == 0) {
             ESP_LOGI(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
                      tick, (uint32_t)esp_get_free_heap_size());
-#if configGENERATE_RUN_TIME_STATS
-            static char stats[512];
-            vTaskGetRunTimeStats(stats);
-            printf("--- CPU usage ---\n%s\n", stats);
-#endif
         }
         tick++;
         vTaskDelay(pdMS_TO_TICKS(100));

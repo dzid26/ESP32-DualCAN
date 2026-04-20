@@ -1,10 +1,12 @@
 <script lang="ts">
   import { BleTransport } from './transport/ble';
+  import { Protocol } from './transport/protocol';
   import ScriptsView from './views/Scripts.svelte';
   import DbcView from './views/Dbc.svelte';
   import DashboardView from './views/Dashboard.svelte';
 
   const ble = new BleTransport();
+  const proto = new Protocol(ble);
   let activeView = $state('scripts');
   let connected = $state(false);
 
@@ -44,11 +46,11 @@
 
   <div class="content">
     {#if activeView === 'scripts'}
-      <ScriptsView transport={ble} />
+      <ScriptsView transport={ble} {proto} />
     {:else if activeView === 'dbc'}
-      <DbcView transport={ble} />
+      <DbcView transport={ble} {proto} />
     {:else}
-      <DashboardView transport={ble} />
+      <DashboardView transport={ble} {proto} />
     {/if}
   </div>
 </main>

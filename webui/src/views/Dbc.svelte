@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { Transport } from '../transport/types';
+  import type { Protocol } from '../transport/protocol';
   import { parseDbc, compileDbc, type Message } from '../dbc/parser';
 
-  let { transport }: { transport: Transport } = $props();
+  let { transport, proto: _proto }: { transport: Transport; proto: Protocol } = $props();
   let messages = $state<Message[]>([]);
   let status = $state('No DBC loaded');
 

@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Transport } from '../transport/types';
+  import type { Protocol } from '../transport/protocol';
 
-  let { transport }: { transport: Transport } = $props();
+  let { transport, proto: _proto }: { transport: Transport; proto: Protocol } = $props();
 </script>
 
 <div class="dashboard">
