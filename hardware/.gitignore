@@ -11,6 +11,7 @@
 *-cache*
 *-bak
 *-bak*
+*.FCBak
 *~
 ~*
 _autosave-*
