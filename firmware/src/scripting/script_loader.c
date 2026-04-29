@@ -1,4 +1,5 @@
 #include "scripting/script_loader.h"
+#include "scripting/berry_bindings.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +10,7 @@
 
 static const char *TAG = "scripts";
 static script_entry_t s_scan_existing[SCRIPT_MAX_COUNT];
+static int            s_next_script_id = 1;   /* 0 reserved for "no context" */
 
 static const script_entry_t *find_existing_script(
     const script_entry_t *scripts, int count, const char *filename)
@@ -52,6 +54,8 @@ int script_loader_scan(script_loader_t *loader, bvm *vm)
             find_existing_script(s_scan_existing, existing_count, ent->d_name);
 
         memset(s, 0, sizeof(*s));
+        s->setup_ref = -1;
+        s->teardown_ref = -1;
         if (prev) {
             *s = *prev;
         } else {
@@ -101,6 +105,10 @@ int script_loader_enable(script_loader_t *loader, int idx)
 
     bvm *vm = loader->vm;
 
+    /* Tag every binding registration during load + setup with this id. */
+    s->script_id = s_next_script_id++;
+    berry_set_current_script(s->script_id);
+
     /* Execute the script (defines its functions). */
     if (be_loadstring(vm, code) != 0 || be_pcall(vm, 0) != 0) {
         snprintf(s->error, sizeof(s->error), "%.*s",
@@ -108,30 +116,47 @@ int script_loader_enable(script_loader_t *loader, int idx)
         be_pop(vm, 1);
         s->errored = true;
         ESP_LOGE(TAG, "%s load error: %s", s->filename, s->error);
+        berry_set_current_script(0);
+        berry_cleanup_script(s->script_id);
         free(code);
         return -1;
     }
     be_pop(vm, 1);
     free(code);
 
-    /* Call setup() if defined. be_getglobal always pushes; only call if function. */
-    be_getglobal(vm, "setup");
-    if (be_isfunction(vm, -1)) {
-        if (be_pcall(vm, 0) != 0) {
-            snprintf(s->error, sizeof(s->error), "%.*s",
-                     (int)(sizeof(s->error) - 1), be_tostring(vm, -1));
-            s->errored = true;
-            ESP_LOGE(TAG, "%s setup() error: %s", s->filename, s->error);
-            be_pop(vm, 1);
-            return -1;
-        }
-    }
-    be_pop(vm, 1);
+    /* Capture setup/teardown into refs and clear the globals. This isolates
+     * scripts from each other (the global namespace is shared by all). */
+    s->setup_ref    = berry_capture_global(vm, "setup");
+    s->teardown_ref = berry_capture_global(vm, "teardown");
 
+    /* The legacy `loop` global is no longer polled — warn if a script defines
+     * it, since the user probably intended timer_every. Clear it either way. */
+    int loop_ref = berry_capture_global(vm, "loop");
+    if (loop_ref >= 0) {
+        ESP_LOGW(TAG, "%s defines loop() — use timer_every(period_ms, fn) instead",
+                 s->filename);
+        berry_release_ref(vm, loop_ref);
+    }
+
+    /* Call setup() via captured ref. */
+    if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref) == -2) {
+        snprintf(s->error, sizeof(s->error), "setup() raised");
+        s->errored = true;
+        ESP_LOGE(TAG, "%s setup() error", s->filename);
+        berry_set_current_script(0);
+        berry_release_ref(vm, s->setup_ref);
+        berry_release_ref(vm, s->teardown_ref);
+        s->setup_ref = -1;
+        s->teardown_ref = -1;
+        berry_cleanup_script(s->script_id);
+        return -1;
+    }
+
+    berry_set_current_script(0);
     s->loaded = true;
     s->enabled = true;
     s->errored = false;
-    ESP_LOGI(TAG, "Enabled: %s", s->filename);
+    ESP_LOGI(TAG, "Enabled: %s (script_id=%d)", s->filename, s->script_id);
     return 0;
 }
 
@@ -143,15 +168,18 @@ int script_loader_disable(script_loader_t *loader, int idx)
 
     bvm *vm = loader->vm;
 
-    /* Call teardown() if defined. be_getglobal always pushes; only call if function. */
-    be_getglobal(vm, "teardown");
-    if (be_isfunction(vm, -1)) {
-        if (be_pcall(vm, 0) != 0) {
-            ESP_LOGW(TAG, "%s teardown() error: %s",
-                     s->filename, be_tostring(vm, -1));
-        }
-    }
-    be_pop(vm, 1);
+    /* Call teardown via captured ref (any new registrations from teardown
+     * still get tagged with this script's id so cleanup catches them). */
+    berry_set_current_script(s->script_id);
+    if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref);
+
+    /* Revoke every can.on / timer / action tagged to this script. */
+    berry_cleanup_script(s->script_id);
+    berry_release_ref(vm, s->setup_ref);
+    berry_release_ref(vm, s->teardown_ref);
+    s->setup_ref = -1;
+    s->teardown_ref = -1;
+    berry_set_current_script(0);
 
     s->loaded = false;
     s->enabled = false;

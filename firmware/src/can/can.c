@@ -91,15 +91,27 @@ void can_poll(can_t *c, uint32_t now_ms)
     }
 }
 
-int can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx)
+// todo: function description
+int can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag)
 {
     if (!c->loaded) return -1;
     int si = dbc_find_signal(&c->dbc, sig_name);
     if (si < 0 || c->cb_count >= CAN_MAX_CALLBACKS) return -1;
     c->callbacks[c->cb_count++] = (typeof(c->callbacks[0])){
-        .sig_idx = si, .cb = cb, .ctx = ctx
+        .sig_idx = si, .cb = cb, .ctx = ctx, .tag = tag
     };
     return 0;
+}
+// todo explain tag and can_off_by_tag
+void can_off_by_tag(can_t *c, int tag)
+{
+    int w = 0;
+    for (int r = 0; r < c->cb_count; r++) {
+        if (c->callbacks[r].tag != tag) {
+            c->callbacks[w++] = c->callbacks[r];
+        }
+    }
+    c->cb_count = w;
 }
 
 const signal_state_t *can_signal(const can_t *c, const char *name)

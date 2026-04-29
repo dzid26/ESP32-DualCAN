@@ -183,7 +183,7 @@ Required shape:
 # @bus 0
 
 def setup()
-  # register signal subscriptions, timers, etc.
+  # register signal subscriptions, timers, actions
 end
 
 def teardown()
@@ -191,9 +191,20 @@ def teardown()
 end
 ```
 
-The framework calls `setup()` when the script is enabled and `teardown()` when disabled. Handler unregistration is automatic based on what `setup()` registered.
+The framework calls `setup()` when the script is enabled and `teardown()` when disabled. Handler unregistration is automatic based on what `setup()` registered (each registration is tagged with the current script id and revoked on disable).
+
+**Scripts are purely reactive.** There is no `loop()` and no implicit tick. Periodic behavior uses `timer.every(ms, fn)`. Event-driven behavior uses `can.on(signal, fn)`. On-demand behavior uses Actions (§7.8).
 
 Shared helpers go in `/scripts/lib/*.be`, imported with `import lib.helper`.
+
+### 7.1.1 Script isolation
+
+Berry has a single global namespace. To stop scripts trampling each other:
+
+1. Each script is assigned a unique numeric `script_id` when loaded.
+2. The script's source is executed in a fresh-globals state — after running it, the framework captures references to `setup` / `teardown` (and any actions/handlers it registered) and clears those globals so the next script loads cleanly.
+3. Native bindings (`can.on`, `timer.every`, `actions.register`, …) tag every registration with the current `script_id`. On `script_loader_disable`, the framework first calls the captured `teardown` ref (if any), then revokes every registration tagged with that `script_id`.
+4. Per-script state (`state.*`) uses an NVS namespace derived from the script filename, surviving disable/enable.
 
 ### 7.2 Enable/disable UI
 
@@ -232,7 +243,29 @@ log("message", level)   # level: debug / info / warn / error
 
 Logs go to a ring buffer and stream to the UI console over the active transport. Also mirrored to UART for wired debugging.
 
-### 7.7 Scripting API reference (initial surface)
+### 7.8 Actions (named callable units)
+
+Actions are named, parameterless (or single-arg) callables exposed by scripts. They serve two purposes:
+
+- **UI tiles**: the web UI's Dashboard renders one button per registered action. Tapping calls `actions.invoke(name)` over the transport. Use case: short-honk, fold-mirrors, lock-doors, summon-window-down.
+- **Cross-script calls**: a reactive handler in script A can invoke an action defined in script B. Example: a "drive-mode-changed" subscriber invokes the "track-mode-prep" action.
+
+An action is just a Berry function with a stable name:
+
+```python
+def setup()
+  actions.register("short_honk", def()
+    var msg = can.message("VCFRONT_buzzerCmd")
+    msg.set("VCFRONT_buzzerRequest", 1)
+    msg.send()
+    timer.after(150, def() msg.set("VCFRONT_buzzerRequest", 0); msg.send() end)
+  end)
+end
+```
+
+Actions are revoked when their script is disabled (same lifecycle as `can.on`).
+
+### 7.9 Scripting API reference (initial surface)
 
 ```python
 # ---- Signals (decoded) ----
@@ -273,6 +306,11 @@ log(msg [, level])
 led.set(r, g, b)
 led.off()
 
+# ---- Actions (UI tiles + cross-script) ----
+actions.register(name, fn)          # tiles fn for UI button + cross-script invoke
+actions.invoke(name [, arg])        # call an action by name (returns its result)
+actions.list()                      # -> [name, …] (for introspection)
+
 # ---- Checksum helper ----
 can.tesla_checksum(addr, checksum_byte_index, data)
 ```
@@ -307,7 +345,8 @@ Works natively on Chrome/Edge on Android, macOS, Linux, Windows, ChromeOS. Does 
 
 Messages between UI and firmware use CBOR (compact, schema-light). One schema shared between transports. Topics include:
 
-- `script.list`, `script.get`, `script.put`, `script.enable`, `script.disable`
+- `script.list`, `script.read`, `script.write`, `script.enable`, `script.disable`, `script.delete`
+- `action.list`, `action.invoke`
 - `dbc.upload`, `dbc.status`
 - `signal.subscribe`, `signal.unsubscribe`, `signal.inject`
 - `trace.start`, `trace.stop`, `trace.frame` (notification)
@@ -329,7 +368,7 @@ The two copies are identical and chosen at runtime based on transport availabili
 
 ### 9.1 Views
 
-- **Dashboard** — signal watch list, live values, simple graphs (uPlot).
+- **Dashboard** — signal watch list, live values, simple graphs (uPlot), and **action tiles** (one button per registered Action).
 - **Scripts** — list with enable toggles, Monaco editor, error console.
 - **DBC** — upload, per-bus assignment, signal browser.
 - **Trace** — live CAN frame log (both buses), filter, pause, export.

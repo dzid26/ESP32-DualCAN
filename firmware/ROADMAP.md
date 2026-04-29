@@ -177,6 +177,8 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
    - User-facing README in `firmware/` with install, flash, first-connection, first-script walkthrough.
    - Contributor guide.
    - Protocol reference (CBOR topics, payloads).
+   - How to script
+   - Usable examples on the website
 
 ### Exit criteria
 

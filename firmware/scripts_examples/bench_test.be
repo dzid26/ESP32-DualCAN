@@ -5,7 +5,7 @@
 
 var tick = 0
 
-def loop()
+def tick_fn()
   # Send three different message IDs so we can see them in the trace
   var b = bytes()
   b.add(tick & 0xFF)
@@ -39,4 +39,8 @@ def loop()
   else
     led_set(0, 0, 16)    # blue
   end
+end
+
+def setup()
+  timer_every(100, tick_fn)
 end

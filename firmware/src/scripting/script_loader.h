@@ -14,6 +14,9 @@ typedef struct {
     bool    loaded;                     /* true if setup() has been called */
     bool    errored;                    /* true if last load/run threw */
     char    error[128];                 /* last error message */
+    int     script_id;                  /* unique tag, 0 = unloaded (reserved) */
+    int     setup_ref;                  /* refs[] index of setup fn, -1 if none */
+    int     teardown_ref;               /* refs[] index of teardown fn, -1 if none */
 } script_entry_t;
 
 typedef struct {

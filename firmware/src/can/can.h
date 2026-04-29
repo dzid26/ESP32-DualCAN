@@ -28,7 +28,7 @@ typedef struct {
     bool               loaded;
     bool               sim_mode;       /* true = TX goes to log, not bus */
 
-    struct { int sig_idx; can_signal_cb_t cb; void *ctx; } callbacks[CAN_MAX_CALLBACKS];
+    struct { int sig_idx; can_signal_cb_t cb; void *ctx; int tag; } callbacks[CAN_MAX_CALLBACKS];
     int                cb_count;
 } can_t;
 
@@ -37,7 +37,8 @@ int  can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
 void can_free(can_t *c);
 void can_poll(can_t *c, uint32_t now_ms);
 
-int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx);
+int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag);
+void can_off_by_tag(can_t *c, int tag);   /* remove every callback registered with this tag */
 const signal_state_t *can_signal(const can_t *c, const char *name);
 
 int  can_draft(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc);
