@@ -8,6 +8,7 @@
 #include "esp_log.h"
 
 #include "ble/ble_transport.h"
+#include "scripting/berry_bindings.h"
 
 static const char *TAG = "proto";
 
@@ -186,6 +187,32 @@ static void handle_script_delete(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
+static void handle_action_list(int id)
+{
+    const char *names[64];
+    int n = berry_actions_snapshot(names, 64);
+    if (n > 64) n = 64;
+
+    cJSON *arr = cJSON_CreateArray();
+    for (int i = 0; i < n; i++) {
+        cJSON_AddItemToArray(arr, cJSON_CreateString(names[i]));
+    }
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddItemToObject(result, "actions", arr);
+    send_ok(id, result);
+}
+
+static void handle_action_invoke(int id, cJSON *req)
+{
+    const cJSON *name = cJSON_GetObjectItem(req, "name");
+    if (!cJSON_IsString(name)) { send_err(id, "missing name"); return; }
+
+    int rc = berry_action_invoke(name->valuestring);
+    if (rc == -1)      send_err(id, "no such action");
+    else if (rc == -2) send_err(id, "action raised");
+    else               send_ok(id, NULL);
+}
+
 /* ---- frame parser / dispatch ---- */
 
 static void dispatch_frame(const uint8_t *payload, size_t len)
@@ -216,6 +243,8 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "script.enable") == 0)  handle_script_enable(id, req);
     else if (strcmp(op_s, "script.disable") == 0) handle_script_disable(id, req);
     else if (strcmp(op_s, "script.delete") == 0)  handle_script_delete(id, req);
+    else if (strcmp(op_s, "action.list") == 0)    handle_action_list(id);
+    else if (strcmp(op_s, "action.invoke") == 0)  handle_action_invoke(id, req);
     else send_err(id, "unknown op");
 
     cJSON_Delete(req);

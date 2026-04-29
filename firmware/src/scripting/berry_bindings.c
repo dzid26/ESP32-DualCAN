@@ -292,9 +292,111 @@ void berry_timer_tick(uint32_t now_ms)
         if (one_shot) refs_free(s_vm, ref);
     }
 }
-/* ---- Raw CAN bindings (kept from phase 0) ---- */
 
-/* can_send(bus:int, id:int, data:bytes) -> nil */
+/* ---- actions.register / actions.invoke ---- */
+
+#define MAX_ACTIONS 32
+#define ACTION_NAME_MAX 40
+
+typedef struct {
+    bool in_use;
+    char name[ACTION_NAME_MAX];
+    int  ref;
+    int  script_id;
+} action_entry_t;
+
+static action_entry_t s_actions[MAX_ACTIONS];
+
+static int find_action(const char *name)
+{
+    for (int i = 0; i < MAX_ACTIONS; i++) {
+        if (s_actions[i].in_use && strcmp(s_actions[i].name, name) == 0) return i;
+    }
+    return -1;
+}
+
+/* actions.register(name:str, fn:function) -> nil */
+static int l_action_register(bvm *vm)
+{
+    if (be_top(vm) < 2 || !be_isstring(vm, 1) || !be_isfunction(vm, 2)) be_return_nil(vm);
+    const char *name = be_tostring(vm, 1);
+
+    /* Replace existing same-name action (re-registration). */
+    int existing = find_action(name);
+    if (existing >= 0) {
+        refs_free(vm, s_actions[existing].ref);
+        s_actions[existing].in_use = false;
+    }
+
+    int slot = -1;
+    for (int i = 0; i < MAX_ACTIONS; i++) {
+        if (!s_actions[i].in_use) { slot = i; break; }
+    }
+    if (slot < 0) {
+        ESP_LOGE(TAG_BB, "actions registry full");
+        be_return_nil(vm);
+    }
+
+    int ref = refs_alloc(vm, 2);
+    s_actions[slot].in_use = true;
+    s_actions[slot].ref = ref;
+    s_actions[slot].script_id = s_current_script_id;
+    strncpy(s_actions[slot].name, name, ACTION_NAME_MAX - 1);
+    s_actions[slot].name[ACTION_NAME_MAX - 1] = '\0';
+
+    ESP_LOGI(TAG_BB, "action registered: %s (script_id=%d)", name, s_current_script_id);
+    be_return_nil(vm);
+}
+
+/* actions.invoke(name:str) -> nil (calls action's fn, no args) */
+static int l_action_invoke(bvm *vm)
+{
+    if (be_top(vm) >= 1 && be_isstring(vm, 1)) {
+        berry_action_invoke(be_tostring(vm, 1));
+    }
+    be_return_nil(vm);
+}
+
+/* actions.list() -> [name, …] */
+static int l_action_list(bvm *vm)
+{
+    be_newlist(vm);
+    for (int i = 0; i < MAX_ACTIONS; i++) {
+        if (!s_actions[i].in_use) continue;
+        be_pushstring(vm, s_actions[i].name);
+        be_data_push(vm, -2);
+        be_pop(vm, 1);
+    }
+    be_return(vm);
+}
+
+int berry_actions_snapshot(const char **out_names, int max)
+{
+    int n = 0, found = 0;
+    for (int i = 0; i < MAX_ACTIONS; i++) {
+        if (!s_actions[i].in_use) continue;
+        if (n < max) out_names[n++] = s_actions[i].name;
+        found++;
+    }
+    return found;
+}
+
+int berry_action_invoke(const char *name)
+{
+    if (!s_vm || !name) return -1;
+    int idx = find_action(name);
+    if (idx < 0) return -1;
+
+    if (!refs_push(s_vm, s_actions[idx].ref)) return -1;
+    if (be_pcall(s_vm, 0) != 0) {
+        ESP_LOGE(TAG_BB, "action '%s' error: %s", name, be_tostring(s_vm, -1));
+        be_pop(s_vm, 2);
+        return -2;
+    }
+    be_pop(s_vm, 2);
+    return 0;
+}
+
 /* ---- Per-script cleanup ---- */
 
 void berry_cleanup_script(int script_id)
@@ -319,6 +421,14 @@ void berry_cleanup_script(int script_id)
     /* Tell each can_t to drop matching tags */
     for (int b = 0; b < 2; b++) {
         if (s_bus[b]) can_off_by_tag(s_bus[b], script_id);
+    }
+
+    /* Drop actions */
+    for (int i = 0; i < MAX_ACTIONS; i++) {
+        if (s_actions[i].in_use && s_actions[i].script_id == script_id) {
+            refs_free(s_vm, s_actions[i].ref);
+            s_actions[i].in_use = false;
+        }
     }
 }
 
@@ -563,6 +673,10 @@ void berry_register_bindings(bvm *vm)
     be_regfunc(vm, "timer_after", l_timer_after);
     be_regfunc(vm, "timer_every", l_timer_every);
     be_regfunc(vm, "timer_cancel", l_timer_cancel);
+
+    be_regfunc(vm, "action_register", l_action_register);
+    be_regfunc(vm, "action_invoke",   l_action_invoke);
+    be_regfunc(vm, "action_list",     l_action_list);
 
     be_regfunc(vm, "millis", l_millis);
 }

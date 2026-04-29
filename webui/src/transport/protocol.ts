@@ -130,4 +130,12 @@ export class Protocol {
   deleteScript(filename: string): Promise<void> {
     return this.call('script.delete', { filename });
   }
+
+  listActions(): Promise<{ actions: string[] }> {
+    return this.call('action.list');
+  }
+
+  invokeAction(name: string): Promise<void> {
+    return this.call('action.invoke', { name });
+  }
 }

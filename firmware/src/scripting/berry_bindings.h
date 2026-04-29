@@ -36,3 +36,14 @@ int  berry_call_ref(bvm *vm, int ref);
 /* Poll all timers; fire any whose next_fire_ms has passed. Call once per
  * main-loop iteration. */
 void berry_timer_tick(uint32_t now_ms);
+
+/* ---- Action invocation ---- */
+
+/* Snapshot the registered action names. `out_names` must have room for
+ * `max` pointers; returned strings are owned by the registry (do not free).
+ * Returns the actual count (may be > max if truncated). */
+int  berry_actions_snapshot(const char **out_names, int max);
+
+/* Invoke a registered action by name with no arg. Returns 0 on success,
+ * -1 if not found, -2 if Berry call failed (error logged). */
+int  berry_action_invoke(const char *name);
