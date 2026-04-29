@@ -1,2 +1,4 @@
 firmware/build/
 .codex
+test-results/
+webui/node_modules/

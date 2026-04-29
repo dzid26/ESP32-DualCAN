@@ -3,7 +3,7 @@
 
   let { proto, connected }: { proto: Protocol; connected: boolean } = $props();
 
-  let code = $state('# Write your Berry script here\ndef setup()\n  print("hello")\nend\n\ndef loop()\n  # Runs every 100ms on the device\nend\n');
+  let code = $state('# Write your Berry script here\n\ndef setup()\n  print("hello from setup")\n  # Schedule a repeating callback every 500 ms:\n  # timer_every(500, /-> print("tick"))\nend\n\ndef teardown()\n  # Called when script is disabled\nend\n');
   let filename = $state('my_script.be');
   let scripts = $state<ScriptInfo[]>([]);
   let status = $state('');
