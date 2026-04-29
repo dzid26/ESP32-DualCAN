@@ -80,16 +80,26 @@ void app_main(void)
     uint32_t tick = 0;
     while (1) {
         uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-        can_poll(&bus0, now);
-        can_poll(&bus1, now);
+        int rx_count = 0;
+        rx_count += can_poll(&bus0, now);
+        rx_count += can_poll(&bus1, now);
         berry_timer_tick(now);
 
-        gpio_set_level(LED_GPIO, tick & 1);
+        static uint32_t led_on_until = 0;
+        if (rx_count > 0) {
+            led_on_until = now + 50;
+        }
+        gpio_set_level(LED_GPIO, now < led_on_until ? 1 : 0);
+
         if ((tick % 100) == 0) {
             ESP_LOGI(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
                      tick, (uint32_t)esp_get_free_heap_size());
+            
+            static char stats[1024];
+            // vTaskGetRunTimeStats(stats);
+            // printf("--- CPU usage ---\n%s\n", stats);
         }
         tick++;
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }

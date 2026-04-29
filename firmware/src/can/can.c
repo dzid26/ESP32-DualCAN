@@ -57,10 +57,12 @@ static int msg_index(const can_t *c, uint32_t id)
     return m ? (int)(m - c->dbc.msgs) : -1;
 }
 
-void can_poll(can_t *c, uint32_t now_ms)
+int can_poll(can_t *c, uint32_t now_ms)
 {
+    int rx_count = 0;
     twai_message_t rx;
     while (can_bus_receive(c->bus_id, &rx, 0) == ESP_OK) {
+        rx_count++;
         if (!c->loaded) continue;
 
         int mi = msg_index(c, rx.identifier);
@@ -89,6 +91,7 @@ void can_poll(can_t *c, uint32_t now_ms)
             }
         }
     }
+    return rx_count;
 }
 
 // todo: function description

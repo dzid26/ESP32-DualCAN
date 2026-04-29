@@ -35,7 +35,7 @@ typedef struct {
 int  can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
               tx_finalize_fn_t finalize);
 void can_free(can_t *c);
-void can_poll(can_t *c, uint32_t now_ms);
+int  can_poll(can_t *c, uint32_t now_ms);
 
 int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag);
 void can_off_by_tag(can_t *c, int tag);   /* remove every callback registered with this tag */
