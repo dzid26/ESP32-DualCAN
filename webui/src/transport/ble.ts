@@ -53,29 +53,6 @@ export class BleTransport implements Transport {
     console.log('BLE connected to', device.name);
   }
 
-  /** Try to silently reconnect to a previously authorized device (no user prompt).
-   *  Returns true if reconnected, false otherwise. */
-  async tryAutoConnect(): Promise<boolean> {
-    if (!navigator.bluetooth) return false;
-    const getDevices = (navigator.bluetooth as any).getDevices?.bind(navigator.bluetooth);
-    if (!getDevices) return false;
-    try {
-      const devices: BluetoothDevice[] = await getDevices();
-      for (const device of devices) {
-        if (!device.gatt) continue;
-        try {
-          await this.setupDevice(device);
-          return true;
-        } catch {
-          // device out of range or unavailable — try next
-        }
-      }
-    } catch {
-      // getDevices not permitted or unavailable
-    }
-    return false;
-  }
-
   async connect(): Promise<void> {
     if (!navigator.bluetooth) {
       throw new Error(

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { BleTransport } from './transport/ble';
   import { Protocol } from './transport/protocol';
   import ScriptsView from './views/Scripts.svelte';
@@ -13,15 +12,6 @@
   let error = $state('');
 
   ble.onConnectionChange(c => { connected = c; });
-
-  onMount(async () => {
-    // Silently reconnect to previously paired device after page refresh.
-    const ok = await ble.tryAutoConnect();
-    if (!ok) {
-      // Not an error — device may just be out of range or not yet paired.
-      console.log('No previous BLE device to auto-connect');
-    }
-  });
 
   async function toggleConnect() {
     error = '';
