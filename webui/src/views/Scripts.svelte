@@ -4,15 +4,16 @@
 
   let { proto, connected }: { proto: Protocol; connected: boolean } = $props();
 
-  let selectedExample = $state('');
-
-  function loadExample(fn: string) {
-    const ex = examples.find(e => e.filename === fn);
-    if (!ex) return;
+  function onExampleSelect(e: Event) {
+    const sel = e.currentTarget as HTMLSelectElement;
+    const fn = sel.value;
+    sel.value = '';                       // reset DOM directly, no bind feedback
+    if (!fn) return;
+    const ex = examples.find(e2 => e2.filename === fn);
+    if (!ex) { status = `unknown example: ${fn}`; return; }
     code = ex.code;
     filename = ex.filename;
     status = `loaded example: ${ex.name}`;
-    selectedExample = '';
   }
 
   let code = $state('# Write your Berry script here\n\ndef setup()\n  print("hello from setup")\n  # Schedule a repeating callback every 500 ms:\n  # timer_every(500, /-> print("tick"))\nend\n\ndef teardown()\n  # Called when script is disabled\nend\n');
@@ -118,11 +119,7 @@
 
   <div class="row">
     <input type="text" bind:value={filename} placeholder="filename.be" />
-    <select
-      bind:value={selectedExample}
-      onchange={() => selectedExample && loadExample(selectedExample)}
-      title="Load a bundled example into the editor"
-    >
+    <select onchange={onExampleSelect} title="Load a bundled example into the editor">
       <option value="">Load example…</option>
       {#each examples as ex}
         <option value={ex.filename}>{ex.name}</option>
