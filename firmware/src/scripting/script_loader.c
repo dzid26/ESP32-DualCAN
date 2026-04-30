@@ -133,8 +133,13 @@ int script_loader_enable(script_loader_t *loader, int idx)
      * it, since the user probably intended timer_every. Clear it either way. */
     int loop_ref = berry_capture_global(vm, "loop");
     if (loop_ref >= 0) {
-        ESP_LOGW(TAG, "%s defines loop() — use timer_every(period_ms, fn) instead",
+        char warn[160];
+        snprintf(warn, sizeof(warn),
+                 "warning: %s defines loop() — it is no longer polled; "
+                 "use timer_every(period_ms, fn) instead",
                  s->filename);
+        ESP_LOGW(TAG, "%s", warn);
+        berry_log_push(warn);
         berry_release_ref(vm, loop_ref);
     }
 

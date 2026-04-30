@@ -656,6 +656,11 @@ void berry_set_log_handler(berry_log_handler_t fn)
     s_log_handler = fn;
 }
 
+void berry_log_push(const char *msg)
+{
+    if (s_log_handler && msg) s_log_handler(msg);
+}
+
 static int l_print(bvm *vm)
 {
     static char buf[512];
