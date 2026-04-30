@@ -2,6 +2,7 @@
   import type { Transport } from '../transport/types';
   import type { Protocol, SignalValue } from '../transport/protocol';
   import { onMount, onDestroy } from 'svelte';
+  import { dbcStore } from '../dbcStore.svelte';
 
   let { transport: _transport, proto, connected }: { transport: Transport; proto: Protocol; connected: boolean } = $props();
 
@@ -40,19 +41,25 @@
     name: string;
     bus: number;
     state: SignalValue | null;
-    error: boolean;
+    error: string | null;   // error message if last poll failed, else null
   }
 
   let watched = $state<WatchEntry[]>(loadWatched());
   let signalInput = $state('');
+  let busInput = $state(0);
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+  // Default the bus selector to whichever bus the DBC was last uploaded to.
+  $effect(() => {
+    if (dbcStore.lastUploadedBus >= 0) busInput = dbcStore.lastUploadedBus;
+  });
 
   function loadWatched(): WatchEntry[] {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return [];
       return (JSON.parse(raw) as { name: string; bus: number }[]).map(s => ({
-        ...s, state: null, error: false,
+        ...s, state: null, error: null,
       }));
     } catch { return []; }
   }
@@ -63,8 +70,9 @@
 
   function addSignal() {
     const name = signalInput.trim();
-    if (!name || watched.some(w => w.name === name)) return;
-    watched = [...watched, { name, bus: 0, state: null, error: false }];
+    if (!name) return;
+    if (watched.some(w => w.name === name && w.bus === busInput)) return;
+    watched = [...watched, { name, bus: busInput, state: null, error: null }];
     signalInput = '';
     saveWatched();
   }
@@ -76,13 +84,13 @@
 
   async function pollSignals() {
     if (!connected || watched.length === 0) return;
-    const next = await Promise.all(
-      watched.map(async w => {
+    const next: WatchEntry[] = await Promise.all(
+      watched.map(async (w): Promise<WatchEntry> => {
         try {
           const s = await proto.getSignalValue(w.name, w.bus);
-          return { ...w, state: s, error: false };
-        } catch {
-          return { ...w, error: true };
+          return { ...w, state: s, error: null };
+        } catch (e: any) {
+          return { ...w, error: e?.message ?? String(e) };
         }
       })
     );
@@ -178,22 +186,36 @@
       <div class="signal-add">
         <input
           bind:value={signalInput}
-          placeholder="signal name"
+          placeholder={dbcStore.signals.length > 0 ? 'signal name (autocomplete from DBC)' : 'signal name'}
+          list="dbc-signal-list"
           onkeydown={(e) => e.key === 'Enter' && addSignal()}
         />
+        <datalist id="dbc-signal-list">
+          {#each dbcStore.signals as s}
+            <option value={s.name}>{s.message} (0x{s.msgId.toString(16).toUpperCase()})</option>
+          {/each}
+        </datalist>
+        <select bind:value={busInput} title="CAN bus">
+          <option value={0}>bus 0</option>
+          <option value={1}>bus 1</option>
+        </select>
         <button onclick={addSignal}>Watch</button>
       </div>
+      {#if dbcStore.signals.length === 0}
+        <div class="hint">Tip: load a DBC on the DBC tab to autocomplete signal names.</div>
+      {/if}
       {#if watched.length > 0}
         <table class="signal-table">
-          <thead><tr><th>Signal</th><th>Value</th><th>Prev</th><th>Chg</th><th></th></tr></thead>
+          <thead><tr><th>Signal</th><th>Bus</th><th>Value</th><th>Prev</th><th>Chg</th><th></th></tr></thead>
           <tbody>
             {#each watched as w, i}
               <tr class:changed={w.state?.changed} class:missing={w.state === null && !w.error}>
                 <td class="sig-name">{w.name}</td>
+                <td class="dim">{w.bus}</td>
                 {#if w.error}
-                  <td colspan="3" class="err-cell">error</td>
+                  <td colspan="3" class="err-cell" title={w.error}>error: {w.error}</td>
                 {:else if w.state === null}
-                  <td colspan="3" class="dim">—</td>
+                  <td colspan="3" class="dim" title="signal not found in DBC, or no frames received yet">—</td>
                 {:else}
                   <td>{w.state.value}</td>
                   <td class="dim">{w.state.prev}</td>
@@ -285,6 +307,19 @@
     color: #ddd;
     padding: 0.35rem 0.6rem;
     font-size: 0.85rem;
+  }
+  .signal-add select {
+    background: #0d0d1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #ddd;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  .hint {
+    color: #888;
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
   }
   .signal-table {
     width: 100%;

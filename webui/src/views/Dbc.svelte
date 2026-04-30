@@ -2,15 +2,24 @@
   import type { Transport } from '../transport/types';
   import type { Protocol } from '../transport/protocol';
   import { parseDbc, compileDbc, type Message } from '../dbc/parser';
+  import { dbcStore } from '../dbcStore.svelte';
 
   let { transport, proto: _proto, connected: _connected }: { transport: Transport; proto: Protocol; connected: boolean } = $props();
   let messages = $state<Message[]>([]);
   let status = $state('No DBC loaded');
 
+  function publishSignals() {
+    const flat = messages.flatMap(m =>
+      m.signals.map(s => ({ name: s.name, message: m.name, msgId: m.id }))
+    );
+    dbcStore.setSignals(flat);
+  }
+
   function loadText(text: string, label: string) {
     messages = parseDbc(text);
     const totalSigs = messages.reduce((n, m) => n + m.signals.length, 0);
     status = `${label}: ${messages.length} messages, ${totalSigs} signals`;
+    publishSignals();
   }
 
   function handleFile(event: Event) {
@@ -36,6 +45,7 @@
     if (transport.connected) {
       await transport.send(binary);
       status += ' — uploaded';
+      dbcStore.setLastBus(busId);
     } else {
       status += ' — not connected (compile-only)';
     }
