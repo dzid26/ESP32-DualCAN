@@ -1,7 +1,19 @@
 <script lang="ts">
   import type { Protocol, ScriptInfo } from '../transport/protocol';
+  import { examples } from '../examples';
 
   let { proto, connected }: { proto: Protocol; connected: boolean } = $props();
+
+  let selectedExample = $state('');
+
+  function loadExample(fn: string) {
+    const ex = examples.find(e => e.filename === fn);
+    if (!ex) return;
+    code = ex.code;
+    filename = ex.filename;
+    status = `loaded example: ${ex.name}`;
+    selectedExample = '';
+  }
 
   let code = $state('# Write your Berry script here\n\ndef setup()\n  print("hello from setup")\n  # Schedule a repeating callback every 500 ms:\n  # timer_every(500, /-> print("tick"))\nend\n\ndef teardown()\n  # Called when script is disabled\nend\n');
   let filename = $state('my_script.be');
@@ -106,6 +118,16 @@
 
   <div class="row">
     <input type="text" bind:value={filename} placeholder="filename.be" />
+    <select
+      bind:value={selectedExample}
+      onchange={() => selectedExample && loadExample(selectedExample)}
+      title="Load a bundled example into the editor"
+    >
+      <option value="">Load example…</option>
+      {#each examples as ex}
+        <option value={ex.filename}>{ex.name}</option>
+      {/each}
+    </select>
     <button onclick={upload} disabled={!connected || busy}>Upload</button>
   </div>
 
@@ -152,6 +174,14 @@
     border-radius: 4px;
     padding: 0.4rem 0.6rem;
     font-family: monospace;
+  }
+  select {
+    background: #0d0d1a;
+    color: #ccc;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
   }
   textarea {
     width: 100%;
