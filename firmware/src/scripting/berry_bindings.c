@@ -647,43 +647,9 @@ static int l_state_remove(bvm *vm)
     be_return_nil(vm);
 }
 
-/* ---- Log streaming (Berry print() override) ---- */
-
-static berry_log_handler_t s_log_handler;
-
-void berry_set_log_handler(berry_log_handler_t fn)
-{
-    s_log_handler = fn;
-}
-
-void berry_log_push(const char *msg)
-{
-    if (s_log_handler && msg) s_log_handler(msg);
-}
-
-static int l_print(bvm *vm)
-{
-    static char buf[512];
-    int n = be_top(vm);
-    int pos = 0;
-    for (int i = 1; i <= n; i++) {
-        if (i > 1 && pos < (int)sizeof(buf) - 1) buf[pos++] = ' ';
-        const char *s = be_tostring(vm, i);
-        if (s) {
-            size_t len = strlen(s);
-            size_t avail = sizeof(buf) - 1 - pos;
-            if (len > avail) len = avail;
-            memcpy(buf + pos, s, len);
-            pos += (int)len;
-        }
-        if (pos >= (int)sizeof(buf) - 1) break;
-    }
-    buf[pos] = '\0';
-
-    if (s_log_handler) s_log_handler(buf);
-    else ESP_LOGI(TAG_BB, "%s", buf);
-    be_return_nil(vm);
-}
+/* berry_set_log_handler() and berry_log_push() live in the Berry port
+ * (components/berry/port/be_port.c) so they can intercept Berry's built-in
+ * print(), which routes through be_writebuffer there. */
 
 /* ---- millis() helper ---- */
 
@@ -723,5 +689,4 @@ void berry_register_bindings(bvm *vm)
     be_regfunc(vm, "action_list",     l_action_list);
 
     be_regfunc(vm, "millis", l_millis);
-    be_regfunc(vm, "print", l_print);
 }
