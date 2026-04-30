@@ -1,11 +1,11 @@
 # @name Loopback LED
-# @description TX on CAN0, check RX on CAN1. Green on receive, red on miss.
-#              Also bridges CAN0 RX to CAN1 TX.
+# @description TX a counter on CAN0, light green when CAN1 receives it (loopback
+#              wiring), red on miss. Also bridges any other CAN0 RX to CAN1.
 # @bus 0,1
 
 var tick = 0
 
-def loop()
+def tick_fn()
   # TX a counter frame on CAN0
   var b = bytes()
   b.add(tick & 0xFF)
@@ -29,4 +29,8 @@ def loop()
     can_send(1, rx[0], rx[1])
     rx = can_receive(0)
   end
+end
+
+def setup()
+  timer_every(50, tick_fn)
 end
