@@ -20,6 +20,12 @@ void berry_set_buses(can_t *eng0, can_t *eng1)
     s_bus[1] = eng1;
 }
 
+can_t *berry_get_bus(int bus)
+{
+    if (bus < 0 || bus > 1) return NULL;
+    return s_bus[bus];
+}
+
 void berry_set_current_script(int script_id) { s_current_script_id = script_id; }
 int  berry_current_script(void)              { return s_current_script_id; }
 
@@ -641,6 +647,39 @@ static int l_state_remove(bvm *vm)
     be_return_nil(vm);
 }
 
+/* ---- Log streaming (Berry print() override) ---- */
+
+static berry_log_handler_t s_log_handler;
+
+void berry_set_log_handler(berry_log_handler_t fn)
+{
+    s_log_handler = fn;
+}
+
+static int l_print(bvm *vm)
+{
+    static char buf[512];
+    int n = be_top(vm);
+    int pos = 0;
+    for (int i = 1; i <= n; i++) {
+        if (i > 1 && pos < (int)sizeof(buf) - 1) buf[pos++] = ' ';
+        const char *s = be_tostring(vm, i);
+        if (s) {
+            size_t len = strlen(s);
+            size_t avail = sizeof(buf) - 1 - pos;
+            if (len > avail) len = avail;
+            memcpy(buf + pos, s, len);
+            pos += (int)len;
+        }
+        if (pos >= (int)sizeof(buf) - 1) break;
+    }
+    buf[pos] = '\0';
+
+    if (s_log_handler) s_log_handler(buf);
+    else ESP_LOGI(TAG_BB, "%s", buf);
+    be_return_nil(vm);
+}
+
 /* ---- millis() helper ---- */
 
 static int l_millis(bvm *vm)
@@ -679,4 +718,5 @@ void berry_register_bindings(bvm *vm)
     be_regfunc(vm, "action_list",     l_action_list);
 
     be_regfunc(vm, "millis", l_millis);
+    be_regfunc(vm, "print", l_print);
 }

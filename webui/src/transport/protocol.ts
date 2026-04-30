@@ -14,6 +14,12 @@ export interface ScriptInfo {
   error?: string;
 }
 
+export interface SignalValue {
+  value: number;
+  prev: number;
+  changed: boolean;
+}
+
 type Pending = {
   resolve: (value: any) => void;
   reject: (err: Error) => void;
@@ -26,6 +32,10 @@ export class Protocol {
   private nextId = 1;
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
+  private logCallback: ((msg: string) => void) | null = null;
+
+  /** Register a callback for Berry print() log lines pushed from the device. */
+  onLog(cb: (msg: string) => void) { this.logCallback = cb; }
 
   // Conservative chunk size for BLE writes. Real MTU is usually higher
   // after negotiation, but Web Bluetooth doesn't expose it. 100 B works
@@ -87,6 +97,11 @@ export class Protocol {
 
       try {
         const resp = JSON.parse(text);
+        // Push frame: firmware-initiated, no id, has a type field.
+        if (resp.type !== undefined) {
+          if (resp.type === 'log' && this.logCallback) this.logCallback(resp.msg ?? '');
+          continue;
+        }
         const p = this.pending.get(resp.id);
         if (!p) {
           console.warn('Unsolicited response', resp);
@@ -137,5 +152,10 @@ export class Protocol {
 
   invokeAction(name: string): Promise<void> {
     return this.call('action.invoke', { name });
+  }
+
+  /** Returns current signal state, or null if the signal is not found / no DBC loaded. */
+  getSignalValue(name: string, bus = 0): Promise<SignalValue | null> {
+    return this.call('signal.value', { name, bus });
   }
 }

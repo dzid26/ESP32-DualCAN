@@ -4,6 +4,8 @@
 #include "can/can.h"
 
 void berry_set_buses(can_t *bus0, can_t *bus1);
+/* Returns NULL for an out-of-range or unconfigured index. */
+can_t *berry_get_bus(int bus);
 void berry_register_bindings(bvm *vm);
 
 /* ---- Per-script context ----
@@ -36,6 +38,14 @@ int  berry_call_ref(bvm *vm, int ref);
 /* Poll all timers; fire any whose next_fire_ms has passed. Call once per
  * main-loop iteration. */
 void berry_timer_tick(uint32_t now_ms);
+
+/* ---- Log streaming ---- */
+
+/* Callback type for Berry print() output. msg is a null-terminated string. */
+typedef void (*berry_log_handler_t)(const char *msg);
+
+/* Register (or clear, pass NULL) a handler for Berry print() calls. */
+void berry_set_log_handler(berry_log_handler_t fn);
 
 /* ---- Action invocation ---- */
 

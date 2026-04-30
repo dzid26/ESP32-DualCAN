@@ -9,6 +9,7 @@
 
 #include "ble/ble_transport.h"
 #include "scripting/berry_bindings.h"
+#include "can/can.h"
 
 static const char *TAG = "proto";
 
@@ -81,6 +82,17 @@ static void send_err(int id, const char *msg)
     cJSON_AddStringToObject(resp, "error", msg);
     send_frame(resp);
     cJSON_Delete(resp);
+}
+
+/* ---- unsolicited push ---- */
+
+static void log_push_handler(const char *msg)
+{
+    cJSON *push = cJSON_CreateObject();
+    cJSON_AddStringToObject(push, "type", "log");
+    cJSON_AddStringToObject(push, "msg", msg);
+    send_frame(push);
+    cJSON_Delete(push);
 }
 
 /* ---- command handlers ---- */
@@ -213,6 +225,28 @@ static void handle_action_invoke(int id, cJSON *req)
     else               send_ok(id, NULL);
 }
 
+static void handle_signal_value(int id, cJSON *req)
+{
+    const cJSON *name_j = cJSON_GetObjectItem(req, "name");
+    if (!cJSON_IsString(name_j)) { send_err(id, "missing name"); return; }
+
+    int bus_idx = 0;
+    const cJSON *bus_j = cJSON_GetObjectItem(req, "bus");
+    if (cJSON_IsNumber(bus_j)) bus_idx = bus_j->valueint;
+
+    can_t *eng = berry_get_bus(bus_idx);
+    if (!eng) { send_err(id, "invalid bus"); return; }
+
+    const signal_state_t *s = can_signal(eng, name_j->valuestring);
+    if (!s) { send_ok(id, NULL); return; }   /* null result = not found */
+
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddNumberToObject(result, "value",   s->value);
+    cJSON_AddNumberToObject(result, "prev",    s->prev);
+    cJSON_AddBoolToObject  (result, "changed", s->changed);
+    send_ok(id, result);
+}
+
 /* ---- frame parser / dispatch ---- */
 
 static void dispatch_frame(const uint8_t *payload, size_t len)
@@ -245,6 +279,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "script.delete") == 0)  handle_script_delete(id, req);
     else if (strcmp(op_s, "action.list") == 0)    handle_action_list(id);
     else if (strcmp(op_s, "action.invoke") == 0)  handle_action_invoke(id, req);
+    else if (strcmp(op_s, "signal.value") == 0)   handle_signal_value(id, req);
     else send_err(id, "unknown op");
 
     cJSON_Delete(req);
@@ -292,4 +327,5 @@ void protocol_init(script_loader_t *loader)
 {
     s_loader = loader;
     s_rx_len = 0;
+    berry_set_log_handler(log_push_handler);
 }
