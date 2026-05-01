@@ -23,7 +23,7 @@
 
 static const char *TAG = "dorky";
 
-#define LED_GPIO        GPIO_NUM_15
+#define BLUE_LED_GPIO        GPIO_NUM_15
 
 #define PIN_CAN0_TX     GPIO_NUM_2
 #define PIN_CAN0_RX     GPIO_NUM_1
@@ -39,8 +39,8 @@ static can_t bus0, bus1;
 
 static void hw_init(void)
 {
-    gpio_reset_pin(LED_GPIO);
-    gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(BLUE_LED_GPIO);
+    gpio_set_direction(BLUE_LED_GPIO, GPIO_MODE_OUTPUT);
     led_rgb_init();
 
     can_bus_config_t c0 = {
@@ -89,7 +89,7 @@ void app_main(void)
         if (rx_count > 0) {
             led_on_until = now + 50;
         }
-        gpio_set_level(LED_GPIO, now < led_on_until ? 1 : 0);
+        gpio_set_level(BLUE_LED_GPIO, now < led_on_until ? 1 : 0);
 
         if ((tick % 1000) == 0) {
             ESP_LOGI(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
