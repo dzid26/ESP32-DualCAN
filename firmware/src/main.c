@@ -81,6 +81,7 @@ void app_main(void)
     while (1) {
         uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
         int rx_count = 0;
+        protocol_tick();
         rx_count += can_poll(&bus0, now);
         rx_count += can_poll(&bus1, now);
         berry_timer_tick(now);

@@ -28,3 +28,8 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx);
 /* Initialize the protocol layer. The loader is shared state used to
  * service script.* commands. */
 void protocol_init(script_loader_t *loader);
+
+/* Process any queued frames. Call from the main task once per loop so that
+ * all Berry VM access happens on a single task (avoids races with the NimBLE
+ * task that calls protocol_on_ble_write). */
+void protocol_tick(void);

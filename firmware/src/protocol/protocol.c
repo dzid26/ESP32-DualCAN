@@ -6,6 +6,8 @@
 
 #include "cJSON.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
 #include "ble/ble_transport.h"
 #include "scripting/berry_bindings.h"
@@ -15,10 +17,14 @@ static const char *TAG = "proto";
 
 #define RX_BUF_MAX          (16 * 1024)     /* enough for a 10 KB script */
 #define FRAME_HDR_LEN       4
+#define DISPATCH_QUEUE_LEN  8
+
+typedef struct { uint8_t *data; size_t len; } frame_item_t;
 
 static script_loader_t *s_loader;
 static uint8_t          s_rx_buf[RX_BUF_MAX];
 static size_t           s_rx_len;
+static QueueHandle_t    s_frame_queue;
 
 /* ---- helpers ---- */
 
@@ -311,7 +317,17 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx)
         if (s_rx_len < FRAME_HDR_LEN + jlen) {
             return;  /* need more bytes */
         }
-        dispatch_frame(s_rx_buf + FRAME_HDR_LEN, jlen);
+        /* Hand the frame to the main task so Berry VM access stays
+         * on one task. NimBLE task only does framing, not dispatch. */
+        uint8_t *copy = malloc(jlen);
+        if (copy) {
+            memcpy(copy, s_rx_buf + FRAME_HDR_LEN, jlen);
+            frame_item_t fi = { copy, jlen };
+            if (xQueueSend(s_frame_queue, &fi, 0) != pdTRUE) {
+                ESP_LOGW(TAG, "dispatch queue full, frame dropped");
+                free(copy);
+            }
+        }
 
         /* Shift remaining bytes to the front. */
         size_t consumed = FRAME_HDR_LEN + jlen;
@@ -323,9 +339,19 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx)
     }
 }
 
+void protocol_tick(void)
+{
+    frame_item_t fi;
+    while (xQueueReceive(s_frame_queue, &fi, 0) == pdTRUE) {
+        dispatch_frame(fi.data, fi.len);
+        free(fi.data);
+    }
+}
+
 void protocol_init(script_loader_t *loader)
 {
     s_loader = loader;
     s_rx_len = 0;
+    s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
     berry_set_log_handler(log_push_handler);
 }
