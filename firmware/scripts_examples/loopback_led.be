@@ -26,7 +26,7 @@ def tick_fn()
   # Bridge: forward any CAN0 rx to CAN1
   rx = can_receive(0)
   while rx != nil
-    can_send(1, rx[0], rx[1])
+    can_send(1, rx.item(0), rx.item(1))
     rx = can_receive(0)
   end
 end

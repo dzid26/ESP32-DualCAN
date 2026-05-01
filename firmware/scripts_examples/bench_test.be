@@ -20,13 +20,13 @@ def tick_fn()
   # Drain and print any received frames (from loopback or external)
   var rx = can_receive(0)
   while rx != nil
-    print("bus0 rx: 0x" .. format("%03X", rx[0]))
+    print("bus0 rx: 0x" .. format("%03X", rx.item(0)))
     rx = can_receive(0)
   end
 
   rx = can_receive(1)
   while rx != nil
-    print("bus1 rx: 0x" .. format("%03X", rx[0]))
+    print("bus1 rx: 0x" .. format("%03X", rx.item(0)))
     rx = can_receive(1)
   end
 

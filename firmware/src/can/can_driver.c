@@ -89,7 +89,7 @@ esp_err_t can_bus_send(int bus_id, uint32_t id,
     }
     esp_err_t err = twai_transmit_v2(s_buses[bus_id], &msg, pdMS_TO_TICKS(timeout_ms));
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "bus%d tx 0x%03" PRIx32 " [%d]", bus_id, id, len);
+        ESP_LOGD(TAG, "bus%d tx 0x%03" PRIx32 " [%d]", bus_id, id, len);
     }
     return err;
 }
@@ -99,7 +99,11 @@ esp_err_t can_bus_receive(int bus_id, twai_message_t *out, uint32_t timeout_ms)
     if (bus_id < 0 || bus_id >= CAN_BUS_COUNT || s_buses[bus_id] == NULL || !out) {
         return ESP_ERR_INVALID_STATE;
     }
-    return twai_receive_v2(s_buses[bus_id], out, pdMS_TO_TICKS(timeout_ms));
+    esp_err_t err = twai_receive_v2(s_buses[bus_id], out, pdMS_TO_TICKS(timeout_ms));
+    if (err == ESP_OK) {
+        ESP_LOGD(TAG, "bus%d rx 0x%03" PRIx32 " [%d]", bus_id, out->identifier, out->data_length_code);
+    }
+    return err;
 }
 
 esp_err_t can_bus_status(int bus_id, twai_status_info_t *out)
