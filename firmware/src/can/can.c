@@ -57,12 +57,34 @@ static int msg_index(const can_t *c, uint32_t id)
     return m ? (int)(m - c->dbc.msgs) : -1;
 }
 
+static void rx_buf_push(can_t *c, const twai_message_t *frame)
+{
+    if (c->rx_count >= CAN_RX_BUF) {
+        /* Buffer full — drop oldest to make room. */
+        c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
+        c->rx_count--;
+    }
+    uint8_t tail = (c->rx_head + c->rx_count) % CAN_RX_BUF;
+    c->rx_buf[tail] = *frame;
+    c->rx_count++;
+}
+
+bool can_rx_pop(can_t *c, twai_message_t *out)
+{
+    if (c->rx_count == 0) return false;
+    *out = c->rx_buf[c->rx_head];
+    c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
+    c->rx_count--;
+    return true;
+}
+
 int can_poll(can_t *c, uint32_t now_ms)
 {
     int rx_count = 0;
     twai_message_t rx;
     while (can_bus_receive(c->bus_id, &rx, 0) == ESP_OK) {
         rx_count++;
+        rx_buf_push(c, &rx);
         if (!c->loaded) continue;
 
         int mi = msg_index(c, rx.identifier);

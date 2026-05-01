@@ -3,11 +3,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "driver/twai.h"
 #include "dbc/dbc_pack.h"
 #include "can/msg_codec.h"
 #include "can/rate_limit.h"
 
 #define CAN_MAX_CALLBACKS 32
+#define CAN_RX_BUF        16  /* per-bus software ring buffer depth for Berry scripts */
 
 typedef void (*can_signal_cb_t)(int sig_idx, float value, float prev, void *ctx);
 
@@ -30,12 +32,19 @@ typedef struct {
 
     struct { int sig_idx; can_signal_cb_t cb; void *ctx; int tag; } callbacks[CAN_MAX_CALLBACKS];
     int                cb_count;
+
+    /* Software RX ring buffer: can_poll fills this so Berry can_receive()
+     * sees frames that arrived before the timer callback fires. */
+    twai_message_t     rx_buf[CAN_RX_BUF];
+    uint8_t            rx_head;
+    uint8_t            rx_count;
 } can_t;
 
 int  can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
               tx_finalize_fn_t finalize);
 void can_free(can_t *c);
 int  can_poll(can_t *c, uint32_t now_ms);
+bool can_rx_pop(can_t *c, twai_message_t *out);
 
 int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag);
 void can_off_by_tag(can_t *c, int tag);   /* remove every callback registered with this tag */

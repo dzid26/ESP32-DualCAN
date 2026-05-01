@@ -91,7 +91,7 @@ void app_main(void)
         }
         gpio_set_level(LED_GPIO, now < led_on_until ? 1 : 0);
 
-        if ((tick % 100) == 0) {
+        if ((tick % 1000) == 0) {
             ESP_LOGI(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
                      tick, (uint32_t)esp_get_free_heap_size());
             

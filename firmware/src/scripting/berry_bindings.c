@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "can/can.h"
 #include "can/can_driver.h"
 #include "led/led_rgb.h"
 #include "storage/state.h"
@@ -458,8 +459,10 @@ static int l_can_receive(bvm *vm)
 {
     if (be_top(vm) >= 1 && be_isint(vm, 1)) {
         int bus = be_toint(vm, 1);
+        can_t *c = get_bus(bus);
+        if (!c) be_return_nil(vm);
         twai_message_t rx;
-        if (can_bus_receive(bus, &rx, 0) == ESP_OK) {
+        if (can_rx_pop(c, &rx)) {
             be_newlist(vm);
             be_pushint(vm, (bint)rx.identifier);
             be_data_push(vm, -2);
