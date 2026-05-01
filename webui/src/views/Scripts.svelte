@@ -83,6 +83,15 @@
     }
   }
 
+  async function toggleAll(checked: boolean) {
+    const targets = checked
+      ? scripts.filter(s => !s.enabled)
+      : scripts.filter(s => s.enabled);
+    for (const s of targets) {
+      await toggleScript(s, checked);
+    }
+  }
+
   async function deleteScript(fn: string) {
     busy = true;
     status = `deleting ${fn}...`;
@@ -133,7 +142,18 @@
   <p class="status">{status}</p>
 
   {#if scripts.length > 0}
-    <h3>Scripts on device</h3>
+    <div class="list-header">
+      <h3>Scripts on device</h3>
+      <label class="master-toggle" title={scripts.some(s => s.enabled) ? 'Disable all' : 'Enable all'}>
+        <input
+          type="checkbox"
+          checked={scripts.every(s => s.enabled)}
+          disabled={!connected || busy}
+          onchange={(e) => toggleAll((e.currentTarget as HTMLInputElement).checked)}
+        />
+        <span>{scripts.some(s => s.enabled) ? 'disable all' : 'enable all'}</span>
+      </label>
+    </div>
     <ul class="script-list">
       {#each scripts as s}
         <li>
@@ -216,6 +236,26 @@
     color: #888;
     font-size: 0.85rem;
     min-height: 1.2em;
+  }
+  .list-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+  .list-header h3 { margin: 0; }
+  .master-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: #888;
+    cursor: pointer;
+  }
+  .master-toggle input[type="checkbox"] {
+    width: 0.9rem;
+    height: 0.9rem;
+    accent-color: #56b870;
   }
   .script-list {
     list-style: none;
