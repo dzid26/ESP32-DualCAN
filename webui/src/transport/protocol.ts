@@ -108,7 +108,7 @@ export class Protocol {
           continue;
         }
         this.pending.delete(resp.id);
-        if (resp.ok) p.resolve(resp.result);
+        if (resp.ok) p.resolve(resp.result ?? null);
         else p.reject(new Error(resp.error || 'Request failed'));
       } catch (e) {
         console.error('Bad frame', text, e);
