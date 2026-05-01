@@ -88,8 +88,10 @@ void app_main(void)
         berry_timer_tick(now);
 
         static uint32_t led_on_until = 0;
-        if (rx_count > 0) {
+        static uint32_t led_last_blink = 0;
+        if (rx_count > 0 && (now - led_last_blink) >= 200) {
             led_on_until = now + 50;
+            led_last_blink = now;
         }
         gpio_set_level(BLUE_LED_GPIO, now < led_on_until ? 1 : 0);
 
