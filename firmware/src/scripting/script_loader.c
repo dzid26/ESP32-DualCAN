@@ -143,6 +143,8 @@ int script_loader_enable(script_loader_t *loader, int idx)
         berry_release_ref(vm, loop_ref);
     }
 
+    ESP_LOGI(TAG, "Enabled: %s (script_id=%d)", s->filename, s->script_id);
+
     /* Call setup() via captured ref. */
     if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref) == -2) {
         snprintf(s->error, sizeof(s->error), "setup() raised");
@@ -161,7 +163,6 @@ int script_loader_enable(script_loader_t *loader, int idx)
     s->loaded = true;
     s->enabled = true;
     s->errored = false;
-    ESP_LOGI(TAG, "Enabled: %s (script_id=%d)", s->filename, s->script_id);
     return 0;
 }
 

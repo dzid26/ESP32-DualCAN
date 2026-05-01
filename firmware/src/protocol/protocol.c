@@ -104,7 +104,6 @@ static void handle_ping(int id)
 
 static void handle_script_list(int id)
 {
-    /* Rescan to pick up any new files. */
     script_loader_scan(s_loader, s_loader->vm);
 
     cJSON *arr = cJSON_CreateArray();
@@ -142,7 +141,8 @@ static void handle_script_write(int id, cJSON *req)
     if (idx >= 0) {
         script_loader_disable(s_loader, idx);
     }
-    script_loader_scan(s_loader, s_loader->vm);
+    int n = script_loader_scan(s_loader, s_loader->vm);
+    ESP_LOGI(TAG, "script.write %s: %d scripts total", fn->valuestring, n);
     send_ok(id, NULL);
 }
 

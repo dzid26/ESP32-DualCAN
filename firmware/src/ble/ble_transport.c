@@ -195,6 +195,9 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
         return -1;
     }
 
+    /* NimBLE logs a line per GATT notify at DEBUG level — too noisy in normal use. */
+    esp_log_level_set("NimBLE", ESP_LOG_WARN);
+
     ble_hs_cfg.reset_cb = on_reset;
     ble_hs_cfg.sync_cb = on_sync;
 

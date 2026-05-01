@@ -53,7 +53,7 @@
     try {
       await proto.enableScript(fn);
       status = `enabled ${fn}`;
-      await refresh();
+      scripts = scripts.map(s => s.filename === fn ? { ...s, enabled: true, errored: false } : s);
     } catch (e: any) {
       status = `enable failed: ${e.message}`;
     } finally {
@@ -67,7 +67,7 @@
     try {
       await proto.disableScript(fn);
       status = `disabled ${fn}`;
-      await refresh();
+      scripts = scripts.map(s => s.filename === fn ? { ...s, enabled: false } : s);
     } catch (e: any) {
       status = `disable failed: ${e.message}`;
     } finally {
@@ -89,7 +89,7 @@
     try {
       await proto.deleteScript(fn);
       status = `deleted ${fn}`;
-      await refresh();
+      scripts = scripts.filter(s => s.filename !== fn);
     } catch (e: any) {
       status = `delete failed: ${e.message}`;
     } finally {
