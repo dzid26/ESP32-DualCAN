@@ -9,6 +9,7 @@
 #include "esp_log.h"
 
 static const char *TAG = "scripts";
+#define ENABLED_FILE SCRIPT_DIR "/.enabled"
 static script_entry_t s_scan_existing[SCRIPT_MAX_COUNT];
 static int            s_next_script_id = 1;   /* 0 reserved for "no context" */
 
@@ -243,4 +244,39 @@ int script_loader_read(const char *filename, char *buf, size_t buf_size)
     buf[nread] = '\0';
     fclose(f);
     return nread;
+}
+
+void script_loader_save_enabled(const script_loader_t *loader)
+{
+    FILE *f = fopen(ENABLED_FILE, "w");
+    if (!f) {
+        ESP_LOGW(TAG, "cannot write %s", ENABLED_FILE);
+        return;
+    }
+    for (int i = 0; i < loader->count; i++) {
+        if (loader->scripts[i].enabled) {
+            fprintf(f, "%s\n", loader->scripts[i].filename);
+        }
+    }
+    fclose(f);
+}
+
+void script_loader_restore_enabled(script_loader_t *loader)
+{
+    FILE *f = fopen(ENABLED_FILE, "r");
+    if (!f) return;   /* no saved state — first boot */
+
+    char line[SCRIPT_MAX_NAME];
+    while (fgets(line, sizeof(line), f)) {
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\n') line[--len] = '\0';
+        if (len == 0) continue;
+        for (int i = 0; i < loader->count; i++) {
+            if (strcmp(loader->scripts[i].filename, line) == 0) {
+                script_loader_enable(loader, i);
+                break;
+            }
+        }
+    }
+    fclose(f);
 }

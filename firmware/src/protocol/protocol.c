@@ -178,6 +178,7 @@ static void handle_script_enable(int id, cJSON *req)
         send_err(id, s_loader->scripts[idx].error);
         return;
     }
+    script_loader_save_enabled(s_loader);
     send_ok(id, NULL);
 }
 
@@ -190,6 +191,7 @@ static void handle_script_disable(int id, cJSON *req)
     if (idx < 0) { send_err(id, "no such script"); return; }
 
     script_loader_disable(s_loader, idx);
+    script_loader_save_enabled(s_loader);
     send_ok(id, NULL);
 }
 

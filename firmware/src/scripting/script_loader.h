@@ -46,3 +46,11 @@ int script_loader_read(const char *filename, char *buf, size_t buf_size);
 
 /* Delete a script file from SCRIPT_DIR. Disables it first if loaded. */
 int script_loader_delete(script_loader_t *loader, const char *filename);
+
+/* Persist the set of currently-enabled scripts to SCRIPT_DIR/.enabled.
+ * Call after any enable or disable operation. */
+void script_loader_save_enabled(const script_loader_t *loader);
+
+/* Read SCRIPT_DIR/.enabled and enable each listed script.
+ * Call once after script_loader_scan() on boot. */
+void script_loader_restore_enabled(script_loader_t *loader);

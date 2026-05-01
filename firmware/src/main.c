@@ -74,6 +74,7 @@ void app_main(void)
 
     static script_loader_t loader;
     script_loader_scan(&loader, vm);
+    script_loader_restore_enabled(&loader);
     protocol_init(&loader);
     dorky_ble_init(protocol_on_ble_write, NULL);
 
