@@ -432,7 +432,7 @@ nvs,        data, nvs,     0x9000,  0x6000
 otadata,    data, ota,     0xf000,  0x2000
 app0,       app,  ota_0,   0x10000, 0x1C0000
 app1,       app,  ota_1,   ,        0x1C0000
-littlefs,   data, spiffs,  ,        0xC0000
+littlefs,   data, littlefs, ,        0xC0000
 ```
 
 Sizes are a starting point; tune after first real build.
