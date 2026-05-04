@@ -74,9 +74,16 @@ void app_main(void)
 
     static script_loader_t loader;
     script_loader_scan(&loader, vm);
-    script_loader_restore_enabled(&loader);
+    /* Defer restore_enabled until we've seen a CAN frame OR the startup window
+     * elapses — keeps a faulty script from sending into a dead bus on boot. */
     protocol_init(&loader);
     dorky_ble_init(protocol_on_ble_write, NULL);
+
+    /* Startup-delay guardrail: don't enable user scripts until we've seen the
+     * buses come alive, or until this timeout fires. */
+    const uint32_t STARTUP_DELAY_MS = 5000;
+    bool scripts_restored = false;
+    uint32_t boot_ms = (uint32_t)(esp_timer_get_time() / 1000);
 
     uint32_t tick = 0;
     while (1) {
@@ -86,6 +93,16 @@ void app_main(void)
         rx_count += can_poll(&bus0, now);
         rx_count += can_poll(&bus1, now);
         berry_timer_tick(now);
+
+        if (!scripts_restored) {
+            bool elapsed = (now - boot_ms) >= STARTUP_DELAY_MS;
+            if (rx_count > 0 || elapsed) {
+                ESP_LOGI(TAG, "enabling persisted scripts (%s)",
+                         rx_count > 0 ? "bus alive" : "timeout");
+                script_loader_restore_enabled(&loader);
+                scripts_restored = true;
+            }
+        }
 
         static uint32_t led_on_until = 0;
         static uint32_t led_last_blink = 0;
