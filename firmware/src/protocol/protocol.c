@@ -10,6 +10,7 @@
 #include "freertos/queue.h"
 
 #include "ble/ble_transport.h"
+#include "protocol/frame_buf.h"
 #include "scripting/berry_bindings.h"
 #include "can/can.h"
 
@@ -23,7 +24,7 @@ typedef struct { uint8_t *data; size_t len; } frame_item_t;
 
 static script_loader_t *s_loader;
 static uint8_t          s_rx_buf[RX_BUF_MAX];
-static size_t           s_rx_len;
+static frame_buf_t      s_rx_fb;
 static QueueHandle_t    s_frame_queue;
 
 /* ---- helpers ---- */
@@ -297,47 +298,33 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx)
 {
     (void)ctx;
 
-    if (s_rx_len + len > sizeof(s_rx_buf)) {
-        ESP_LOGE(TAG, "rx buffer overflow (%zu + %zu), resetting", s_rx_len, len);
-        s_rx_len = 0;
+    if (frame_buf_append(&s_rx_fb, data, len) != 0) {
+        ESP_LOGE(TAG, "rx buffer overflow, resetting");
         return;
     }
-    memcpy(s_rx_buf + s_rx_len, data, len);
-    s_rx_len += len;
 
-    /* Drain as many complete frames as we have. */
-    while (s_rx_len >= FRAME_HDR_LEN) {
-        uint32_t jlen = (uint32_t)s_rx_buf[0]
-                      | ((uint32_t)s_rx_buf[1] << 8)
-                      | ((uint32_t)s_rx_buf[2] << 16)
-                      | ((uint32_t)s_rx_buf[3] << 24);
-        if (jlen > sizeof(s_rx_buf) - FRAME_HDR_LEN) {
-            ESP_LOGE(TAG, "frame length %" PRIu32 " exceeds buffer", jlen);
-            s_rx_len = 0;
+    /* Drain every complete frame and hand it to the main task — keeps Berry
+     * VM access on one task (NimBLE only frames, never dispatches). */
+    for (;;) {
+        const uint8_t *payload;
+        size_t plen;
+        int rc = frame_buf_next(&s_rx_fb, &payload, &plen);
+        if (rc == 0) break;
+        if (rc < 0) {
+            ESP_LOGE(TAG, "frame length exceeds buffer, resetting");
             return;
         }
-        if (s_rx_len < FRAME_HDR_LEN + jlen) {
-            return;  /* need more bytes */
-        }
-        /* Hand the frame to the main task so Berry VM access stays
-         * on one task. NimBLE task only does framing, not dispatch. */
-        uint8_t *copy = malloc(jlen);
+
+        uint8_t *copy = malloc(plen);
         if (copy) {
-            memcpy(copy, s_rx_buf + FRAME_HDR_LEN, jlen);
-            frame_item_t fi = { copy, jlen };
+            memcpy(copy, payload, plen);
+            frame_item_t fi = { copy, plen };
             if (xQueueSend(s_frame_queue, &fi, 0) != pdTRUE) {
                 ESP_LOGW(TAG, "dispatch queue full, frame dropped");
                 free(copy);
             }
         }
-
-        /* Shift remaining bytes to the front. */
-        size_t consumed = FRAME_HDR_LEN + jlen;
-        size_t remaining = s_rx_len - consumed;
-        if (remaining > 0) {
-            memmove(s_rx_buf, s_rx_buf + consumed, remaining);
-        }
-        s_rx_len = remaining;
+        frame_buf_consume(&s_rx_fb);
     }
 }
 
@@ -353,7 +340,7 @@ void protocol_tick(void)
 void protocol_init(script_loader_t *loader)
 {
     s_loader = loader;
-    s_rx_len = 0;
+    frame_buf_init(&s_rx_fb, s_rx_buf, sizeof(s_rx_buf));
     s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
     berry_set_log_handler(log_push_handler);
 }
