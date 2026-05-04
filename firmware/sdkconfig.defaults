@@ -14,6 +14,11 @@ CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_ESP_PARTITION_TABLE_CUSTOM=y
 CONFIG_ESP_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
+# Match the ESP32-C6-SuperMini module flash size. PlatformIO's board setting
+# also says 4 MB, but ESP-IDF's generated sdkconfig otherwise defaults to 2 MB.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+
 # BLE (NimBLE — the only stack supported on ESP32-C6).
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y
