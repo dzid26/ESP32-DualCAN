@@ -234,6 +234,25 @@ static void handle_action_invoke(int id, cJSON *req)
     else               send_ok(id, NULL);
 }
 
+static void handle_sim_set(int id, cJSON *req)
+{
+    const cJSON *enabled_j = cJSON_GetObjectItem(req, "enabled");
+    if (!cJSON_IsBool(enabled_j)) { send_err(id, "missing enabled"); return; }
+    bool enabled = cJSON_IsTrue(enabled_j);
+
+    /* Optional bus filter; default to both buses. */
+    int bus_filter = -1;
+    const cJSON *bus_j = cJSON_GetObjectItem(req, "bus");
+    if (cJSON_IsNumber(bus_j)) bus_filter = bus_j->valueint;
+
+    for (int b = 0; b < 2; b++) {
+        if (bus_filter >= 0 && bus_filter != b) continue;
+        can_t *eng = berry_get_bus(b);
+        if (eng) can_set_sim_mode(eng, enabled);
+    }
+    send_ok(id, NULL);
+}
+
 static void handle_signal_value(int id, cJSON *req)
 {
     const cJSON *name_j = cJSON_GetObjectItem(req, "name");
@@ -289,6 +308,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "action.list") == 0)    handle_action_list(id);
     else if (strcmp(op_s, "action.invoke") == 0)  handle_action_invoke(id, req);
     else if (strcmp(op_s, "signal.value") == 0)   handle_signal_value(id, req);
+    else if (strcmp(op_s, "sim.set") == 0)        handle_sim_set(id, req);
     else send_err(id, "unknown op");
 
     cJSON_Delete(req);

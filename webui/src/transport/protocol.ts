@@ -158,4 +158,11 @@ export class Protocol {
   getSignalValue(name: string, bus = 0): Promise<SignalValue | null> {
     return this.call('signal.value', { name, bus });
   }
+
+  /** Toggle simulation mode (TX routed to log instead of bus). Optional bus filter. */
+  setSimMode(enabled: boolean, bus?: number): Promise<void> {
+    const params: Record<string, unknown> = { enabled };
+    if (bus !== undefined) params.bus = bus;
+    return this.call('sim.set', params);
+  }
 }
