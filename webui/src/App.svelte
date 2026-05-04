@@ -4,6 +4,7 @@
   import ScriptsView from './views/Scripts.svelte';
   import DbcView from './views/Dbc.svelte';
   import DashboardView from './views/Dashboard.svelte';
+  import TraceView from './views/Trace.svelte';
 
   const ble = new BleTransport();
   const proto = new Protocol(ble);
@@ -34,6 +35,7 @@
     <button class:active={activeView === 'scripts'} onclick={() => activeView = 'scripts'}>Scripts</button>
     <button class:active={activeView === 'dbc'} onclick={() => activeView = 'dbc'}>DBC</button>
     <button class:active={activeView === 'dashboard'} onclick={() => activeView = 'dashboard'}>Dashboard</button>
+    <button class:active={activeView === 'trace'} onclick={() => activeView = 'trace'}>Trace</button>
     <button class="connect" class:connected onclick={toggleConnect}>
       {connected ? 'Connected' : 'Connect BLE'}
     </button>
@@ -48,6 +50,8 @@
       <ScriptsView {proto} {connected} />
     {:else if activeView === 'dbc'}
       <DbcView transport={ble} {proto} {connected} />
+    {:else if activeView === 'trace'}
+      <TraceView {proto} {connected} />
     {:else}
       <DashboardView transport={ble} {proto} {connected} />
     {/if}

@@ -20,6 +20,13 @@ export interface SignalValue {
   changed: boolean;
 }
 
+export interface TraceFrame {
+  bus: number;
+  id: number;
+  ts: number;        // ms since boot
+  data: Uint8Array;
+}
+
 type Pending = {
   resolve: (value: any) => void;
   reject: (err: Error) => void;
@@ -33,9 +40,13 @@ export class Protocol {
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
   private logCallback: ((msg: string) => void) | null = null;
+  private traceCallback: ((f: TraceFrame) => void) | null = null;
 
   /** Register a callback for Berry print() log lines pushed from the device. */
   onLog(cb: (msg: string) => void) { this.logCallback = cb; }
+
+  /** Register a callback for trace frames pushed by the device. Pass null to clear. */
+  onTrace(cb: ((f: TraceFrame) => void) | null) { this.traceCallback = cb; }
 
   // Conservative chunk size for BLE writes. Real MTU is usually higher
   // after negotiation, but Web Bluetooth doesn't expose it. 100 B works
@@ -99,7 +110,12 @@ export class Protocol {
         const resp = JSON.parse(text);
         // Push frame: firmware-initiated, no id, has a type field.
         if (resp.type !== undefined) {
-          if (resp.type === 'log' && this.logCallback) this.logCallback(resp.msg ?? '');
+          if (resp.type === 'log' && this.logCallback) {
+            this.logCallback(resp.msg ?? '');
+          } else if (resp.type === 'trace' && this.traceCallback) {
+            const data = new Uint8Array(((resp.data ?? '') as string).match(/.{2}/g)?.map((h: string) => parseInt(h, 16)) ?? []);
+            this.traceCallback({ bus: resp.bus ?? 0, id: resp.id ?? 0, ts: resp.ts ?? 0, data });
+          }
           continue;
         }
         const p = this.pending.get(resp.id);
@@ -157,6 +173,15 @@ export class Protocol {
   /** Returns current signal state, or null if the signal is not found / no DBC loaded. */
   getSignalValue(name: string, bus = 0): Promise<SignalValue | null> {
     return this.call('signal.value', { name, bus });
+  }
+
+  /** Start streaming raw frames. `buses` defaults to both. */
+  traceStart(buses: number[] = [0, 1]): Promise<void> {
+    return this.call('trace.start', { buses });
+  }
+
+  traceStop(): Promise<void> {
+    return this.call('trace.stop');
   }
 
   /** Toggle simulation mode (TX routed to log instead of bus). Optional bus filter. */

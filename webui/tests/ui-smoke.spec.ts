@@ -37,6 +37,8 @@ async function mockConnected(page: Page, actionNames: string[] = []) {
           else if (req.op === 'action.list') result = { actions };
           else if (req.op === 'action.invoke') result = null;
           else if (req.op === 'sim.set') result = null;
+          else if (req.op === 'trace.start') result = null;
+          else if (req.op === 'trace.stop') result = null;
           notify(frame({ id: req.id, ok: true, result }));
         } catch {}
       }
@@ -118,6 +120,13 @@ test.describe('page structure', () => {
     await expect(page.getByRole('heading', { name: 'DBC' })).toBeVisible();
   });
 
+  test('Trace view is reachable and Start is gated on connect', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Trace' }).click();
+    await expect(page.getByRole('heading', { name: 'Trace' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start' })).toBeDisabled();
+  });
+
 });
 
 test.describe('mock BLE connect', () => {
@@ -154,6 +163,19 @@ test.describe('mock BLE connect', () => {
     await expect(page.getByRole('button', { name: 'Connected' })).toBeVisible({ timeout: 5000 });
     await page.getByRole('button', { name: 'Dashboard' }).click();
     await expect(page.getByText('action_register')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('Trace Start/Stop round-trip', async ({ page }) => {
+    await mockConnected(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Connect BLE' }).click();
+    await expect(page.getByRole('button', { name: 'Connected' })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Trace' }).click();
+    await page.getByRole('button', { name: 'Start' }).click();
+    // Stop button replaces Start once running.
+    await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
+    await page.getByRole('button', { name: 'Stop' }).click();
+    await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
   });
 
   test('Sim mode toggle round-trip', async ({ page }) => {

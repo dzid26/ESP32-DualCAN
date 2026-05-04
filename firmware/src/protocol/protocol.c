@@ -27,6 +27,10 @@ static uint8_t          s_rx_buf[RX_BUF_MAX];
 static frame_buf_t      s_rx_fb;
 static QueueHandle_t    s_frame_queue;
 
+/* ---- trace state ---- */
+/* Bit 0 = bus 0 enabled, bit 1 = bus 1 enabled. 0 = trace off. */
+static uint8_t          s_trace_buses;
+
 /* ---- helpers ---- */
 
 static int find_script_idx(const char *filename)
@@ -98,6 +102,35 @@ static void log_push_handler(const char *msg)
     cJSON *push = cJSON_CreateObject();
     cJSON_AddStringToObject(push, "type", "log");
     cJSON_AddStringToObject(push, "msg", msg);
+    send_frame(push);
+    cJSON_Delete(push);
+}
+
+static const char HEX[] = "0123456789ABCDEF";
+
+static void trace_observer(int bus_id, const twai_message_t *frame, uint32_t now_ms)
+{
+    if (!s_trace_buses) return;
+    if (bus_id < 0 || bus_id > 7) return;
+    if (!(s_trace_buses & (1u << bus_id))) return;
+    if (!dorky_ble_connected()) return;
+
+    /* Hex-encode the data inline (max 16 chars + NUL). cJSON will copy it. */
+    char hex[17];
+    int dlc = frame->data_length_code;
+    if (dlc > 8) dlc = 8;
+    for (int i = 0; i < dlc; i++) {
+        hex[2*i]     = HEX[(frame->data[i] >> 4) & 0xF];
+        hex[2*i + 1] = HEX[frame->data[i] & 0xF];
+    }
+    hex[2*dlc] = '\0';
+
+    cJSON *push = cJSON_CreateObject();
+    cJSON_AddStringToObject(push, "type", "trace");
+    cJSON_AddNumberToObject(push, "bus", bus_id);
+    cJSON_AddNumberToObject(push, "id",  (double)frame->identifier);
+    cJSON_AddNumberToObject(push, "ts",  (double)now_ms);
+    cJSON_AddStringToObject(push, "data", hex);
     send_frame(push);
     cJSON_Delete(push);
 }
@@ -234,6 +267,33 @@ static void handle_action_invoke(int id, cJSON *req)
     else               send_ok(id, NULL);
 }
 
+static void handle_trace_start(int id, cJSON *req)
+{
+    /* Optional: { "buses": [0, 1] } — defaults to all buses. */
+    uint8_t mask = 0;
+    const cJSON *buses = cJSON_GetObjectItem(req, "buses");
+    if (cJSON_IsArray(buses)) {
+        cJSON *b;
+        cJSON_ArrayForEach(b, buses) {
+            if (cJSON_IsNumber(b)) {
+                int idx = b->valueint;
+                if (idx >= 0 && idx <= 7) mask |= (1u << idx);
+            }
+        }
+    }
+    if (mask == 0) mask = 0x03;   /* default: bus0+bus1 */
+    s_trace_buses = mask;
+    ESP_LOGI(TAG, "trace.start mask=0x%02x", mask);
+    send_ok(id, NULL);
+}
+
+static void handle_trace_stop(int id)
+{
+    s_trace_buses = 0;
+    ESP_LOGI(TAG, "trace.stop");
+    send_ok(id, NULL);
+}
+
 static void handle_sim_set(int id, cJSON *req)
 {
     const cJSON *enabled_j = cJSON_GetObjectItem(req, "enabled");
@@ -308,6 +368,8 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "action.list") == 0)    handle_action_list(id);
     else if (strcmp(op_s, "action.invoke") == 0)  handle_action_invoke(id, req);
     else if (strcmp(op_s, "signal.value") == 0)   handle_signal_value(id, req);
+    else if (strcmp(op_s, "trace.start") == 0)    handle_trace_start(id, req);
+    else if (strcmp(op_s, "trace.stop") == 0)     handle_trace_stop(id);
     else if (strcmp(op_s, "sim.set") == 0)        handle_sim_set(id, req);
     else send_err(id, "unknown op");
 
@@ -363,4 +425,5 @@ void protocol_init(script_loader_t *loader)
     frame_buf_init(&s_rx_fb, s_rx_buf, sizeof(s_rx_buf));
     s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
     berry_set_log_handler(log_push_handler);
+    can_set_raw_observer(trace_observer);
 }
