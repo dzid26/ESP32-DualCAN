@@ -53,19 +53,22 @@
   }
 
   // ---- Signal Watch ----
+  // Subscribe-and-stream model: the firmware pushes a {type:"signal"} frame
+  // whenever a watched signal's decoded value changes. We seed each row with
+  // a one-shot signal.value read so users see "—" for unknown signals and the
+  // current value for ones already received.
   const LS_KEY = 'dorky-watched-signals';
 
   interface WatchEntry {
     name: string;
     bus: number;
     state: SignalValue | null;
-    error: string | null;   // error message if last poll failed, else null
+    error: string | null;
   }
 
   let watched = $state<WatchEntry[]>(loadWatched());
   let signalInput = $state('');
   let busInput = $state(0);
-  let pollTimer: ReturnType<typeof setInterval> | null = null;
 
   // Default the bus selector to whichever bus the DBC was last uploaded to.
   $effect(() => {
@@ -86,43 +89,60 @@
     localStorage.setItem(LS_KEY, JSON.stringify(watched.map(w => ({ name: w.name, bus: w.bus }))));
   }
 
-  function addSignal() {
+  async function seedValue(name: string, bus: number) {
+    try {
+      const s = await proto.getSignalValue(name, bus);
+      watched = watched.map(w =>
+        w.name === name && w.bus === bus ? { ...w, state: s, error: null } : w
+      );
+    } catch (e: any) {
+      watched = watched.map(w =>
+        w.name === name && w.bus === bus ? { ...w, error: e?.message ?? String(e) } : w
+      );
+    }
+  }
+
+  async function addSignal() {
     const name = signalInput.trim();
     if (!name) return;
     if (watched.some(w => w.name === name && w.bus === busInput)) return;
-    watched = [...watched, { name, bus: busInput, state: null, error: null }];
+    const bus = busInput;
+    watched = [...watched, { name, bus, state: null, error: null }];
     signalInput = '';
     saveWatched();
+    if (connected) {
+      try { await proto.subscribeSignal(name, bus); } catch {}
+      seedValue(name, bus);
+    }
   }
 
-  function removeSignal(idx: number) {
+  async function removeSignal(idx: number) {
+    const w = watched[idx];
     watched = watched.filter((_, i) => i !== idx);
     saveWatched();
+    if (connected && w) {
+      try { await proto.unsubscribeSignal(w.name, w.bus); } catch {}
+    }
   }
 
-  async function pollSignals() {
-    if (!connected || watched.length === 0) return;
-    const next: WatchEntry[] = await Promise.all(
-      watched.map(async (w): Promise<WatchEntry> => {
-        try {
-          const s = await proto.getSignalValue(w.name, w.bus);
-          return { ...w, state: s, error: null };
-        } catch (e: any) {
-          return { ...w, error: e?.message ?? String(e) };
-        }
-      })
+  function onSignalPush(s: { name: string; bus: number; value: number; prev: number }) {
+    const nextState: SignalValue = { value: s.value, prev: s.prev, changed: true };
+    watched = watched.map(w =>
+      w.name === s.name && w.bus === s.bus ? { ...w, state: nextState, error: null } : w
     );
-    watched = next;
   }
 
-  function startPoll() {
-    if (pollTimer) return;
-    pollTimer = setInterval(pollSignals, 1000);
-    pollSignals();
+  async function subscribeAll() {
+    if (!connected) return;
+    for (const w of watched) {
+      try { await proto.subscribeSignal(w.name, w.bus); } catch {}
+      seedValue(w.name, w.bus);
+    }
   }
 
-  function stopPoll() {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  async function unsubscribeAll() {
+    if (!connected) return;
+    try { await proto.unsubscribeSignal(); } catch {}
   }
 
   // ---- Log ----
@@ -138,20 +158,20 @@
   // ---- Lifecycle ----
   onMount(() => {
     proto.onLog(pushLog);
+    proto.onSignal(onSignalPush);
     refreshActions();
   });
 
   onDestroy(() => {
     proto.onLog(() => {});
-    stopPoll();
+    proto.onSignal(null);
+    unsubscribeAll();
   });
 
   $effect(() => {
     if (connected) {
       refreshActions();
-      startPoll();
-    } else {
-      stopPoll();
+      subscribeAll();
     }
   });
 

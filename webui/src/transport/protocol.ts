@@ -27,6 +27,13 @@ export interface TraceFrame {
   data: Uint8Array;
 }
 
+export interface SignalUpdate {
+  name: string;
+  bus: number;
+  value: number;
+  prev: number;
+}
+
 type Pending = {
   resolve: (value: any) => void;
   reject: (err: Error) => void;
@@ -41,12 +48,16 @@ export class Protocol {
   private decoder = new TextDecoder();
   private logCallback: ((msg: string) => void) | null = null;
   private traceCallback: ((f: TraceFrame) => void) | null = null;
+  private signalCallback: ((s: SignalUpdate) => void) | null = null;
 
   /** Register a callback for Berry print() log lines pushed from the device. */
   onLog(cb: (msg: string) => void) { this.logCallback = cb; }
 
   /** Register a callback for trace frames pushed by the device. Pass null to clear. */
   onTrace(cb: ((f: TraceFrame) => void) | null) { this.traceCallback = cb; }
+
+  /** Register a callback for subscribed signal updates. Pass null to clear. */
+  onSignal(cb: ((s: SignalUpdate) => void) | null) { this.signalCallback = cb; }
 
   // Conservative chunk size for BLE writes. Real MTU is usually higher
   // after negotiation, but Web Bluetooth doesn't expose it. 100 B works
@@ -115,6 +126,13 @@ export class Protocol {
           } else if (resp.type === 'trace' && this.traceCallback) {
             const data = new Uint8Array(((resp.data ?? '') as string).match(/.{2}/g)?.map((h: string) => parseInt(h, 16)) ?? []);
             this.traceCallback({ bus: resp.bus ?? 0, id: resp.id ?? 0, ts: resp.ts ?? 0, data });
+          } else if (resp.type === 'signal' && this.signalCallback) {
+            this.signalCallback({
+              name: resp.name ?? '',
+              bus: resp.bus ?? 0,
+              value: resp.value ?? 0,
+              prev: resp.prev ?? 0,
+            });
           }
           continue;
         }
@@ -173,6 +191,18 @@ export class Protocol {
   /** Returns current signal state, or null if the signal is not found / no DBC loaded. */
   getSignalValue(name: string, bus = 0): Promise<SignalValue | null> {
     return this.call('signal.value', { name, bus });
+  }
+
+  /** Subscribe to a signal — pushes arrive via onSignal() until unsubscribed. */
+  subscribeSignal(name: string, bus = 0): Promise<void> {
+    return this.call('signal.subscribe', { name, bus });
+  }
+
+  /** Unsubscribe a single signal, or pass no name to clear all subscriptions. */
+  unsubscribeSignal(name?: string, bus = 0): Promise<void> {
+    const params: Record<string, unknown> = { bus };
+    if (name !== undefined) params.name = name;
+    return this.call('signal.unsubscribe', params);
   }
 
   /** Start streaming raw frames. `buses` defaults to both. */

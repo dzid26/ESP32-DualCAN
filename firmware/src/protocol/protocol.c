@@ -13,6 +13,7 @@
 #include "protocol/frame_buf.h"
 #include "scripting/berry_bindings.h"
 #include "can/can.h"
+#include "dbc/dbc_pack.h"
 
 static const char *TAG = "proto";
 
@@ -30,6 +31,24 @@ static QueueHandle_t    s_frame_queue;
 /* ---- trace state ---- */
 /* Bit 0 = bus 0 enabled, bit 1 = bus 1 enabled. 0 = trace off. */
 static uint8_t          s_trace_buses;
+
+/* ---- signal subscriptions ----
+ * Each entry uses can_on_change with a unique tag = SIG_SUB_TAG_BASE | slot.
+ * Tags above 0x10000000 never collide with script_ids (allocated 1..N from
+ * script_loader), so berry_cleanup_script never touches these. */
+#define SIG_SUB_MAX        16
+#define SIG_SUB_NAME_MAX   48
+#define SIG_SUB_TAG_BASE   0x10000000
+
+typedef struct {
+    bool in_use;
+    int  bus;
+    int  sig_idx;
+    char name[SIG_SUB_NAME_MAX];
+} sig_sub_t;
+static sig_sub_t s_sig_subs[SIG_SUB_MAX];
+
+static int sig_sub_slot_from_ctx(void *ctx) { return (int)(intptr_t)ctx; }
 
 /* ---- helpers ---- */
 
@@ -131,6 +150,25 @@ static void trace_observer(int bus_id, const twai_message_t *frame, uint32_t now
     cJSON_AddNumberToObject(push, "id",  (double)frame->identifier);
     cJSON_AddNumberToObject(push, "ts",  (double)now_ms);
     cJSON_AddStringToObject(push, "data", hex);
+    send_frame(push);
+    cJSON_Delete(push);
+}
+
+static void signal_sub_cb(int sig_idx, float value, float prev, void *ctx)
+{
+    (void)sig_idx;
+    if (!dorky_ble_connected()) return;
+    int slot = sig_sub_slot_from_ctx(ctx);
+    if (slot < 0 || slot >= SIG_SUB_MAX) return;
+    sig_sub_t *s = &s_sig_subs[slot];
+    if (!s->in_use) return;
+
+    cJSON *push = cJSON_CreateObject();
+    cJSON_AddStringToObject(push, "type", "signal");
+    cJSON_AddStringToObject(push, "name",  s->name);
+    cJSON_AddNumberToObject(push, "bus",   s->bus);
+    cJSON_AddNumberToObject(push, "value", (double)value);
+    cJSON_AddNumberToObject(push, "prev",  (double)prev);
     send_frame(push);
     cJSON_Delete(push);
 }
@@ -313,6 +351,72 @@ static void handle_sim_set(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
+static void handle_signal_subscribe(int id, cJSON *req)
+{
+    const cJSON *name_j = cJSON_GetObjectItem(req, "name");
+    if (!cJSON_IsString(name_j)) { send_err(id, "missing name"); return; }
+    int bus_idx = 0;
+    const cJSON *bus_j = cJSON_GetObjectItem(req, "bus");
+    if (cJSON_IsNumber(bus_j)) bus_idx = bus_j->valueint;
+
+    can_t *eng = berry_get_bus(bus_idx);
+    if (!eng) { send_err(id, "invalid bus"); return; }
+
+    int sig_idx = dbc_find_signal(&eng->dbc, name_j->valuestring);
+    if (sig_idx < 0) { send_err(id, "no such signal"); return; }
+
+    /* Idempotent re-subscribe: existing slot for the same (bus, sig)
+     * stays as-is so the can_on_change registration doesn't double up. */
+    int slot = -1;
+    for (int i = 0; i < SIG_SUB_MAX; i++) {
+        if (s_sig_subs[i].in_use &&
+            s_sig_subs[i].bus == bus_idx &&
+            s_sig_subs[i].sig_idx == sig_idx) {
+            send_ok(id, NULL);
+            return;
+        }
+        if (slot < 0 && !s_sig_subs[i].in_use) slot = i;
+    }
+    if (slot < 0) { send_err(id, "subscription table full"); return; }
+
+    s_sig_subs[slot].in_use  = true;
+    s_sig_subs[slot].bus     = bus_idx;
+    s_sig_subs[slot].sig_idx = sig_idx;
+    strncpy(s_sig_subs[slot].name, name_j->valuestring, SIG_SUB_NAME_MAX - 1);
+    s_sig_subs[slot].name[SIG_SUB_NAME_MAX - 1] = '\0';
+
+    int tag = SIG_SUB_TAG_BASE | slot;
+    if (can_on_change(eng, name_j->valuestring, signal_sub_cb,
+                      (void *)(intptr_t)slot, tag) != 0) {
+        s_sig_subs[slot].in_use = false;
+        send_err(id, "can_on_change failed");
+        return;
+    }
+    send_ok(id, NULL);
+}
+
+static void handle_signal_unsubscribe(int id, cJSON *req)
+{
+    /* No name → clear all. With name → match (bus, name). */
+    const cJSON *name_j = cJSON_GetObjectItem(req, "name");
+    int bus_idx = 0;
+    const cJSON *bus_j = cJSON_GetObjectItem(req, "bus");
+    if (cJSON_IsNumber(bus_j)) bus_idx = bus_j->valueint;
+    bool clear_all = !cJSON_IsString(name_j);
+
+    for (int i = 0; i < SIG_SUB_MAX; i++) {
+        if (!s_sig_subs[i].in_use) continue;
+        bool drop = clear_all ||
+            (s_sig_subs[i].bus == bus_idx &&
+             strcmp(s_sig_subs[i].name, name_j->valuestring) == 0);
+        if (!drop) continue;
+        can_t *eng = berry_get_bus(s_sig_subs[i].bus);
+        if (eng) can_off_by_tag(eng, SIG_SUB_TAG_BASE | i);
+        s_sig_subs[i].in_use = false;
+    }
+    send_ok(id, NULL);
+}
+
 static void handle_signal_value(int id, cJSON *req)
 {
     const cJSON *name_j = cJSON_GetObjectItem(req, "name");
@@ -367,7 +471,9 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "script.delete") == 0)  handle_script_delete(id, req);
     else if (strcmp(op_s, "action.list") == 0)    handle_action_list(id);
     else if (strcmp(op_s, "action.invoke") == 0)  handle_action_invoke(id, req);
-    else if (strcmp(op_s, "signal.value") == 0)   handle_signal_value(id, req);
+    else if (strcmp(op_s, "signal.value") == 0)        handle_signal_value(id, req);
+    else if (strcmp(op_s, "signal.subscribe") == 0)    handle_signal_subscribe(id, req);
+    else if (strcmp(op_s, "signal.unsubscribe") == 0)  handle_signal_unsubscribe(id, req);
     else if (strcmp(op_s, "trace.start") == 0)    handle_trace_start(id, req);
     else if (strcmp(op_s, "trace.stop") == 0)     handle_trace_stop(id);
     else if (strcmp(op_s, "sim.set") == 0)        handle_sim_set(id, req);

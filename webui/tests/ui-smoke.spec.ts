@@ -39,6 +39,9 @@ async function mockConnected(page: Page, actionNames: string[] = []) {
           else if (req.op === 'sim.set') result = null;
           else if (req.op === 'trace.start') result = null;
           else if (req.op === 'trace.stop') result = null;
+          else if (req.op === 'signal.subscribe') result = null;
+          else if (req.op === 'signal.unsubscribe') result = null;
+          else if (req.op === 'signal.value') result = null;
           notify(frame({ id: req.id, ok: true, result }));
         } catch {}
       }
