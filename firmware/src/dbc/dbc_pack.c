@@ -38,6 +38,7 @@ const dbc_msg_t *dbc_find_msg(const dbc_t *dbc, uint32_t id)
 
 int dbc_find_signal(const dbc_t *dbc, const char *name)
 {
+    if (!dbc || !dbc->hdr || !dbc->sigs) return -1;
     for (uint16_t i = 0; i < dbc->hdr->sig_count; i++) {
         if (strcmp(dbc_str(dbc, dbc->sigs[i].name_off), name) == 0) return (int)i;
     }

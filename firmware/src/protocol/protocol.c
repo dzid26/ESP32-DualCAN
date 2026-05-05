@@ -399,6 +399,7 @@ static void handle_signal_subscribe(int id, cJSON *req)
 
     can_t *eng = berry_get_bus(bus_idx);
     if (!eng) { send_err(id, "invalid bus"); return; }
+    if (!eng->loaded) { send_err(id, "no DBC loaded for bus"); return; }
 
     int sig_idx = dbc_find_signal(&eng->dbc, name_j->valuestring);
     if (sig_idx < 0) { send_err(id, "no such signal"); return; }
