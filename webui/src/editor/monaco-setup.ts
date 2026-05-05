@@ -10,9 +10,16 @@
  * calling registerBerry() twice is a no-op.
  */
 /* Import the editor API directly (not the umbrella `monaco-editor` entry,
- * which pulls every built-in language and balloons the bundle by ~3 MB). */
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
+ * which pulls every built-in language and balloons the bundle by ~3 MB).
+ * The subpath has no type declarations of its own, so we type-import from
+ * the umbrella entry — types are erased at compile time so this doesn't
+ * pull any of those modules into the runtime bundle. */
+// @ts-expect-error subpath has no .d.ts; types come from umbrella import below
+import * as monacoRuntime from 'monaco-editor/esm/vs/editor/editor.api';
+import type * as MonacoNS from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+
+const monaco = monacoRuntime as typeof MonacoNS;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (self as any).MonacoEnvironment = {
@@ -131,7 +138,7 @@ export function registerBerry(): void {
         startColumn:     word.startColumn,
         endColumn:       word.endColumn,
       };
-      const suggestions: monaco.languages.CompletionItem[] = API.map(b => ({
+      const suggestions: MonacoNS.languages.CompletionItem[] = API.map(b => ({
         label: b.label,
         kind:  monaco.languages.CompletionItemKind.Function,
         insertText:    b.label,

@@ -43,6 +43,8 @@ async function mockConnected(page: Page, actionNames: string[] = []) {
           else if (req.op === 'signal.subscribe') result = null;
           else if (req.op === 'signal.unsubscribe') result = null;
           else if (req.op === 'signal.value') result = null;
+          else if (req.op === 'wifi.status') result = { connected: false, ssid: '', ip: '' };
+          else if (req.op === 'wifi.set_creds') result = null;
           notify(frame({ id: req.id, ok: true, result }));
         } catch {}
       }

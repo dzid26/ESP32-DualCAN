@@ -20,6 +20,7 @@
 #include "storage/state.h"
 #include "scripting/script_loader.h"
 #include "protocol/protocol.h"
+#include "wifi/wifi.h"
 
 static const char *TAG = "dorky";
 
@@ -59,6 +60,7 @@ static void hw_init(void)
 
     state_nvs_init();
     fs_init();
+    wifi_init();
 }
 
 void app_main(void)

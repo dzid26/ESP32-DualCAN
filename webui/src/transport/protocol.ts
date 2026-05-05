@@ -224,4 +224,12 @@ export class Protocol {
     if (bus !== undefined) params.bus = bus;
     return this.call('sim.set', params);
   }
+
+  wifiStatus(): Promise<{ connected: boolean; ssid: string; ip: string }> {
+    return this.call('wifi.status');
+  }
+
+  wifiSetCreds(ssid: string, psk: string): Promise<void> {
+    return this.call('wifi.set_creds', { ssid, psk });
+  }
 }

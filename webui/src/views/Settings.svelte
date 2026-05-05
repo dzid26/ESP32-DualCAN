@@ -39,6 +39,39 @@
     }
   }
 
+  // ---- WiFi ----
+  let wifiSsid = $state('');
+  let wifiPsk = $state('');
+  let wifiStatus = $state<{ connected: boolean; ssid: string; ip: string } | null>(null);
+  let wifiBusy = $state(false);
+  let wifiError = $state<string | null>(null);
+
+  async function refreshWifi() {
+    if (!connected) return;
+    try {
+      wifiStatus = await proto.wifiStatus();
+      wifiError = null;
+    } catch (e: any) {
+      wifiError = e?.message ?? String(e);
+    }
+  }
+
+  async function saveWifi() {
+    if (!wifiSsid.trim()) { wifiError = 'SSID required'; return; }
+    wifiBusy = true;
+    wifiError = null;
+    try {
+      await proto.wifiSetCreds(wifiSsid.trim(), wifiPsk);
+      wifiPsk = '';   // don't keep secrets in the form
+      // Allow a couple of seconds for the device to attempt the connect.
+      setTimeout(refreshWifi, 3000);
+    } catch (e: any) {
+      wifiError = e?.message ?? String(e);
+    } finally {
+      wifiBusy = false;
+    }
+  }
+
   // ---- Kill switch: disable every loaded script ----
   let killBusy = $state(false);
   let killStatus = $state<string | null>(null);
@@ -67,8 +100,8 @@
     }
   }
 
-  onMount(refreshInfo);
-  $effect(() => { if (connected) refreshInfo(); });
+  onMount(() => { refreshInfo(); refreshWifi(); });
+  $effect(() => { if (connected) { refreshInfo(); refreshWifi(); } });
 </script>
 
 <div class="settings">
@@ -105,6 +138,25 @@
         <span>{simEnabled ? 'ON — TX is logged' : 'OFF — TX hits the bus'}</span>
       </label>
       {#if simError}<div class="err small">{simError}</div>{/if}
+    </section>
+
+    <section>
+      <h3>WiFi</h3>
+      <p class="hint">Set credentials to connect the device to your network. Status updates a few seconds after save.</p>
+      {#if wifiStatus}
+        <dl>
+          <dt>Status</dt>
+          <dd>{wifiStatus.connected ? 'connected' : 'not connected'}</dd>
+          {#if wifiStatus.ssid}<dt>SSID</dt><dd>{wifiStatus.ssid}</dd>{/if}
+          {#if wifiStatus.ip}<dt>IP</dt><dd>{wifiStatus.ip}</dd>{/if}
+        </dl>
+      {/if}
+      <div class="wifi-form">
+        <input bind:value={wifiSsid} placeholder="SSID" autocomplete="off" />
+        <input bind:value={wifiPsk} type="password" placeholder="password (blank for open)" autocomplete="off" />
+        <button onclick={saveWifi} disabled={wifiBusy}>Save &amp; connect</button>
+      </div>
+      {#if wifiError}<div class="err small">{wifiError}</div>{/if}
     </section>
 
     <section>
@@ -158,6 +210,22 @@
     padding: 0.4rem 1rem;
     border-radius: 4px;
     cursor: pointer;
+  }
+  .wifi-form {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .wifi-form input {
+    flex: 1;
+    min-width: 12em;
+    background: #0d0d1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #ddd;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
   }
   button.danger { background: #4a1a1a; border-color: #a44; color: #faa; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }

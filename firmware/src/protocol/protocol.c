@@ -14,6 +14,7 @@
 #include "scripting/berry_bindings.h"
 #include "can/can.h"
 #include "dbc/dbc_pack.h"
+#include "wifi/wifi.h"
 
 static const char *TAG = "proto";
 
@@ -342,6 +343,33 @@ static void handle_trace_stop(int id)
     send_ok(id, NULL);
 }
 
+static void handle_wifi_status(int id)
+{
+    char ssid[33], ip[16];
+    wifi_get_ssid(ssid, sizeof(ssid));
+    wifi_get_ip(ip, sizeof(ip));
+
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (result, "connected", wifi_connected());
+    cJSON_AddStringToObject(result, "ssid",      ssid);
+    cJSON_AddStringToObject(result, "ip",        ip);
+    send_ok(id, result);
+}
+
+static void handle_wifi_set_creds(int id, cJSON *req)
+{
+    const cJSON *ssid_j = cJSON_GetObjectItem(req, "ssid");
+    const cJSON *psk_j  = cJSON_GetObjectItem(req, "psk");
+    if (!cJSON_IsString(ssid_j)) { send_err(id, "missing ssid"); return; }
+    const char *psk = cJSON_IsString(psk_j) ? psk_j->valuestring : "";
+
+    if (wifi_set_creds(ssid_j->valuestring, psk) != 0) {
+        send_err(id, "set failed");
+        return;
+    }
+    send_ok(id, NULL);
+}
+
 static void handle_sim_set(int id, cJSON *req)
 {
     const cJSON *enabled_j = cJSON_GetObjectItem(req, "enabled");
@@ -488,6 +516,8 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "trace.start") == 0)    handle_trace_start(id, req);
     else if (strcmp(op_s, "trace.stop") == 0)     handle_trace_stop(id);
     else if (strcmp(op_s, "sim.set") == 0)        handle_sim_set(id, req);
+    else if (strcmp(op_s, "wifi.status") == 0)    handle_wifi_status(id);
+    else if (strcmp(op_s, "wifi.set_creds") == 0) handle_wifi_set_creds(id, req);
     else send_err(id, "unknown op");
 
     cJSON_Delete(req);
