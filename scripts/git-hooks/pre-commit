@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Dorky Commander pre-commit: runs host firmware tests + webui tests.
+#
+# Skips automatically if the staged diff doesn't touch firmware/ or webui/.
+# Bypass with `git commit --no-verify` if you really need to.
+#
+# Install once: ./scripts/setup-hooks.sh
+
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+
+# Look at *staged* paths, not the working tree, so unrelated dirty files
+# don't trigger a heavy test run.
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+
+run_fw=0
+run_ui=0
+for f in $STAGED; do
+  case "$f" in
+    firmware/src/*|firmware/test/*|firmware/include/*|firmware/platformio.ini|firmware/sdkconfig.defaults*|firmware/partitions.csv)
+      run_fw=1 ;;
+    webui/src/*|webui/tests/*|webui/package.json|webui/playwright.config.ts|webui/vite.config.ts|webui/svelte.config.js)
+      run_ui=1 ;;
+  esac
+done
+
+if [ "$run_fw" = 0 ] && [ "$run_ui" = 0 ]; then
+  echo "pre-commit: no firmware or webui changes — skipping tests"
+  exit 0
+fi
+
+cd "$ROOT"
+
+if [ "$run_fw" = 1 ]; then
+  echo "pre-commit: running firmware native tests…"
+  if ! make -s test-fw; then
+    echo
+    echo "pre-commit: firmware tests failed — aborting commit. (use --no-verify to override)"
+    exit 1
+  fi
+fi
+
+if [ "$run_ui" = 1 ]; then
+  echo "pre-commit: running webui tests…"
+  if ! make -s test-ui; then
+    echo
+    echo "pre-commit: webui tests failed — aborting commit. (use --no-verify to override)"
+    exit 1
+  fi
+fi
+
+echo "pre-commit: ok"

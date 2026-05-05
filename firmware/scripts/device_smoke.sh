@@ -50,10 +50,35 @@ LOGFILE=$(mktemp -t dorky-smoke-XXXXXX.log)
 trap 'rm -f "$LOGFILE"' EXIT
 
 echo "==> capturing serial output for ${TIMEOUT}s on $PORT"
-# pio device monitor with a hard timeout. --no-reconnect so timeout actually
-# exits instead of trying to reattach. Send EOF on stdin so it doesn't block.
-( timeout --foreground "${TIMEOUT}" pio device monitor \
-    -e "$ENV" -p "$PORT" --quiet 2>&1 || true ) </dev/null >"$LOGFILE"
+# Read serial directly via pyserial. pio device monitor breaks when stdin
+# isn't a TTY (it tries to set termios on stdin and dies with EINVAL),
+# which is exactly what happens in non-interactive scripts and CI.
+# Prefer PlatformIO's bundled python — it always has pyserial. Fall back to
+# system python3 only if the user explicitly sets PYTHON or the PIO venv is
+# missing.
+if [ -n "${PYTHON:-}" ]; then
+  :
+elif [ -x "$HOME/.platformio/penv/bin/python" ]; then
+  PYTHON=$HOME/.platformio/penv/bin/python
+else
+  PYTHON=python3
+fi
+"$PYTHON" - "$PORT" "$TIMEOUT" >"$LOGFILE" 2>&1 <<'PY' || true
+import sys, time, serial
+port, timeout = sys.argv[1], float(sys.argv[2])
+ser = serial.Serial(port, 115200, timeout=0.2)
+end = time.time() + timeout
+while time.time() < end:
+    try:
+        chunk = ser.read(4096)
+    except Exception as e:
+        print(f"read error: {e}", file=sys.stderr)
+        break
+    if chunk:
+        sys.stdout.write(chunk.decode('utf-8', errors='replace'))
+        sys.stdout.flush()
+ser.close()
+PY
 
 echo "----- captured output (${TIMEOUT}s) -----"
 cat "$LOGFILE"
