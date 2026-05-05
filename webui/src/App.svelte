@@ -5,6 +5,7 @@
   import DbcView from './views/Dbc.svelte';
   import DashboardView from './views/Dashboard.svelte';
   import TraceView from './views/Trace.svelte';
+  import SettingsView from './views/Settings.svelte';
 
   const ble = new BleTransport();
   const proto = new Protocol(ble);
@@ -57,6 +58,7 @@
     <button class:active={activeView === 'dbc'} onclick={() => activeView = 'dbc'}>DBC</button>
     <button class:active={activeView === 'dashboard'} onclick={() => activeView = 'dashboard'}>Dashboard</button>
     <button class:active={activeView === 'trace'} onclick={() => activeView = 'trace'}>Trace</button>
+    <button class:active={activeView === 'settings'} onclick={() => activeView = 'settings'}>Settings</button>
     {#if connected && fwVersion}
       <span class="fw-version" title="firmware version">fw {fwVersion}</span>
     {/if}
@@ -79,6 +81,8 @@
       <DbcView transport={ble} {proto} {connected} />
     {:else if activeView === 'trace'}
       <TraceView {proto} {connected} />
+    {:else if activeView === 'settings'}
+      <SettingsView {proto} {connected} />
     {:else}
       <DashboardView transport={ble} {proto} {connected} />
     {/if}

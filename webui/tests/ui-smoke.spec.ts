@@ -182,16 +182,17 @@ test.describe('mock BLE connect', () => {
     await expect(page.getByRole('button', { name: 'Start' })).toBeVisible();
   });
 
-  test('Sim mode toggle round-trip', async ({ page }) => {
+  test('Settings shows fw version + sim toggle round-trip', async ({ page }) => {
     await mockConnected(page);
     await page.goto('/');
     await page.getByRole('button', { name: 'Connect BLE' }).click();
     await expect(page.getByRole('button', { name: 'Connected' })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: 'Dashboard' }).click();
-    const cb = page.getByRole('checkbox', { name: 'Simulation mode' });
-    await expect(cb).toBeVisible();
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(page.locator('dd', { hasText: '0.0.1-test' })).toBeVisible();
+    const cb = page.getByRole('checkbox');
     await cb.check();
-    await expect(page.getByText('SIM', { exact: true })).toBeVisible();
+    await expect(page.getByText('TX is logged')).toBeVisible();
   });
 
   test('Action tile invoke calls action.invoke op', async ({ page }) => {

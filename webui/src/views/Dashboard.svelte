@@ -11,24 +11,6 @@
   let busy = $state<string | null>(null);
   let actionError = $state<string | null>(null);
 
-  // ---- Simulation mode ----
-  let simEnabled = $state(false);
-  let simBusy = $state(false);
-  let simError = $state<string | null>(null);
-
-  async function toggleSim(checked: boolean) {
-    simBusy = true;
-    simError = null;
-    try {
-      await proto.setSimMode(checked);
-      simEnabled = checked;
-    } catch (e: any) {
-      simError = e?.message ?? String(e);
-    } finally {
-      simBusy = false;
-    }
-  }
-
   async function refreshActions() {
     if (!connected) return;
     try {
@@ -191,21 +173,6 @@
     </div>
   {:else}
 
-    <!-- Simulation mode -->
-    <section class="sim-strip">
-      <label class="sim-toggle" title="Route all CAN sends to a log instead of the bus.">
-        <input
-          type="checkbox"
-          checked={simEnabled}
-          disabled={simBusy}
-          onchange={(e) => toggleSim((e.currentTarget as HTMLInputElement).checked)}
-        />
-        <span>Simulation mode</span>
-        {#if simEnabled}<span class="tag">SIM</span>{/if}
-      </label>
-      {#if simError}<span class="err small">{simError}</span>{/if}
-    </section>
-
     <!-- Actions -->
     <section>
       <header>
@@ -326,36 +293,6 @@
     margin-top: 1.25rem;
   }
   section { margin-bottom: 0.5rem; }
-
-  /* Sim toggle strip */
-  .sim-strip {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0.5rem 0 0.25rem;
-  }
-  .sim-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: #bbb;
-    font-size: 0.85rem;
-    cursor: pointer;
-  }
-  .sim-toggle input[type="checkbox"] {
-    width: 1rem;
-    height: 1rem;
-    accent-color: #d8b94c;
-  }
-  .sim-toggle .tag {
-    background: #4a3a1a;
-    color: #fc8;
-    border-radius: 3px;
-    padding: 0.05rem 0.4rem;
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
-  }
-  .err.small { font-size: 0.8rem; }
 
   /* Action tiles */
   .tiles {
