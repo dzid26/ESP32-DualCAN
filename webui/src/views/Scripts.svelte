@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Protocol, ScriptInfo } from '../transport/protocol';
   import { examples } from '../examples';
+  import MonacoEditor from '../editor/MonacoEditor.svelte';
 
   let { proto, connected }: { proto: Protocol; connected: boolean } = $props();
 
@@ -137,7 +138,10 @@
     <button onclick={upload} disabled={!connected || busy}>Upload</button>
   </div>
 
-  <textarea bind:value={code} rows="16" spellcheck="false"></textarea>
+  <MonacoEditor bind:value={code} />
+  <noscript>
+    <textarea bind:value={code} rows="16" spellcheck="false"></textarea>
+  </noscript>
 
   <p class="status">{status}</p>
 

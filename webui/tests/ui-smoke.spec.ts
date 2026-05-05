@@ -103,7 +103,8 @@ test.describe('page structure', () => {
   test('Scripts view is default', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Scripts' })).toBeVisible();
-    await expect(page.locator('textarea')).toBeVisible();
+    // Monaco mounts a contenteditable region inside .editor.
+    await expect(page.locator('.editor')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Upload' })).toBeVisible();
   });
 
