@@ -33,6 +33,7 @@ async function mockConnected(page: Page, actionNames: string[] = []) {
           const req = JSON.parse(json);
           let result: object | null = null;
           if (req.op === 'ping') result = 'pong';
+          else if (req.op === 'system.info') result = { fw_version: '0.0.1-test', proto_version: 1 };
           else if (req.op === 'script.list') result = { scripts: [] };
           else if (req.op === 'action.list') result = { actions };
           else if (req.op === 'action.invoke') result = null;

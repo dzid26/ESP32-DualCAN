@@ -11,8 +11,29 @@
   let activeView = $state('scripts');
   let connected = $state(false);
   let error = $state('');
+  let fwVersion = $state<string | null>(null);
 
-  ble.onConnectionChange(c => { connected = c; });
+  /* Bump in lockstep with the firmware-side proto_version when ops change. */
+  const UI_PROTO_VERSION = 1;
+  let protoMismatch = $state<string | null>(null);
+
+  ble.onConnectionChange(async (c) => {
+    connected = c;
+    if (!c) { fwVersion = null; protoMismatch = null; return; }
+    try {
+      const info = await proto.systemInfo();
+      fwVersion = info.fw_version;
+      if (info.proto_version !== UI_PROTO_VERSION) {
+        protoMismatch =
+          `firmware proto v${info.proto_version}, UI expects v${UI_PROTO_VERSION} — some features may not work`;
+      } else {
+        protoMismatch = null;
+      }
+    } catch (e: any) {
+      // Older firmware doesn't support system.info — that's itself a mismatch.
+      protoMismatch = 'firmware too old (no system.info) — please update';
+    }
+  });
 
   async function toggleConnect() {
     error = '';
@@ -36,6 +57,9 @@
     <button class:active={activeView === 'dbc'} onclick={() => activeView = 'dbc'}>DBC</button>
     <button class:active={activeView === 'dashboard'} onclick={() => activeView = 'dashboard'}>Dashboard</button>
     <button class:active={activeView === 'trace'} onclick={() => activeView = 'trace'}>Trace</button>
+    {#if connected && fwVersion}
+      <span class="fw-version" title="firmware version">fw {fwVersion}</span>
+    {/if}
     <button class="connect" class:connected onclick={toggleConnect}>
       {connected ? 'Connected' : 'Connect BLE'}
     </button>
@@ -43,6 +67,9 @@
 
   {#if error}
     <div class="error">{error}</div>
+  {/if}
+  {#if protoMismatch}
+    <div class="warning">{protoMismatch}</div>
   {/if}
 
   <div class="content">
@@ -111,5 +138,20 @@
     border-radius: 4px;
     font-size: 0.85rem;
     margin-bottom: 1rem;
+  }
+  .warning {
+    background: #4a3a1a;
+    border: 1px solid #a84;
+    color: #fc8;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  .fw-version {
+    color: #888;
+    font-size: 0.75rem;
+    font-family: monospace;
+    margin-right: 0.5rem;
   }
 </style>

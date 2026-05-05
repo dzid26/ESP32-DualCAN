@@ -156,6 +156,10 @@ export class Protocol {
     return this.call('ping');
   }
 
+  systemInfo(): Promise<{ fw_version: string; proto_version: number }> {
+    return this.call('system.info');
+  }
+
   listScripts(): Promise<{ scripts: ScriptInfo[] }> {
     return this.call('script.list');
   }

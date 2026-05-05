@@ -180,6 +180,16 @@ static void handle_ping(int id)
     send_ok(id, cJSON_CreateString("pong"));
 }
 
+static void handle_system_info(int id)
+{
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddStringToObject(result, "fw_version", DORKY_FIRMWARE_VERSION);
+    /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
+     * features that the firmware doesn't recognise yet. */
+    cJSON_AddNumberToObject(result, "proto_version", 1);
+    send_ok(id, result);
+}
+
 static void handle_script_list(int id)
 {
     script_loader_scan(s_loader, s_loader->vm);
@@ -463,6 +473,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     ESP_LOGI(TAG, "op=%s id=%d", op_s, id);
 
     if (strcmp(op_s, "ping") == 0)                handle_ping(id);
+    else if (strcmp(op_s, "system.info") == 0)    handle_system_info(id);
     else if (strcmp(op_s, "script.list") == 0)    handle_script_list(id);
     else if (strcmp(op_s, "script.write") == 0)   handle_script_write(id, req);
     else if (strcmp(op_s, "script.read") == 0)    handle_script_read(id, req);
