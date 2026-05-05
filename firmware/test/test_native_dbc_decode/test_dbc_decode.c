@@ -94,6 +94,14 @@ void test_find_signal(void) {
     TEST_ASSERT_EQUAL(-1, dbc_find_signal(&dbc, "nonexistent"));
 }
 
+/* Regression: signal.subscribe used to panic (MCAUSE=5) when called before any
+ * DBC was loaded — dbc_find_signal dereferenced a NULL hdr/sigs pointer. */
+void test_find_signal_null_safe(void) {
+    dbc_t empty = {0};
+    TEST_ASSERT_EQUAL(-1, dbc_find_signal(&empty, "anything"));
+    TEST_ASSERT_EQUAL(-1, dbc_find_signal(NULL, "anything"));
+}
+
 void test_decode_simple(void) {
     uint8_t data[8] = {0x34, 0x12, 0x05, 0, 0, 0, 0, 0};
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 46.60f, msg_decode_signal(&dbc.sigs[0], data));
@@ -152,6 +160,7 @@ int main(void) {
     RUN_TEST(test_load_header);
     RUN_TEST(test_find_msg);
     RUN_TEST(test_find_signal);
+    RUN_TEST(test_find_signal_null_safe);
     RUN_TEST(test_decode_simple);
     RUN_TEST(test_decode_signed);
     RUN_TEST(test_decode_frame_mux);
