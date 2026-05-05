@@ -5,10 +5,12 @@
 .vscode/launch.json
 .vscode/ipch
 
-# ESP-IDF: per-env sdkconfig is generated from sdkconfig.defaults.
-# Ignore every sdkconfig.* except the committed defaults file.
+# ESP-IDF: per-env sdkconfig is generated from sdkconfig.defaults.* files.
+# Ignore the generated per-env sdkconfig but keep the committed defaults
+# and any `sdkconfig.defaults.*` overlays (e.g. .release, .debug).
 sdkconfig.*
 !sdkconfig.defaults
+!sdkconfig.defaults.*
 
 # ESP-IDF Component Manager (auto-downloaded, like node_modules)
 managed_components/

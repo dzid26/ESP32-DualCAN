@@ -1,0 +1,9 @@
+# Production-only sdkconfig overlay (applied on top of sdkconfig.defaults).
+# Used by [env:esp32-c6] via board_build.cmake_extra_args. The debug env
+# keeps the IDF default (INFO) because DEBUG floods the console.
+
+# Compile-time strip: anything below ERROR is removed from the binary,
+# which also drops the matching rodata format strings. Saves ~50–80 KB.
+CONFIG_LOG_MAXIMUM_LEVEL_ERROR=y
+# Runtime default. (Same as max above, but explicit.)
+CONFIG_LOG_DEFAULT_LEVEL_ERROR=y
