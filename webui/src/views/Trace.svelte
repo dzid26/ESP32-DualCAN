@@ -91,6 +91,48 @@
     droppedCount = 0;
   }
 
+  /* Parse a previously exported trace file (the candump-ish format above)
+   * back into TraceFrame[]. Unparseable lines are silently skipped. */
+  const PARSE_RE = /^\((\d+(?:\.\d+)?)\)\s+bus(\d+)\s+([0-9A-Fa-f]+)\s+\[(\d+)\]\s*([0-9A-Fa-f\s]*)$/;
+
+  function parseCapture(text: string): TraceFrame[] {
+    const out: TraceFrame[] = [];
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;
+      const m = line.match(PARSE_RE);
+      if (!m) continue;
+      const tsMs = Math.round(parseFloat(m[1]) * 1000);
+      const bus  = parseInt(m[2], 10);
+      const id   = parseInt(m[3], 16);
+      const dlc  = parseInt(m[4], 10);
+      const bytes = m[5].trim().split(/\s+/).filter(Boolean).map(b => parseInt(b, 16));
+      if (bytes.length !== dlc) continue;   // malformed
+      out.push({ ts: tsMs, bus, id, data: new Uint8Array(bytes) });
+    }
+    return out;
+  }
+
+  function handleLoadFile(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';   // allow loading the same file twice
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const parsed = parseCapture(reader.result as string);
+      if (parsed.length === 0) { status = `${file.name}: no frames parsed`; return; }
+      // Newest-first to match the live view ordering. parseCapture yields
+      // file order (oldest-first in our exporter); reverse to flip.
+      frames = parsed.slice().reverse();
+      buffer = [];
+      totalCount = parsed.length;
+      droppedCount = 0;
+      status = `loaded ${parsed.length} frames from ${file.name}`;
+    };
+    reader.readAsText(file);
+  }
+
   function exportCandump() {
     // candump-ish: (ts.sss) busN  XXX   [DLC]  AA BB CC ...
     const lines = [...frames].reverse().map(f => {
@@ -152,6 +194,10 @@
 
     <button onclick={clear} disabled={frames.length === 0}>Clear</button>
     <button onclick={exportCandump} disabled={frames.length === 0}>Export</button>
+    <label class="load-btn" title="Load a previously exported trace file">
+      Load
+      <input type="file" accept=".log,text/plain" onchange={handleLoadFile} />
+    </label>
   </div>
 
   <div class="filter-row">
@@ -245,6 +291,18 @@
   button.primary { background: #2a4a2a; border-color: #4a4; }
   button.danger  { background: #4a1a1a; border-color: #a44; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .load-btn {
+    display: inline-flex;
+    align-items: center;
+    background: #2a2a4a;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 0.4rem 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .load-btn input[type="file"] { display: none; }
   .placeholder {
     background: #0d0d1a;
     border: 1px dashed #333;
