@@ -234,12 +234,8 @@ button { font: inherit; color: inherit; }
   position: relative;
   min-height: 44px;
 }
-.status::before {
-  content: ''; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
-  width: 3px; height: 3px; border-radius: 999px;
-  background: var(--dc-ok); box-shadow: 0 0 4px var(--dc-ok);
-  animation: led-pulse-ok 2.4s ease-in-out infinite;
-}
+/* Decorative green pulse pip used to live on the left edge of the strip;
+ * removed because it competed with the actual transport pip's dot. */
 @media (max-width: 720px) {
   .status { flex-wrap: wrap; }
 }
