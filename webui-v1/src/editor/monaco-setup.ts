@@ -229,19 +229,46 @@ export function registerBerry(): void {
     },
   });
 
+  /* Kimbie warm theme — mirrors the --dc-* tokens in app.css so the editor
+   * doesn't fight the surrounding chrome. Update both files in lockstep. */
   monaco.editor.defineTheme('dorky-dark', {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      { token: 'comment',         foreground: '6a6a8a', fontStyle: 'italic' },
-      { token: 'keyword',         foreground: 'c792ea' },
-      { token: 'type.identifier', foreground: '82aaff' },
-      { token: 'string',          foreground: 'c3e88d' },
-      { token: 'number',          foreground: 'f78c6c' },
-      { token: 'number.hex',      foreground: 'f78c6c' },
+      { token: '',                foreground: 'f4d9a1' },
+      { token: 'comment',         foreground: '70583a', fontStyle: 'italic' },
+      { token: 'keyword',         foreground: 'c97a4a' },
+      { token: 'type.identifier', foreground: 'b8c47a' },
+      { token: 'string',          foreground: 'ffa24a' },
+      { token: 'number',          foreground: 'd68a3a' },
+      { token: 'number.hex',      foreground: 'd68a3a' },
+      { token: 'identifier',      foreground: 'f4d9a1' },
+      { token: 'operator',        foreground: 'e6c07a' },
+      { token: 'delimiter',       foreground: 'a08555' },
     ],
     colors: {
-      'editor.background': '#0d0d1a',
+      'editor.background':                '#18110a',
+      'editor.foreground':                '#f4d9a1',
+      'editorCursor.foreground':          '#e07b1f',
+      'editor.lineHighlightBackground':   '#2a1f10',
+      'editor.lineHighlightBorder':       '#00000000',
+      'editorLineNumber.foreground':      '#70583a',
+      'editorLineNumber.activeForeground':'#e6c07a',
+      'editor.selectionBackground':       '#e07b1f52',
+      'editor.inactiveSelectionBackground':'#e07b1f29',
+      'editorWidget.background':          '#362712',
+      'editorWidget.border':              '#5a411f',
+      'editorSuggestWidget.background':   '#362712',
+      'editorSuggestWidget.border':       '#5a411f',
+      'editorSuggestWidget.selectedBackground': '#4a351b',
+      'editorSuggestWidget.foreground':   '#e6c07a',
+      'editorIndentGuide.background1':    '#3d2d16',
+      'editorIndentGuide.activeBackground1': '#5a411f',
+      'editorBracketMatch.background':    '#4a2c1066',
+      'editorBracketMatch.border':        '#d68a3a',
+      'scrollbarSlider.background':       '#4a351b66',
+      'scrollbarSlider.hoverBackground':  '#6b4a24aa',
+      'scrollbarSlider.activeBackground': '#6b4a24',
     },
   });
 }
