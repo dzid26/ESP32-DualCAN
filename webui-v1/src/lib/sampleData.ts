@@ -3,6 +3,14 @@
 
 export type EventLed = 'off' | 'on' | 'warn' | 'err';
 
+/* TODO firmware: tile LED state is not yet wired. The Berry runtime needs
+ * a way to publish per-action status. Two reasonable shapes:
+ *   1. action.list returns [{ name, led? }] where led is one of EventLed,
+ *      sourced from a bound CAN signal value via DBC.
+ *   2. A new push topic { type: 'action.led', name, led } emitted whenever
+ *      a registered Berry hook updates the value (e.g. action_set_led).
+ * Until either lands, EventsView falls back to the static SAMPLE_EVENTS
+ * metadata defined here and the LED is purely decorative. */
 export type EventTile = {
   id: string;
   name: string;
