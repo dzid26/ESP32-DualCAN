@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="56" viewBox="0 0 280 56" fill="none">
+  
+  
+  
+  <g transform="translate(10 10)">
+    <rect x="0" y="0" width="36" height="36" rx="4" fill="#1a1a2e" stroke="#3a3a6a" stroke-width="1.5"></rect>
+    <rect x="7" y="7" width="22" height="22" rx="2" fill="none" stroke="#6a6aaa" stroke-width="1.2"></rect>
+    
+    <g fill="#6a6aaa">
+      <rect x="-3" y="8" width="3" height="2"></rect>
+      <rect x="-3" y="17" width="3" height="2"></rect>
+      <rect x="-3" y="26" width="3" height="2"></rect>
+      <rect x="36" y="8" width="3" height="2"></rect>
+      <rect x="36" y="17" width="3" height="2"></rect>
+      <rect x="36" y="26" width="3" height="2"></rect>
+    </g>
+    
+    <circle cx="18" cy="18" r="3" class="dc-dot"></circle>
+  </g>
+  <text x="58" y="32" class="dc-word">dorky</text>
+  <text x="58" y="48" class="dc-word dc-dim" style="font-size:11px;font-weight:400;letter-spacing:.25em;text-transform:uppercase">commander</text>
+</svg>
