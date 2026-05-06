@@ -17,7 +17,8 @@ export const ICON_PATHS: Record<IconName, string[]> = {
     'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
     'M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2.1-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2.1 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2.1 1.2L10 21h4l.5-2.6a7 7 0 0 0 2.1-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z'
   ],
-  tesla:    ['M12 4v4', 'M6 8a6 3 0 0 0 12 0', 'M9 8v12', 'M15 8v12', 'M12 8v12'],
+  // Stylized T silhouette — top crossbar with end-drops + center stem.
+  tesla:    ['M5 6h14', 'M12 6v14', 'M5 6v3', 'M19 6v3'],
   gallery:  ['M4 4h7v7H4z', 'M13 4h7v7h-7z', 'M4 13h7v7H4z', 'M13 13h7v7h-7z'],
   log:      ['M4 5h16', 'M4 10h16', 'M4 15h10', 'M4 20h12'],
   play:     ['M6 4l14 8-14 8z'],
