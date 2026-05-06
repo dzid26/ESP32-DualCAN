@@ -93,7 +93,6 @@
                 {:else}
                   <span></span>
                 {/if}
-                <span class="car-row__dbc mono ghost">{c.dbc}</span>
                 {#if c.id === current?.id}
                   <Icon name="check" size={13} />
                 {:else}
