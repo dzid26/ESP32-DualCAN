@@ -183,6 +183,25 @@
     if (app.connected) refresh();
     else { scripts = []; }
   });
+
+  /** Cross-view hand-off: EventsView (or anything else) sets
+   * app.pendingExample to a filename in firmware/scripts_examples/ then
+   * navigates here. Consume + clear so a re-mount doesn't replay it. */
+  $effect(() => {
+    const fn = app.pendingExample;
+    if (!fn) return;
+    const ex = examples.find(x => x.filename === fn);
+    if (ex) {
+      code = ex.code;
+      savedCode = '';
+      selFn = null;
+      editorFilename = ex.filename;
+      status = `loaded example: ${ex.name}`;
+    } else {
+      status = `unknown example: ${fn}`;
+    }
+    app.pendingExample = null;
+  });
 </script>
 
 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">

@@ -117,10 +117,14 @@
         <span class="mono">action_register("name", fn)</span> and enable it.
       </div>
     {/if}
-    <button class="evtile evtile--add" onclick={() => app.setView('scripts')}>
+    <button
+      class="evtile evtile--add"
+      onclick={() => { app.pendingExample = 'tiles_demo.be'; app.setView('scripts'); }}
+      title="Open Scripts with tiles_demo.be loaded as a starting point"
+    >
       <div class="evtile__icon">+</div>
       <div class="evtile__name">Add event</div>
-      <div class="evtile__desc mono">Write a script that registers an action</div>
+      <div class="evtile__desc mono">Open tiles_demo.be in editor</div>
     </button>
   </div>
 

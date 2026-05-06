@@ -77,6 +77,10 @@ class AppState {
   logOpen = $state(false);
   logs = $state<LogLine[]>([]);
 
+  /** Cross-view hand-off: another view (Events, Gallery) drops a script
+   * filename here, then setView('scripts'). ScriptsView consumes + clears. */
+  pendingExample = $state<string | null>(null);
+
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));
