@@ -186,8 +186,22 @@
       </select>
     </div>
 
-    <button class="btn btn--sm" onclick={exportCsv} disabled={frames.length === 0}><Icon name="down" size={13} />CSV</button>
-    <button class="btn btn--sm" onclick={exportCandump} disabled={frames.length === 0}>candump</button>
+    <button
+      class="btn btn--sm"
+      onclick={exportCsv}
+      disabled={frames.length === 0}
+      title="Export visible frames as CSV — comma-separated columns ts_ms, bus, id_hex, dlc, data_hex. Spreadsheet-friendly."
+    >
+      <Icon name="down" size={13} />CSV
+    </button>
+    <button
+      class="btn btn--sm"
+      onclick={exportCandump}
+      disabled={frames.length === 0}
+      title="Export visible frames in Linux candump log format: (sec) busN id [dlc] BB BB ... — replayable with can-utils canplayer and Trace itself."
+    >
+      candump
+    </button>
   </div>
 
   <div class="row-flex mono" style="font-size: 11px; color: var(--dc-text-fade)">
