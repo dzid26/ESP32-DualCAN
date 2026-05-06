@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
+  import { examples } from '../../examples';
   import SectionHead from '../SectionHead.svelte';
   import MonacoEditor from '../../editor/MonacoEditor.svelte';
   import Icon from '../Icon.svelte';
@@ -139,6 +140,22 @@
     status = 'new script — set a filename and Save';
   }
 
+  /** Drop a bundled `firmware/scripts_examples/*.be` into the editor. */
+  function loadExample(e: Event): void {
+    const sel = e.currentTarget as HTMLSelectElement;
+    const fn = sel.value;
+    sel.value = '';
+    if (!fn) return;
+    if (dirty && !confirm('Discard unsaved changes?')) return;
+    const ex = examples.find(x => x.filename === fn);
+    if (!ex) { status = `unknown example: ${fn}`; return; }
+    code = ex.code;
+    savedCode = '';
+    selFn = null;
+    editorFilename = ex.filename;
+    status = `loaded example: ${ex.name}`;
+  }
+
   function revert(): void {
     code = savedCode;
     status = 'reverted';
@@ -175,7 +192,18 @@
   >
     {#snippet actions()}
       <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
-      <label class="btn btn--sm btn--info">
+      <select
+        class="sel"
+        onchange={loadExample}
+        title="Load a bundled Berry example into the editor (firmware/scripts_examples)"
+        style="width: auto; padding-right: 24px"
+      >
+        <option value="">Load example…</option>
+        {#each examples as ex}
+          <option value={ex.filename}>{ex.name}</option>
+        {/each}
+      </select>
+      <label class="btn btn--sm btn--info" title="Read a .be file from disk into the editor">
         Import
         <input type="file" accept=".be,text/plain" onchange={importFile} style="display: none" />
       </label>
