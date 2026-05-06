@@ -178,7 +178,12 @@ button { font: inherit; color: inherit; }
 .rail__brand-name { color: var(--dc-text); font-weight: 700; }
 .rail__brand-name + .rail__brand-name { color: var(--dc-accent); margin-top: 1.5px; }
 
-.rail__list { flex: 1; overflow-y: auto; padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
+.rail__list {
+  flex: 1; padding: 6px 0;
+  display: flex; flex-direction: column; gap: 2px;
+  /* Vertical scroll only — never let icons drift sideways. */
+  overflow-y: auto; overflow-x: hidden;
+}
 .rail__foot { border-top: 1px solid var(--dc-border); padding: 6px 0; display: flex; flex-direction: column; gap: 2px; }
 
 .railItem {
