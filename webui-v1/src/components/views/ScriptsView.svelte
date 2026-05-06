@@ -24,6 +24,7 @@
 
   let confirmRemove = $state<string | null>(null);
   const dirty = $derived(code !== savedCode);
+  let lastScriptStatusSeq = 0;
 
   let isMobile = $state(false);
   $effect(() => {
@@ -184,6 +185,21 @@
     void app.connected; void app.scriptsVersion;
     if (app.connected) refresh();
     else { scripts = []; }
+  });
+
+  $effect(() => {
+    const patch = app.scriptStatusPatch;
+    if (!patch || patch.seq === lastScriptStatusSeq) return;
+    lastScriptStatusSeq = patch.seq;
+    scripts = scripts.map(s => {
+      if (s.filename !== patch.filename) return s;
+      return {
+        ...s,
+        enabled: patch.enabled,
+        errored: patch.clearError ? false : s.errored,
+        error: patch.clearError ? undefined : s.error,
+      };
+    });
   });
 
   /** Cross-view hand-off: EventsView (or anything else) sets

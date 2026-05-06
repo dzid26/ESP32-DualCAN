@@ -179,6 +179,19 @@ class AppState {
 
   /** Bumped on every kill / release so view-side $effects re-fetch their lists. */
   scriptsVersion = $state(0);
+  /** Last known script enable-state change, used for live cross-view updates
+   * while a kill / release sweep is still running. */
+  scriptStatusPatch = $state<{ seq: number; filename: string; enabled: boolean; clearError: boolean } | null>(null);
+  private scriptStatusSeq = 0;
+
+  private publishScriptStatus(filename: string, enabled: boolean, clearError = false): void {
+    this.scriptStatusPatch = {
+      seq: ++this.scriptStatusSeq,
+      filename,
+      enabled,
+      clearError,
+    };
+  }
 
   /** Kill switch: disable every enabled script and remember which they were.
    * Release: re-enable that remembered set. Both modes refresh ScriptsView via
@@ -197,6 +210,7 @@ class AppState {
         for (const fn of this.restoreOnRelease) {
           try {
             await this.proto.enableScript(fn);
+            this.publishScriptStatus(fn, true, true);
             restored++;
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
@@ -214,6 +228,7 @@ class AppState {
         for (const s of enabled) {
           try {
             await this.proto.disableScript(s.filename);
+            this.publishScriptStatus(s.filename, false);
             remember.push(s.filename);
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
