@@ -603,8 +603,3 @@ button { font: inherit; color: inherit; }
 }
 .gal-stats__n { font-size: 12px; color: var(--dc-text); font-weight: 600; }
 .gal-stats__l { font-size: 9.5px; color: var(--dc-text-ghost); text-transform: uppercase; letter-spacing: 0.06em; }
-
-/* ===== Monaco-lite editor selection ===== */
-.monaco-lite__ta::selection { background: rgba(224,123,31,0.32); color: transparent; }
-.monaco-lite__ta::-moz-selection { background: rgba(224,123,31,0.32); color: transparent; }
-.monaco-lite__ta { tab-size: 2; }

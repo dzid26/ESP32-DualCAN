@@ -83,7 +83,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 7. **Web UI v0**:
    - Svelte 5 + Vite + TS project at `webui/`.
    - Transport abstraction with BLE adapter only (WS later).
-   - Monaco editor with a basic Berry mode and static completion from the API.
+   - CodeMirror 6 editor with a basic Berry mode and static completion from the API.
    - Three views: Scripts (edit/enable), DBC (upload), Dashboard (signal watch).
    - GH Pages deployment workflow.
 8. **Browser-side DBC compiler**:
@@ -206,5 +206,5 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 - Support for other vehicles beyond Tesla (structurally supported, but no presets shipped).
 - Cloud relay / remote access.
 - Native mobile apps.
-- On-device Berry compile-error reporting via a Berry WASM build (nice-to-have for better Monaco integration).
+- On-device Berry compile-error reporting via a Berry WASM build (nice-to-have for better editor integration).
 - BLE OTA (slow but possible; deferred until someone needs it).

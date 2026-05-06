@@ -59,7 +59,7 @@ Bus assignment (convention, user-configurable per preset) — by default for Tes
 - **Filesystem**: LittleFS for scripts, DBCs, web UI assets, logs.
 - **Config store**: ESP-IDF NVS for key/value state (per-script).
 - **Scripting language**: [Berry](https://github.com/berry-lang/berry) (MIT), vendored into `lib/berry/`. Chosen over Lua and MicroPython for memory footprint (~40 KB vs 150+ KB), object-orientation that maps well to CAN messages/signals, and proven embedded track record (Tasmota).
-- **Web UI**: Svelte 5 + Vite + TypeScript, built as a static SPA. Monaco editor for script editing. uPlot for signal graphs.
+- **Web UI**: Svelte 5 + Vite + TypeScript, built as a static SPA. CodeMirror 6 for script editing. uPlot for signal graphs.
 - **Transport to UI**: BLE GATT (primary) and HTTP + WebSocket (fallback over WiFi). Same UI code via a transport adapter.
 - **Firmware license**: GPLv3 (`firmware/LICENSE`). Hardware stays CERN-OHL-W (`LICENSE.txt` at repo root).
 
@@ -369,7 +369,7 @@ The two copies are identical and chosen at runtime based on transport availabili
 ### 9.1 Views
 
 - **Dashboard** — signal watch list, live values, simple graphs (uPlot), and **action tiles** (one button per registered Action).
-- **Scripts** — list with enable toggles, Monaco editor, error console.
+- **Scripts** — list with enable toggles, CodeMirror editor, error console.
 - **DBC** — upload, per-bus assignment, signal browser.
 - **Trace** — live CAN frame log (both buses), filter, pause, export.
 - **Diff / capture** — event-triggered capture, baseline vs. post-action diff.
@@ -378,7 +378,7 @@ The two copies are identical and chosen at runtime based on transport availabili
 
 ### 9.2 Editor
 
-Monaco with a custom Berry tokenizer (~100 lines) and a static completion provider generated from a TypeScript description of the scripting API. Hover docs from the same source. Compile errors shown inline, produced either by a Berry WASM build or by a round-trip to the firmware.
+CodeMirror 6 with a custom Berry tokenizer and a static completion provider maintained from a TypeScript description of the scripting API. Hover docs come from the same source. Compile errors can be shown inline, produced either by a Berry WASM build or by a round-trip to the firmware.
 
 ### 9.3 Example script gallery
 
@@ -618,7 +618,7 @@ scripts/
 ## 16. Open questions
 
 - Final CBOR schema for the transport protocol.
-- Whether the Berry compiler runs in the browser (WASM build) or on device for inline error reporting in Monaco.
+- Whether the Berry compiler runs in the browser (WASM build) or on device for inline editor error reporting.
 - Merge strategy for the two DBC files — which one becomes canonical per bus, and whether we maintain our own curated Tesla DBC fork.
 - Whether `webui/` uses GPLv3 or MIT.
 - Tesla-BLE library selection.

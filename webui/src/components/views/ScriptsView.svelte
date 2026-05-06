@@ -3,7 +3,7 @@
   import type { ScriptInfo } from '../../transport/protocol';
   import { examples } from '../../examples';
   import SectionHead from '../SectionHead.svelte';
-  import MonacoEditor from '../../editor/MonacoEditor.svelte';
+  import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
   import { onMount } from 'svelte';
 
@@ -359,7 +359,7 @@
       {/if}
 
       <div style="flex: 1; min-height: 0; display: flex">
-        <MonacoEditor bind:value={code} height="100%" onSave={save} />
+        <CodeMirrorEditor bind:value={code} height="100%" onSave={save} />
       </div>
     </div>
   </div>
