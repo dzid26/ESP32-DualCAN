@@ -89,6 +89,10 @@ class AppState {
    * to the DBC view + bus tab when a slot is populated. */
   loadedDbc = $state<Record<number, string | null>>({ 0: null, 1: null });
 
+  /** Pure navigation hand-off: bus-pip "(dbc)" link writes the bus id
+   * here, then setView('dbc'). DbcView consumes + clears. */
+  dbcViewBus = $state<number | null>(null);
+
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));

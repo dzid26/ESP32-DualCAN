@@ -96,6 +96,14 @@
     })();
   });
 
+  /** Pure navigation: bus-pip "(dbc)" link sets dbcViewBus + setView('dbc'). */
+  $effect(() => {
+    const b = app.dbcViewBus;
+    if (b === null) return;
+    bus = b;
+    app.dbcViewBus = null;
+  });
+
   function hex3(n: number): string {
     return '0x' + n.toString(16).toUpperCase().padStart(3, '0');
   }
