@@ -4,10 +4,10 @@
 # through decode_panic.sh.
 #
 # Usage:
-#   ./scripts/device_smoke.sh                    # default env, 30 s window
-#   ./scripts/device_smoke.sh -e esp32-c6-debug
-#   ./scripts/device_smoke.sh -t 60              # 60 s capture
-#   ./scripts/device_smoke.sh --no-flash         # only monitor (already flashed)
+#   ./tools/device_smoke.sh                    # default env, 30 s window
+#   ./tools/device_smoke.sh -e esp32-c6-debug
+#   ./tools/device_smoke.sh -t 60              # 60 s capture
+#   ./tools/device_smoke.sh --no-flash         # only monitor (already flashed)
 #
 # Exits non-zero if any of these strings appear in the captured log:
 #   "Guru Meditation" "abort()" "rst:" (after the first boot)
@@ -92,7 +92,7 @@ if grep -qE "$PANIC_PATTERNS" "$LOGFILE"; then
   echo
   echo "!!! PANIC DETECTED — decoding backtrace !!!"
   echo
-  ./scripts/decode_panic.sh -e "$ENV" <"$LOGFILE" || true
+  ./tools/decode_panic.sh -e "$ENV" <"$LOGFILE" || true
   exit 1
 fi
 

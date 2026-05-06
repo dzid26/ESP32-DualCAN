@@ -2,9 +2,9 @@
 # Resolve an ESP32-C6 panic backtrace to source lines.
 #
 # Usage:
-#   ./scripts/decode_panic.sh < panic.txt
-#   pio device monitor | ./scripts/decode_panic.sh    # live: paste-then-Ctrl-D
-#   ./scripts/decode_panic.sh -e <env> < panic.txt    # alt env (default: esp32-c6)
+#   ./tools/decode_panic.sh < panic.txt
+#   pio device monitor | ./tools/decode_panic.sh    # live: paste-then-Ctrl-D
+#   ./tools/decode_panic.sh -e <env> < panic.txt    # alt env (default: esp32-c6)
 #
 # Reads the panic output on stdin, finds the Backtrace line plus MEPC/RA/MTVAL
 # registers, and runs riscv32-esp-elf-addr2line against the matching env's

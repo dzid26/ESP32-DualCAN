@@ -3,8 +3,8 @@
 # runs it over every script in firmware/scripts_examples/. Catches syntax /
 # parse errors in examples without needing a flashed ESP32.
 #
-# Usage:  ./scripts/parse_check_examples.sh           # check examples/
-#         ./scripts/parse_check_examples.sh path.be   # check specific files
+# Usage:  ./tools/parse_check_examples.sh           # check examples/
+#         ./tools/parse_check_examples.sh path.be   # check specific files
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ BUILD=$ROOT/.cache/parse_check
 mkdir -p "$BUILD"
 
 BIN=$BUILD/parse_check
-SRCS=( "$BERRY_SRC"/*.c "$BERRY_DEFAULT"/be_port.c "$BERRY_DEFAULT"/be_modtab.c "$ROOT/scripts/parse_check.c" )
+SRCS=( "$BERRY_SRC"/*.c "$BERRY_DEFAULT"/be_port.c "$BERRY_DEFAULT"/be_modtab.c "$ROOT/tools/parse_check.c" )
 
 # Rebuild if the binary is missing or older than any source file.
 needs_build=0

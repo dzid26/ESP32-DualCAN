@@ -21,6 +21,6 @@ test-ui:
 
 test-device:
 	@echo "==> firmware device smoke (will flash $$DORKY_PORT or /dev/ttyACM0)"
-	cd firmware && ./scripts/device_smoke.sh
+	cd firmware && ./tools/device_smoke.sh
 
 test-all: test test-device
