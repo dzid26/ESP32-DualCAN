@@ -153,6 +153,33 @@ test.describe('protocol wire format', () => {
     // What matters is exactly one request was reconstructed.
     expect(device.recorded).toHaveLength(1);
   });
+
+  test('concurrent calls do not interleave chunks on the wire', async () => {
+    const { device, proto, transport } = makePair();
+    device.handler = () => null;
+
+    // Override the fake transport to yield the event loop on every chunk,
+    // which guarantees that concurrent send() loops will interleave if they
+    // aren't synchronized.
+    const origSend = transport.send.bind(transport);
+    transport.send = async (chunk) => {
+      await new Promise((r) => setTimeout(r, 0));
+      return origSend(chunk);
+    };
+
+    // Fire two large requests at the same time. If they interleave, the FakeDevice
+    // will see corrupt JSON or mismatched lengths, and it will drop or error them.
+    const p1 = proto.writeScript('a.be', 'A'.repeat(500));
+    const p2 = proto.writeScript('b.be', 'B'.repeat(500));
+
+    await Promise.all([p1, p2]);
+
+    expect(device.recorded).toHaveLength(2);
+    expect(device.recorded[0].op).toBe('script.write');
+    expect(device.recorded[1].op).toBe('script.write');
+    expect(device.recorded[0].params.filename).toBe('a.be');
+    expect(device.recorded[1].params.filename).toBe('b.be');
+  });
 });
 
 test.describe('protocol push frames', () => {

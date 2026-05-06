@@ -64,6 +64,8 @@ export class Protocol {
   // on every stack we've tested.
   private readonly CHUNK = 100;
 
+  private txMutex = Promise.resolve();
+
   constructor(transport: Transport) {
     this.transport = transport;
     transport.onReceive((data) => this.onRx(data));
@@ -91,10 +93,22 @@ export class Protocol {
       }, 5000);
     });
 
-    for (let off = 0; off < frame.length; off += this.CHUNK) {
-      const chunk = frame.subarray(off, Math.min(off + this.CHUNK, frame.length));
-      await this.transport.send(chunk);
-    }
+    const doSend = async () => {
+      try {
+        for (let off = 0; off < frame.length; off += this.CHUNK) {
+          const chunk = frame.subarray(off, Math.min(off + this.CHUNK, frame.length));
+          await this.transport.send(chunk);
+        }
+      } catch (err) {
+        const p = this.pending.get(id);
+        if (p) {
+          this.pending.delete(id);
+          p.reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      }
+    };
+
+    this.txMutex = this.txMutex.then(doSend);
 
     return promise;
   }

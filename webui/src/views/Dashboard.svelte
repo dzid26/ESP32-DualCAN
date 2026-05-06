@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Transport } from '../transport/types';
   import type { Protocol, SignalValue } from '../transport/protocol';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
   import { dbcStore } from '../dbcStore.svelte';
 
   let { transport: _transport, proto, connected }: { transport: Transport; proto: Protocol; connected: boolean } = $props();
@@ -152,8 +152,10 @@
 
   $effect(() => {
     if (connected) {
-      refreshActions();
-      subscribeAll();
+      untrack(() => {
+        refreshActions();
+        subscribeAll();
+      });
     }
   });
 
