@@ -44,3 +44,30 @@ int dbc_find_signal(const dbc_t *dbc, const char *name)
     }
     return -1;
 }
+
+int dbc_find_signal_in_msg(const dbc_t *dbc, const dbc_msg_t *msg, const char *name)
+{
+    if (!dbc || !dbc->hdr || !dbc->sigs || !msg || !name) return -1;
+    for (uint16_t i = 0; i < msg->sig_count; i++) {
+        uint16_t si = msg->sig_start + i;
+        if (si >= dbc->hdr->sig_count) return -1;
+        if (strcmp(dbc_str(dbc, dbc->sigs[si].name_off), name) == 0) return (int)si;
+    }
+    return -1;
+}
+
+const dbc_msg_t *dbc_find_msg_by_name(const dbc_t *dbc, const char *name)
+{
+    if (!dbc || !dbc->hdr || !dbc->msgs || !name) return NULL;
+    for (uint16_t i = 0; i < dbc->hdr->msg_count; i++) {
+        if (strcmp(dbc_str(dbc, dbc->msgs[i].name_off), name) == 0) return &dbc->msgs[i];
+    }
+    return NULL;
+}
+
+int dbc_find_signal_by_msg_name(const dbc_t *dbc, const char *msg_name, const char *sig_name)
+{
+    const dbc_msg_t *m = dbc_find_msg_by_name(dbc, msg_name);
+    if (!m) return -1;
+    return dbc_find_signal_in_msg(dbc, m, sig_name);
+}

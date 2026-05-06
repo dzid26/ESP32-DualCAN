@@ -16,13 +16,13 @@ var full_throttle_start = 0
 var track_requested = false
 
 def setup()
-  can_on("DI_accelPedalPos", def(sig)
+  can_signal_on("DI_torque", "DI_accelPedalPos", def(sig)
     var pedal = sig['value']
     if pedal >= 99.0
       if !track_requested
-        # TODO: need millis() to time the hold duration
+        full_throttle_start = millis()
         print("Full throttle detected — would request track mode")
-        # var msg = can_msg_draft(0x313)
+        # var msg = can_msg_get(0x313)
         # can_msg_set(msg, "UI_trackModeRequest", 1)  # ON
         # can_msg_send(msg)
         track_requested = true

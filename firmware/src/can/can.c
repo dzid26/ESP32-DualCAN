@@ -132,6 +132,18 @@ int can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx,
     };
     return 0;
 }
+
+int can_on_change_scoped(can_t *c, const char *msg_name, const char *sig_name,
+                          can_signal_cb_t cb, void *ctx, int tag)
+{
+    if (!c->loaded) return -1;
+    int si = dbc_find_signal_by_msg_name(&c->dbc, msg_name, sig_name);
+    if (si < 0 || c->cb_count >= CAN_MAX_CALLBACKS) return -1;
+    c->callbacks[c->cb_count++] = (typeof(c->callbacks[0])){
+        .sig_idx = si, .cb = cb, .ctx = ctx, .tag = tag
+    };
+    return 0;
+}
 // todo explain tag and can_off_by_tag
 void can_off_by_tag(can_t *c, int tag)
 {
@@ -148,6 +160,13 @@ const signal_state_t *can_signal(const can_t *c, const char *name)
 {
     if (!c->loaded) return NULL;
     int si = dbc_find_signal(&c->dbc, name);
+    return (si >= 0) ? &c->signals[si] : NULL;
+}
+
+const signal_state_t *can_signal_scoped(const can_t *c, const char *msg_name, const char *sig_name)
+{
+    if (!c->loaded) return NULL;
+    int si = dbc_find_signal_by_msg_name(&c->dbc, msg_name, sig_name);
     return (si >= 0) ? &c->signals[si] : NULL;
 }
 

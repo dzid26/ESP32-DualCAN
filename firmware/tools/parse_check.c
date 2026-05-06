@@ -15,8 +15,9 @@
 #include <string.h>
 
 static const char *BINDING_NAMES[] = {
-    "can_send", "can_receive", "can_signal", "can_on",
-    "can_msg_draft", "can_msg_set", "can_msg_send",
+    "can_send_raw", "can_recv_raw",
+    "can_signal_get", "can_signal_on",
+    "can_msg_get", "can_msg_set", "can_msg_send",
     "led_set", "led_off",
     "state_set", "state_get", "state_remove",
     "timer_after", "timer_every", "timer_cancel",

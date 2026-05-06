@@ -17,11 +17,11 @@ var handle_start_ms = 0
 var handle_held = false
 
 def setup()
-  can_on("VCRIGHT_frontHandlePulled", def(sig)
+  can_signal_on("VCRIGHT_doorStatus", "VCRIGHT_frontHandlePulled", def(sig)
     if sig['value'] > 0
       if !handle_held
         handle_held = true
-        handle_start_ms = 0  # TODO: need millis() binding
+        handle_start_ms = millis()
         print("Handle pulled — timing...")
       end
     else
@@ -32,7 +32,7 @@ def setup()
     end
   end)
 
-  can_on("VCRIGHT_frontLatchStatus", def(sig)
+  can_signal_on("VCRIGHT_doorStatus", "VCRIGHT_frontLatchStatus", def(sig)
     if sig['value'] > 0
       print("Door open, latch=" .. str(sig['value']))
     end

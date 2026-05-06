@@ -11,23 +11,23 @@ def tick_fn()
   b.add(tick & 0xFF)
   b.add((tick >> 8) & 0xFF)
 
-  can_send(0, 0x100, b)     # simulated DI_torque
-  can_send(0, 0x103, b)     # simulated VCRIGHT_doorStatus
-  can_send(0, 0x118, b)     # simulated DI_state
+  can_send_raw(0, 0x100, b)     # simulated DI_torque
+  can_send_raw(0, 0x103, b)     # simulated VCRIGHT_doorStatus
+  can_send_raw(0, 0x118, b)     # simulated DI_state
 
   tick += 1
 
   # Drain and print any received frames (from loopback or external)
-  var rx = can_receive(0)
+  var rx = can_recv_raw(0)
   while rx != nil
     print("bus0 rx: 0x" .. format("%03X", rx.item(0)))
-    rx = can_receive(0)
+    rx = can_recv_raw(0)
   end
 
-  rx = can_receive(1)
+  rx = can_recv_raw(1)
   while rx != nil
     print("bus1 rx: 0x" .. format("%03X", rx.item(0)))
-    rx = can_receive(1)
+    rx = can_recv_raw(1)
   end
 
   # Cycle LED color based on tick

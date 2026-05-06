@@ -12,11 +12,11 @@ def tick_fn()
   b.add((tick >> 8) & 0xFF)
   b.add((tick >> 16) & 0xFF)
   b.add((tick >> 24) & 0xFF)
-  can_send(0, 0x123, b)
+  can_send_raw(0, 0x123, b)
   tick += 1
 
   # Check CAN1 for loopback
-  var rx = can_receive(1)
+  var rx = can_recv_raw(1)
   if rx != nil
     led_set(0, 32, 0)   # green
   else
@@ -24,10 +24,10 @@ def tick_fn()
   end
 
   # Bridge: forward any CAN0 rx to CAN1
-  rx = can_receive(0)
+  rx = can_recv_raw(0)
   while rx != nil
-    can_send(1, rx.item(0), rx.item(1))
-    rx = can_receive(0)
+    can_send_raw(1, rx.item(0), rx.item(1))
+    rx = can_recv_raw(0)
   end
 end
 

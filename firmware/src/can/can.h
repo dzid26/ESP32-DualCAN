@@ -33,7 +33,7 @@ typedef struct {
     struct { int sig_idx; can_signal_cb_t cb; void *ctx; int tag; } callbacks[CAN_MAX_CALLBACKS];
     int                cb_count;
 
-    /* Software RX ring buffer: can_poll fills this so Berry can_receive()
+    /* Software RX ring buffer: can_poll fills this so Berry can_recv_raw()
      * sees frames that arrived before the timer callback fires. */
     twai_message_t     rx_buf[CAN_RX_BUF];
     uint8_t            rx_head;
@@ -52,8 +52,15 @@ typedef void (*can_raw_observer_t)(int bus_id, const twai_message_t *frame, uint
 void can_set_raw_observer(can_raw_observer_t cb);
 
 int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag);
+/* Scoped variant: only matches a signal living inside `msg_name`. Use this from
+ * Berry, where the script knows the message context — DBC signal names are not
+ * unique across messages, and the bare can_on_change picks the first match. */
+int  can_on_change_scoped(can_t *c, const char *msg_name, const char *sig_name,
+                           can_signal_cb_t cb, void *ctx, int tag);
 void can_off_by_tag(can_t *c, int tag);   /* remove every callback registered with this tag */
 const signal_state_t *can_signal(const can_t *c, const char *name);
+/* Scoped read (msg_name, sig_name). Same rationale as can_on_change_scoped. */
+const signal_state_t *can_signal_scoped(const can_t *c, const char *msg_name, const char *sig_name);
 
 int  can_draft(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc);
 void can_encode(const can_t *c, int sig_idx, uint8_t *data, float value);

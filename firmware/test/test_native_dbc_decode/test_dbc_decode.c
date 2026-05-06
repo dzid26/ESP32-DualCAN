@@ -94,6 +94,36 @@ void test_find_signal(void) {
     TEST_ASSERT_EQUAL(-1, dbc_find_signal(&dbc, "nonexistent"));
 }
 
+/* Scoped lookup: signal must live inside the named message. Real DBCs
+ * have name collisions across messages, so the bare dbc_find_signal()
+ * is ambiguous — these helpers fix that. */
+void test_find_signal_scoped(void) {
+    const dbc_msg_t *m100 = dbc_find_msg(&dbc, 0x100);
+    const dbc_msg_t *m200 = dbc_find_msg(&dbc, 0x200);
+    TEST_ASSERT_NOT_NULL(m100);
+    TEST_ASSERT_NOT_NULL(m200);
+
+    /* "speed" lives in msg100 only; "temp_a" in msg200 only. */
+    TEST_ASSERT_EQUAL(0,  dbc_find_signal_in_msg(&dbc, m100, "speed"));
+    TEST_ASSERT_EQUAL(-1, dbc_find_signal_in_msg(&dbc, m100, "temp_a"));
+    TEST_ASSERT_EQUAL(3,  dbc_find_signal_in_msg(&dbc, m200, "temp_a"));
+    TEST_ASSERT_EQUAL(-1, dbc_find_signal_in_msg(&dbc, m200, "speed"));
+}
+
+void test_find_msg_by_name(void) {
+    const dbc_msg_t *m = dbc_find_msg_by_name(&dbc, "msg100");
+    TEST_ASSERT_NOT_NULL(m);
+    TEST_ASSERT_EQUAL_UINT32(0x100, m->id);
+    TEST_ASSERT_NULL(dbc_find_msg_by_name(&dbc, "nope"));
+}
+
+void test_find_signal_by_msg_name(void) {
+    TEST_ASSERT_EQUAL(0,  dbc_find_signal_by_msg_name(&dbc, "msg100", "speed"));
+    TEST_ASSERT_EQUAL(3,  dbc_find_signal_by_msg_name(&dbc, "msg200", "temp_a"));
+    TEST_ASSERT_EQUAL(-1, dbc_find_signal_by_msg_name(&dbc, "msg100", "temp_a"));
+    TEST_ASSERT_EQUAL(-1, dbc_find_signal_by_msg_name(&dbc, "ghost",  "speed"));
+}
+
 /* Regression: signal.subscribe used to panic (MCAUSE=5) when called before any
  * DBC was loaded — dbc_find_signal dereferenced a NULL hdr/sigs pointer. */
 void test_find_signal_null_safe(void) {
@@ -161,6 +191,9 @@ int main(void) {
     RUN_TEST(test_find_msg);
     RUN_TEST(test_find_signal);
     RUN_TEST(test_find_signal_null_safe);
+    RUN_TEST(test_find_signal_scoped);
+    RUN_TEST(test_find_msg_by_name);
+    RUN_TEST(test_find_signal_by_msg_name);
     RUN_TEST(test_decode_simple);
     RUN_TEST(test_decode_signed);
     RUN_TEST(test_decode_frame_mux);

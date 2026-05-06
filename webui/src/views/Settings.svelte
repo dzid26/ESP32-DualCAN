@@ -127,7 +127,7 @@
 
     <section>
       <h3>Simulation mode</h3>
-      <p class="hint">When ON, every <code>can_send</code> is routed to the log instead of the bus. Use to develop scripts without being in the car.</p>
+      <p class="hint">When ON, every <code>can_send_raw</code> / <code>can_msg_send</code> is routed to the log instead of the bus. Use to develop scripts without being in the car.</p>
       <label class="toggle">
         <input
           type="checkbox"

@@ -37,7 +37,7 @@ static can_t *get_bus(int bus)
 }
 
 /* ---- Berry function ref storage (list at global ".refs") ----
- * Each registered callback (can.on, timer, action) stores its function in
+ * Each registered callback (can_signal_on, timer, action) stores its function in
  * the .refs list and remembers the index. To revoke, we nil out the slot
  * (the list grows monotonically; we don't compact it). */
 
@@ -119,7 +119,7 @@ int berry_call_ref(bvm *vm, int ref)
     return 0;
 }
 
-/* ---- can.on signal callbacks ---- */
+/* ---- can_signal_on callbacks ---- */
 
 #define MAX_BERRY_CBS 16
 
@@ -156,17 +156,24 @@ static void can_on_trampoline(int sig_idx, float value, float prev, void *ctx)
     be_pop(s_vm, 2);
 
     if (be_pcall(s_vm, 1) != 0) {
-        ESP_LOGE(TAG_BB, "can.on callback error: %s", be_tostring(s_vm, -1));
+        ESP_LOGE(TAG_BB, "can_signal_on callback error: %s", be_tostring(s_vm, -1));
     }
     be_pop(s_vm, 2);   /* pop result + .refs */
 }
 
-/* can_on(name:str, fn:function [, bus:int]) -> nil */
-static int l_can_on(bvm *vm)
+/* can_signal_on(msg:str, sig:str, fn:function [, bus:int]) -> nil
+ *
+ * Invoke fn(sig_map) every time the named signal changes. Scoped by message
+ * because DBC signal names are unique only within a message.
+ */
+static int l_can_signal_on(bvm *vm)
 {
-    if (be_top(vm) < 2 || !be_isstring(vm, 1) || !be_isfunction(vm, 2)) be_return_nil(vm);
-    const char *name = be_tostring(vm, 1);
-    int bus = (be_top(vm) >= 3 && be_isint(vm, 3)) ? be_toint(vm, 3) : 0;
+    if (be_top(vm) < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2) || !be_isfunction(vm, 3)) {
+        be_return_nil(vm);
+    }
+    const char *msg_name = be_tostring(vm, 1);
+    const char *sig_name = be_tostring(vm, 2);
+    int bus = (be_top(vm) >= 4 && be_isint(vm, 4)) ? be_toint(vm, 4) : 0;
     can_t *eng = get_bus(bus);
     if (!eng) be_return_nil(vm);
 
@@ -175,21 +182,22 @@ static int l_can_on(bvm *vm)
         if (!s_can_cbs[i].in_use) { slot = i; break; }
     }
     if (slot < 0) {
-        ESP_LOGE(TAG_BB, "can.on registry full");
+        ESP_LOGE(TAG_BB, "can_signal_on registry full");
         be_return_nil(vm);
     }
 
-    int ref = refs_alloc(vm, 2);
-    if (can_on_change(eng, name, can_on_trampoline,
-                      (void *)(intptr_t)ref, s_current_script_id) != 0) {
+    int ref = refs_alloc(vm, 3);
+    if (can_on_change_scoped(eng, msg_name, sig_name, can_on_trampoline,
+                              (void *)(intptr_t)ref, s_current_script_id) != 0) {
         refs_free(vm, ref);
-        ESP_LOGW(TAG_BB, "can.on: signal '%s' not found on bus %d", name, bus);
+        ESP_LOGW(TAG_BB, "can_signal_on: %s.%s not found on bus %d",
+                 msg_name, sig_name, bus);
         be_return_nil(vm);
     }
 
     s_can_cbs[slot] = (cb_entry_t){
         .in_use = true, .ref = ref, .bus = bus,
-        .sig_idx = -1,  /* not used directly; kept for symmetry */
+        .sig_idx = -1,
         .script_id = s_current_script_id,
     };
     be_return_nil(vm);
@@ -418,7 +426,7 @@ void berry_cleanup_script(int script_id)
         }
     }
 
-    /* Drop can.on callbacks */
+    /* Drop can_signal_on callbacks */
     for (int i = 0; i < MAX_BERRY_CBS; i++) {
         if (s_can_cbs[i].in_use && s_can_cbs[i].script_id == script_id) {
             refs_free(s_vm, s_can_cbs[i].ref);
@@ -439,9 +447,11 @@ void berry_cleanup_script(int script_id)
     }
 }
 
-/* ---- Raw CAN, signals query, draft/encode/send (unchanged from before) ---- */
+/* ---- CAN: raw frames, signal reads, message drafts ---- */
 
-static int l_can_send(bvm *vm)
+/* can_send_raw(bus:int, id:int, data:bytes) -> nil
+ * Transmit a raw CAN frame. Bypasses DBC encoding and rate limiting. */
+static int l_can_send_raw(bvm *vm)
 {
     int argc = be_top(vm);
     if (argc >= 3 && be_isint(vm, 1) && be_isint(vm, 2) && be_isbytes(vm, 3)) {
@@ -455,7 +465,8 @@ static int l_can_send(bvm *vm)
     be_return_nil(vm);
 }
 
-static int l_can_receive(bvm *vm)
+/* can_recv_raw(bus:int) -> [id, bytes] | nil */
+static int l_can_recv_raw(bvm *vm)
 {
     if (be_top(vm) >= 1 && be_isint(vm, 1)) {
         int bus = be_toint(vm, 1);
@@ -476,15 +487,18 @@ static int l_can_receive(bvm *vm)
     be_return_nil(vm);
 }
 
-static int l_can_signal(bvm *vm)
+/* can_signal_get(msg:str, sig:str [, bus:int]) -> {value, prev, changed} | nil
+ * Read the latest decoded value of a signal. Scoped by message. */
+static int l_can_signal_get(bvm *vm)
 {
-    if (be_top(vm) >= 1 && be_isstring(vm, 1)) {
-        const char *name = be_tostring(vm, 1);
-        int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
+    if (be_top(vm) >= 2 && be_isstring(vm, 1) && be_isstring(vm, 2)) {
+        const char *msg_name = be_tostring(vm, 1);
+        const char *sig_name = be_tostring(vm, 2);
+        int bus = (be_top(vm) >= 3 && be_isint(vm, 3)) ? be_toint(vm, 3) : 0;
         can_t *eng = get_bus(bus);
         if (!eng) be_return_nil(vm);
 
-        const signal_state_t *e = can_signal(eng, name);
+        const signal_state_t *e = can_signal_scoped(eng, msg_name, sig_name);
         if (e) {
             be_newobject(vm, "map");
             be_pushstring(vm, "value");
@@ -505,7 +519,9 @@ static int l_can_signal(bvm *vm)
     be_return_nil(vm);
 }
 
-static int l_can_msg_draft(bvm *vm)
+/* can_msg_get(id:int [, bus:int]) -> draft
+ * Returns the latest received frame as a draft you can edit and send. */
+static int l_can_msg_get(bvm *vm)
 {
     if (be_top(vm) >= 1 && be_isint(vm, 1)) {
         uint32_t msg_id = (uint32_t)be_toint(vm, 1);
@@ -545,10 +561,18 @@ static int l_can_msg_set(bvm *vm)
         can_t *eng = get_bus(bus);
         if (!eng) be_return_nil(vm);
 
+        /* Scope signal lookup to this draft's message (id) — DBC signal names
+         * aren't unique across messages and the global lookup would pick the
+         * wrong one. */
+        be_getmember(vm, 1, "id");
+        uint32_t msg_id = (uint32_t)be_toint(vm, -1);
+        be_pop(vm, 1);
+
         const char *sig_name = be_tostring(vm, 2);
         float val = be_isreal(vm, 3) ? (float)be_toreal(vm, 3) : (float)be_toint(vm, 3);
 
-        int si = dbc_find_signal(&eng->dbc, sig_name);
+        const dbc_msg_t *m = dbc_find_msg(&eng->dbc, msg_id);
+        int si = m ? dbc_find_signal_in_msg(&eng->dbc, m, sig_name) : -1;
         if (si < 0) be_return_nil(vm);
 
         be_getmember(vm, 1, "data");
@@ -668,13 +692,19 @@ void berry_register_bindings(bvm *vm)
 {
     s_vm = vm;
 
-    be_regfunc(vm, "can_send", l_can_send);
-    be_regfunc(vm, "can_receive", l_can_receive);
-    be_regfunc(vm, "can_signal", l_can_signal);
-    be_regfunc(vm, "can_on", l_can_on);
-    be_regfunc(vm, "can_msg_draft", l_can_msg_draft);
-    be_regfunc(vm, "can_msg_set", l_can_msg_set);
-    be_regfunc(vm, "can_msg_send", l_can_msg_send);
+    /* CAN API — naming hierarchy is can_<level>_<verb>:
+     *   raw frame:  can_send_raw, can_recv_raw
+     *   message:    can_msg_get, can_msg_set, can_msg_send
+     *   signal:     can_signal_get, can_signal_on
+     * Signal-level ops require a message name as well, since DBC signal
+     * names are unique only inside a message. */
+    be_regfunc(vm, "can_send_raw",   l_can_send_raw);
+    be_regfunc(vm, "can_recv_raw",   l_can_recv_raw);
+    be_regfunc(vm, "can_signal_get", l_can_signal_get);
+    be_regfunc(vm, "can_signal_on",  l_can_signal_on);
+    be_regfunc(vm, "can_msg_get",    l_can_msg_get);
+    be_regfunc(vm, "can_msg_set",    l_can_msg_set);
+    be_regfunc(vm, "can_msg_send",   l_can_msg_send);
 
     be_regfunc(vm, "led_set", l_led_set);
     be_regfunc(vm, "led_off", l_led_off);
