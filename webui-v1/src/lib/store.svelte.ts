@@ -174,37 +174,57 @@ class AppState {
     }
   }
 
-  /** Kill switch = disable every enabled script. The "release" path can't
-   * un-disable since we don't track which were enabled before; users re-enable
-   * what they want from the Scripts view. */
+  /** Filenames that were enabled at the moment Kill engaged — re-enabled on release. */
+  private restoreOnRelease: string[] = [];
+
+  /** Bumped on every kill / release so view-side $effects re-fetch their lists. */
+  scriptsVersion = $state(0);
+
+  /** Kill switch: disable every enabled script and remember which they were.
+   * Release: re-enable that remembered set. Both modes refresh ScriptsView via
+   * scriptsVersion. */
   async toggleKill(): Promise<void> {
     if (this.killBusy) return;
-    if (this.killed) {
-      // "Release" — purely a UI state flag here. Tell the user how to recover.
-      this.killed = false;
-      this.pushLog('Kill switch released — re-enable scripts from Automations', 'info', 'system');
-      return;
-    }
     if (!this.connected) {
       this.pushLog('Kill switch needs an active connection', 'warn', 'system');
       return;
     }
     this.killBusy = true;
     try {
-      const r = await this.proto.listScripts();
-      const enabled = r.scripts.filter(s => s.enabled);
-      let n = 0;
-      for (const s of enabled) {
-        try {
-          await this.proto.disableScript(s.filename);
-          n++;
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          this.pushLog(`disable ${s.filename} failed: ${msg}`, 'error', 'system');
+      if (this.killed) {
+        // Release — re-enable everything we disabled.
+        let restored = 0;
+        for (const fn of this.restoreOnRelease) {
+          try {
+            await this.proto.enableScript(fn);
+            restored++;
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.pushLog(`re-enable ${fn} failed: ${msg}`, 'error', 'system');
+          }
         }
+        this.restoreOnRelease = [];
+        this.killed = false;
+        this.pushLog(`Kill switch released — re-enabled ${restored} script(s)`, 'info', 'system');
+      } else {
+        // Engage — list, disable each enabled, remember them.
+        const r = await this.proto.listScripts();
+        const enabled = r.scripts.filter(s => s.enabled);
+        const remember: string[] = [];
+        for (const s of enabled) {
+          try {
+            await this.proto.disableScript(s.filename);
+            remember.push(s.filename);
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            this.pushLog(`disable ${s.filename} failed: ${msg}`, 'error', 'system');
+          }
+        }
+        this.restoreOnRelease = remember;
+        this.killed = true;
+        this.pushLog(`KILL SWITCH engaged — disabled ${remember.length} script(s)`, 'warn', 'system');
       }
-      this.killed = true;
-      this.pushLog(`KILL SWITCH engaged — disabled ${n} script(s)`, 'warn', 'system');
+      this.scriptsVersion++;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.pushLog(`kill failed: ${msg}`, 'error', 'system');

@@ -179,7 +179,9 @@
 
   onMount(refresh);
   $effect(() => {
-    void app.connected;
+    // Re-list whenever connection flips, or whenever the global kill switch
+    // bumps scriptsVersion (engage / release sweeps change enabled state).
+    void app.connected; void app.scriptsVersion;
     if (app.connected) refresh();
     else { scripts = []; }
   });
