@@ -3,7 +3,7 @@
 # Targets:
 #   make test          host firmware tests + webui tests (no device, no browser)
 #   make test-fw       firmware native tests only
-#   make test-ui       webui tests only (Playwright; spawns Vite dev server)
+#   make test-ui       webui protocol tests only (Node; no browser)
 #   make test-device   flash + smoke the connected ESP32-C6 (panic capture)
 #   make test-all      everything except test-device
 
@@ -16,8 +16,8 @@ test-fw:
 	cd firmware && pio test -e tests-native
 
 test-ui:
-	@echo "==> webui tests (UI smoke + protocol round-trip)"
-	cd webui && npx playwright test
+	@echo "==> webui tests (protocol round-trip)"
+	cd webui && npm test
 
 test-device:
 	@echo "==> firmware device smoke (will flash $$DORKY_PORT or /dev/ttyACM0)"
