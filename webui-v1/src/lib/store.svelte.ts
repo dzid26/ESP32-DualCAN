@@ -81,6 +81,14 @@ class AppState {
    * filename here, then setView('scripts'). ScriptsView consumes + clears. */
   pendingExample = $state<string | null>(null);
 
+  /** Cross-view hand-off for Gallery → DBC. Picks the bus tab and the
+   * URL to fetch+parse+upload. DbcView consumes + clears. */
+  pendingDbc = $state<{ url: string; busId: number; name: string } | null>(null);
+
+  /** Last-loaded DBC name per bus, indexed by bus id. Status pips link
+   * to the DBC view + bus tab when a slot is populated. */
+  loadedDbc = $state<Record<number, string | null>>({ 0: null, 1: null });
+
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));

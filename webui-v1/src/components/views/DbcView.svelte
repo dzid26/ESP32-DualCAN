@@ -62,6 +62,7 @@
         await app.ble.send(binary);
         status += ' — uploaded';
         dbcStore.setLastBus(busId);
+        app.loadedDbc = { ...app.loadedDbc, [busId]: loadedFrom ?? 'custom.dbc' };
         app.pushLog(`DBC uploaded to bus ${busId} (${binary.length} bytes)`, 'info', 'dbc');
       } else {
         status += ' — not connected (compile-only)';
@@ -72,6 +73,28 @@
       busy = false;
     }
   }
+
+  /** Cross-view hand-off from Gallery: fetch URL, parse, switch to that
+   * bus tab, upload if connected. Clears the flag so a re-mount doesn't
+   * replay it. */
+  $effect(() => {
+    const p = app.pendingDbc;
+    if (!p) return;
+    app.pendingDbc = null;
+    bus = p.busId;
+    void (async () => {
+      status = `fetching ${p.name}…`;
+      try {
+        const resp = await fetch(p.url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        loadText(text, p.name);
+        if (app.ble.connected) await upload(p.busId);
+      } catch (e) {
+        status = `gallery load failed: ${e instanceof Error ? e.message : e}`;
+      }
+    })();
+  });
 
   function hex3(n: number): string {
     return '0x' + n.toString(16).toUpperCase().padStart(3, '0');

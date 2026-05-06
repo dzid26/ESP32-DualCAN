@@ -96,21 +96,29 @@ export const GALLERY_SCRIPTS: GalleryScript[] = [
 
 export const DBC_SOURCE = { repo: 'commaai/opendbc', url: 'https://github.com/commaai/opendbc' };
 
+export type DbcSource = 'opendbc' | 'community';
+
 export type GalleryDbc = {
   n: string; bus: number; desc: string; file: string;
-  sigs: number; msgs: number; ver: string; size: string; brands: string[];
+  sigs: number; msgs: number; ver: string; size: string;
+  brands: string[]; source: DbcSource;
+  /** Optional: where this DBC actually loads from. Defaults to the
+   * Tesla Model 3 vehicle DBC bundled in webui-v1/public/dbc/. */
+  url?: string;
 };
 
 export const GALLERY_DBCS: GalleryDbc[] = [
-  { n: 'Tesla Model 3 / Y — VehicleCAN', bus: 0, desc: 'Reverse-engineered from the Model 3/Y party bus. 61 messages, 428 signals.', file: 'tesla_model3_party.dbc',     sigs: 428, msgs: 61, ver: '2026.03', size: '2.1 KB', brands: ['Tesla'] },
-  { n: 'Tesla Model 3 / Y — ChassisCAN', bus: 1, desc: 'Brake, steering, IBST, EPAS frames on the chassis bus.',                    file: 'tesla_model3_chassis.dbc',   sigs: 187, msgs: 24, ver: '2026.03', size: '0.9 KB', brands: ['Tesla'] },
-  { n: 'Tesla Model S / X — Pre-Raven',  bus: 0, desc: 'Legacy MS/MX vehicle bus through 2019 Raven refresh.',                       file: 'tesla_modelS_preraven.dbc',  sigs: 312, msgs: 51, ver: '2025.08', size: '1.6 KB', brands: ['Tesla'] },
-  { n: 'Tesla Model S / X — Raven+',     bus: 0, desc: 'Post-Raven MS/MX. Newer steering rack and inverter messages.',               file: 'tesla_modelS_raven.dbc',     sigs: 298, msgs: 49, ver: '2025.11', size: '1.5 KB', brands: ['Tesla'] },
-  { n: 'Cybertruck — VehicleCAN',        bus: 0, desc: 'Partial coverage. Steer-by-wire, tri-motor torque, air-suspension.',         file: 'tesla_cybertruck.dbc',       sigs:  92, msgs: 22, ver: '2026.01', size: '0.5 KB', brands: ['Tesla'] },
-  { n: 'Toyota — RAV4 / Prius / Corolla', bus: 0, desc: 'Shared Toyota powertrain DBC. Brake, accel, steering torque, ACC.',         file: 'toyota_rav4_2019_pt.dbc',    sigs: 215, msgs: 38, ver: '2026.02', size: '1.2 KB', brands: ['Toyota'] },
-  { n: 'Honda — Civic / Accord / CR-V',  bus: 0, desc: 'Bosch radar architecture Honda powertrain. Auto-generated.',                 file: 'honda_civic_2022_can_generated.dbc', sigs: 244, msgs: 41, ver: '2026.02', size: '1.4 KB', brands: ['Honda'] },
-  { n: 'Hyundai EV — Ioniq 5 / EV6',     bus: 0, desc: 'E-GMP platform. BMS, charge, regen, vehicle dynamics.',                      file: 'hyundai_ev_2022.dbc',        sigs: 271, msgs: 44, ver: '2026.02', size: '1.5 KB', brands: ['Hyundai', 'Kia'] },
-  { n: 'Powertrain debug overlay',       bus: 0, desc: 'Adds inverter currents and battery cell deltas on top of the M3 base DBC.',  file: 'tesla_m3_pt_overlay.dbc',    sigs:  38, msgs:  7, ver: '2026.02', size: '0.2 KB', brands: ['Tesla'] },
+  // opendbc (mirrored from commaai/opendbc)
+  { n: 'Tesla Model 3 / Y — VehicleCAN', bus: 0, desc: 'Reverse-engineered from the Model 3/Y party bus. 61 messages, 428 signals.', file: 'tesla_model3_party.dbc',     sigs: 428, msgs: 61, ver: '2026.03', size: '2.1 KB', brands: ['Tesla'],          source: 'opendbc',  url: '/dbc/tesla_model3_vehicle.dbc' },
+  { n: 'Toyota — RAV4 / Prius / Corolla', bus: 0, desc: 'Shared Toyota powertrain DBC. Brake, accel, steering torque, ACC.',         file: 'toyota_rav4_2019_pt.dbc',    sigs: 215, msgs: 38, ver: '2026.02', size: '1.2 KB', brands: ['Toyota'],          source: 'opendbc' },
+  { n: 'Honda — Civic / Accord / CR-V',  bus: 0, desc: 'Bosch radar architecture Honda powertrain. Auto-generated.',                 file: 'honda_civic_2022_can_generated.dbc', sigs: 244, msgs: 41, ver: '2026.02', size: '1.4 KB', brands: ['Honda'], source: 'opendbc' },
+  { n: 'Hyundai EV — Ioniq 5 / EV6',     bus: 0, desc: 'E-GMP platform. BMS, charge, regen, vehicle dynamics.',                      file: 'hyundai_ev_2022.dbc',        sigs: 271, msgs: 44, ver: '2026.02', size: '1.5 KB', brands: ['Hyundai', 'Kia'], source: 'opendbc' },
+  // Community (dorky-specific or third-party)
+  { n: 'Tesla Model 3 / Y — ChassisCAN', bus: 1, desc: 'Brake, steering, IBST, EPAS frames on the chassis bus.',                    file: 'tesla_model3_chassis.dbc',   sigs: 187, msgs: 24, ver: '2026.03', size: '0.9 KB', brands: ['Tesla'], source: 'community' },
+  { n: 'Tesla Model S / X — Pre-Raven',  bus: 0, desc: 'Legacy MS/MX vehicle bus through 2019 Raven refresh.',                       file: 'tesla_modelS_preraven.dbc',  sigs: 312, msgs: 51, ver: '2025.08', size: '1.6 KB', brands: ['Tesla'], source: 'community' },
+  { n: 'Tesla Model S / X — Raven+',     bus: 0, desc: 'Post-Raven MS/MX. Newer steering rack and inverter messages.',               file: 'tesla_modelS_raven.dbc',     sigs: 298, msgs: 49, ver: '2025.11', size: '1.5 KB', brands: ['Tesla'], source: 'community' },
+  { n: 'Cybertruck — VehicleCAN',        bus: 0, desc: 'Partial coverage. Steer-by-wire, tri-motor torque, air-suspension.',         file: 'tesla_cybertruck.dbc',       sigs:  92, msgs: 22, ver: '2026.01', size: '0.5 KB', brands: ['Tesla'], source: 'community' },
+  { n: 'Powertrain debug overlay',       bus: 0, desc: 'Adds inverter currents and battery cell deltas on top of the M3 base DBC.',  file: 'tesla_m3_pt_overlay.dbc',    sigs:  38, msgs:  7, ver: '2026.02', size: '0.2 KB', brands: ['Tesla'], source: 'community' },
 ];
 
 export type LogLine = { ts: string; level: 'info' | 'warn' | 'error' | 'debug'; src: string; msg: string };
