@@ -186,10 +186,16 @@
 
   /** Cross-view hand-off: EventsView (or anything else) sets
    * app.pendingExample to a filename in firmware/scripts_examples/ then
-   * navigates here. Consume + clear so a re-mount doesn't replay it. */
+   * navigates here. Consume + clear so a re-mount doesn't replay it.
+   * Confirms before clobbering an unsaved buffer. */
   $effect(() => {
     const fn = app.pendingExample;
     if (!fn) return;
+    app.pendingExample = null;
+    if (dirty && !confirm('Discard unsaved changes and load the example?')) {
+      status = 'kept your unsaved buffer';
+      return;
+    }
     const ex = examples.find(x => x.filename === fn);
     if (ex) {
       code = ex.code;
@@ -200,7 +206,6 @@
     } else {
       status = `unknown example: ${fn}`;
     }
-    app.pendingExample = null;
   });
 </script>
 
@@ -336,7 +341,7 @@
       {/if}
 
       <div style="flex: 1; min-height: 0; display: flex">
-        <MonacoEditor bind:value={code} height="100%" />
+        <MonacoEditor bind:value={code} height="100%" onSave={save} />
       </div>
     </div>
   </div>

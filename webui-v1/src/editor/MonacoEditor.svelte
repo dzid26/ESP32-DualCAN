@@ -5,10 +5,12 @@
   /* Bound value uses Svelte 5 $bindable() so the parent can write the editor
    * contents (e.g. when loading a script from the device or an example) and
    * also receive every keystroke. */
-  let { value = $bindable(''), language = 'berry', height = '380px' }: {
+  let { value = $bindable(''), language = 'berry', height = '380px', onSave }: {
     value: string;
     language?: string;
     height?: string;
+    /** Bound to Cmd/Ctrl+S inside the editor; default browser save is suppressed. */
+    onSave?: () => void;
   } = $props();
 
   let host: HTMLDivElement | undefined = $state();
@@ -34,6 +36,11 @@
       if (suppressNextChange) { suppressNextChange = false; return; }
       const v = editor!.getValue();
       if (v !== value) value = v;
+    });
+
+    /* Cmd/Ctrl+S → call onSave; suppresses the browser's "save page" dialog. */
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      onSave?.();
     });
   });
 
