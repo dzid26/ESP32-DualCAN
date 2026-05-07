@@ -367,6 +367,8 @@ button { font: inherit; color: inherit; }
 .evgrid {
   flex: 1; overflow-y: auto;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  /* baseline row height for tiles; allows spanning rows uniformly */
+  grid-auto-rows: var(--evtile-row-h, 120px);
   gap: 10px; padding: 14px 16px; align-content: start;
 }
 .evtile {
@@ -416,6 +418,11 @@ button { font: inherit; color: inherit; }
   animation: ev-spin .7s linear infinite;
 }
 @keyframes ev-spin { to { transform: rotate(360deg); } }
+
+/* Modifier to make a tile span two grid rows (taller tile) */
+.evtile--tall {
+  grid-row: span 2;
+}
 
 /* ===== AI Assistant ===== */
 .view--ai { padding: 0; }
