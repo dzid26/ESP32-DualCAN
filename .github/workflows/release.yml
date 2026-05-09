@@ -1,0 +1,112 @@
+name: Firmware Release
+
+# Triggered exclusively by version tags. Builds the production binary,
+# runs host tests, and publishes a GitHub pre-release with the .bin attached.
+#
+# Usage:
+#   git tag v0.2.0
+#   git push origin v0.2.0
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  host-tests:
+    name: Host unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+            firmware/.cache
+          key: pio-native-${{ hashFiles('firmware/platformio.ini') }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Run native tests
+        run: pio test -d firmware -e tests-native
+
+  build:
+    name: Firmware build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+            firmware/.cache
+            firmware/.pio
+          key: pio-esp32c6-${{ hashFiles('firmware/platformio.ini', 'firmware/sdkconfig.defaults') }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Inject version from tag
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "FW_VERSION=$VERSION" >> $GITHUB_ENV
+          # Override the version in platformio.ini build_flags
+          sed -i "s/DORKY_FIRMWARE_VERSION=\\\\\".*\\\\\"/DORKY_FIRMWARE_VERSION=\\\\\"${VERSION}\\\\\"/" firmware/platformio.ini
+
+      - name: Build production firmware
+        run: pio run -d firmware -e esp32-c6
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-bin
+          path: firmware/.pio/build/esp32-c6/firmware.bin
+
+  release:
+    name: Create pre-release
+    needs: [host-tests, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-bin
+
+      - name: Rename binary with version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          cp firmware.bin "dorky-commander-${VERSION}.bin"
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            dorky-commander-*.bin
+            firmware.bin
+          name: "Firmware ${{ github.ref_name }}"
+          body: |
+            ## Firmware ${{ github.ref_name }}
+
+            Automated pre-release build from tag `${{ github.ref_name }}`.
+
+            ### Installation
+            - **BLE OTA**: Open the Dorky Commander web UI → Settings → Firmware → "Check GitHub" or upload the `.bin` manually
+            - **USB**: `esptool.py write_flash 0x10000 firmware.bin`

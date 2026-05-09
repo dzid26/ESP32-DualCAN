@@ -71,7 +71,7 @@ export class Protocol {
     transport.onReceive((data) => this.onRx(data));
   }
 
-  async call<T = any>(op: string, params: Record<string, unknown> = {}): Promise<T> {
+  async call<T = any>(op: string, params: Record<string, unknown> = {}, timeoutMs = 5000): Promise<T> {
     if (!this.transport.connected) throw new Error('Not connected');
 
     const id = this.nextId++;
@@ -90,7 +90,7 @@ export class Protocol {
         if (this.pending.delete(id)) {
           reject(new Error(`Timeout waiting for response to ${op}`));
         }
-      }, 5000);
+      }, timeoutMs);
     });
 
     const doSend = async () => {
@@ -246,4 +246,73 @@ export class Protocol {
   wifiSetCreds(ssid: string, psk: string): Promise<void> {
     return this.call('wifi.set_creds', { ssid, psk });
   }
+
+  // ---- OTA (Over-the-Air firmware update) ----
+
+  /** Begin an OTA session. Returns the max firmware size (bytes) of the
+   * target partition. The device erases flash — this can take a few seconds. */
+  otaBegin(): Promise<{ max_size: number }> {
+    return this.call('ota.begin', {}, 30_000);
+  }
+
+  /** Send one base64-encoded chunk of firmware data. */
+  otaWriteChunk(b64: string): Promise<void> {
+    return this.call('ota.write', { data: b64 }, 15_000);
+  }
+
+  /** Finalise and validate the written firmware image. If `reboot` is true
+   * (default), the device restarts into the new firmware. */
+  otaEnd(reboot = true): Promise<void> {
+    return this.call('ota.end', { reboot }, 15_000);
+  }
+
+  /** Abort an in-progress OTA session and free firmware-side resources. */
+  otaAbort(): Promise<void> {
+    return this.call('ota.abort');
+  }
+
+  /**
+   * High-level: upload an entire firmware binary via BLE OTA.
+   *
+   * `bin` — the raw firmware ArrayBuffer / Uint8Array.
+   * `onProgress(sent, total)` — called after each chunk is acknowledged.
+   * `reboot` — restart into new firmware when done (default true).
+   *
+   * Throws on any error (caller should catch and show to user).
+   */
+  async uploadFirmware(
+    bin: Uint8Array,
+    onProgress?: (sent: number, total: number) => void,
+    reboot = true,
+  ): Promise<void> {
+    const { max_size } = await this.otaBegin();
+    if (bin.length > max_size) {
+      await this.otaAbort();
+      throw new Error(`Firmware too large (${bin.length} bytes, max ${max_size})`);
+    }
+
+    // Send in ~4 KB raw chunks → ~5.3 KB base64.  Keeps JSON frames well
+    // under the 16 KB RX buffer on the firmware side.
+    const CHUNK = 4096;
+    let sent = 0;
+    while (sent < bin.length) {
+      const end = Math.min(sent + CHUNK, bin.length);
+      const slice = bin.subarray(sent, end);
+      const b64 = uint8ToBase64(slice);
+      await this.otaWriteChunk(b64);
+      sent = end;
+      onProgress?.(sent, bin.length);
+    }
+
+    await this.otaEnd(reboot);
+  }
+}
+
+/** Encode Uint8Array to standard base64 string. */
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }

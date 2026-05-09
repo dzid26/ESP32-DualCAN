@@ -4,6 +4,8 @@
   import Icon from '../Icon.svelte';
   import { onMount } from 'svelte';
 
+  const GITHUB_REPO = 'dzid26/ESP32-DualCAN';
+
   // System info — refresh on connect.
   let protoVersion = $state<number | null>(null);
   let infoError = $state<string | null>(null);
@@ -52,8 +54,139 @@
     }
   }
 
+  // ---- OTA state ----
+  let otaBusy = $state(false);
+  let otaProgress = $state(0);   // 0–100
+  let otaTotal = $state(0);      // total bytes
+  let otaStatus = $state('');    // human-readable status line
+  let otaError = $state<string | null>(null);
+  let otaDone = $state(false);
+
+  // GitHub release state
+  let ghChecking = $state(false);
+  let ghRelease = $state<{ tag: string; name: string; url: string; size: number; published: string } | null>(null);
+  let ghError = $state<string | null>(null);
+  let ghDownloading = $state(false);
+
+  /** Pick a .bin file from disk and flash it. */
+  async function uploadFromFile(): Promise<void> {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.bin';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      await doOTA(new Uint8Array(await file.arrayBuffer()), file.name);
+    };
+    input.click();
+  }
+
+  /** Fetch the latest pre-release from GitHub. */
+  async function checkGitHub(): Promise<void> {
+    ghChecking = true;
+    ghError = null;
+    ghRelease = null;
+    try {
+      const resp = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases`);
+      if (!resp.ok) throw new Error(`GitHub API ${resp.status}`);
+      const releases: any[] = await resp.json();
+      // Find the latest prerelease, or fall back to latest release
+      const pre = releases.find((r: any) => r.prerelease) ?? releases[0];
+      if (!pre) { ghError = 'No releases found'; return; }
+      // Find the .bin asset
+      const asset = pre.assets?.find((a: any) => a.name.endsWith('.bin'));
+      if (!asset) { ghError = `Release ${pre.tag_name} has no .bin asset`; return; }
+      ghRelease = {
+        tag: pre.tag_name,
+        name: pre.name ?? pre.tag_name,
+        url: asset.browser_download_url,
+        size: asset.size,
+        published: new Date(pre.published_at).toLocaleDateString(),
+      };
+    } catch (e) {
+      ghError = e instanceof Error ? e.message : String(e);
+    } finally {
+      ghChecking = false;
+    }
+  }
+
+  /** Download firmware from GitHub and flash it. */
+  async function downloadAndFlash(): Promise<void> {
+    if (!ghRelease) return;
+    ghDownloading = true;
+    ghError = null;
+    try {
+      otaStatus = 'Downloading from GitHub…';
+      const resp = await fetch(ghRelease.url);
+      if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      ghDownloading = false;
+      await doOTA(buf, `${ghRelease.tag}.bin`);
+    } catch (e) {
+      ghError = e instanceof Error ? e.message : String(e);
+      ghDownloading = false;
+    }
+  }
+
+  /** Core OTA upload flow. */
+  async function doOTA(bin: Uint8Array, label: string): Promise<void> {
+    if (!app.connected) { otaError = 'Not connected'; return; }
+    otaBusy = true;
+    otaError = null;
+    otaDone = false;
+    otaProgress = 0;
+    otaTotal = bin.length;
+    otaStatus = `Preparing flash for ${label} (${(bin.length / 1024).toFixed(0)} KB)…`;
+    app.pushLog(`OTA: starting upload of ${label} (${bin.length} bytes)`, 'info', 'ota');
+
+    try {
+      await app.proto.uploadFirmware(bin, (sent, total) => {
+        otaTotal = total;
+        otaProgress = Math.round((sent / total) * 100);
+        otaStatus = `Flashing… ${otaProgress}% (${(sent / 1024).toFixed(0)} / ${(total / 1024).toFixed(0)} KB)`;
+      });
+      otaDone = true;
+      otaStatus = 'Update complete — device is rebooting…';
+      app.pushLog('OTA: firmware installed, device rebooting', 'info', 'ota');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      otaError = msg;
+      otaStatus = '';
+      app.pushLog(`OTA failed: ${msg}`, 'error', 'ota');
+      try { await app.proto.otaAbort(); } catch { /* best-effort */ }
+    } finally {
+      otaBusy = false;
+    }
+  }
+
+  async function abortOTA(): Promise<void> {
+    try {
+      await app.proto.otaAbort();
+      otaStatus = 'Aborted';
+      otaBusy = false;
+      app.pushLog('OTA aborted by user', 'warn', 'ota');
+    } catch { /* ignore */ }
+  }
+
+  function resetOtaState(): void {
+    otaBusy = false;
+    otaProgress = 0;
+    otaTotal = 0;
+    otaStatus = '';
+    otaError = null;
+    otaDone = false;
+  }
+
   onMount(() => { refreshInfo(); refreshWifi(); });
-  $effect(() => { if (app.connected) { refreshInfo(); refreshWifi(); } });
+  $effect(() => {
+    if (app.connected) {
+      refreshInfo();
+      refreshWifi();
+      resetOtaState();
+    } else {
+      resetOtaState();
+    }
+  });
 </script>
 
 <div style="padding: 12px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px">
@@ -180,18 +313,85 @@
           <span class="mono" style="color: var(--dc-warn); font-size: 11px">{app.protoMismatch}</span>
         </div>
       {/if}
+
+      <!-- OTA upload from file -->
       <div class="field">
-        <span>Update</span>
-        <button class="btn btn--info" style="justify-self: start" disabled title="OTA upload not yet wired in protocol">
+        <span>Update from file</span>
+        <button
+          id="ota-upload-btn"
+          class="btn btn--info"
+          style="justify-self: start"
+          onclick={uploadFromFile}
+          disabled={!app.connected || otaBusy}
+        >
           <Icon name="up" size={13} />Upload .bin
         </button>
       </div>
+
+      <!-- GitHub release check -->
       <div class="field">
-        <span></span>
-        <a href="https://github.com/dzid26/ESP32-DualCAN/releases" target="_blank" rel="noopener" class="btn btn--sm" style="justify-self: start; text-decoration: none">
-          Check GitHub releases
-        </a>
+        <span>Update from GitHub</span>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
+          <button
+            id="ota-github-check-btn"
+            class="btn btn--sm"
+            onclick={checkGitHub}
+            disabled={ghChecking || otaBusy}
+          >
+            {ghChecking ? 'Checking…' : 'Check for updates'}
+          </button>
+
+          {#if ghRelease}
+            <div class="ota-release-card">
+              <div class="ota-release-row">
+                <span class="mono" style="font-weight: 600; color: var(--dc-accent)">{ghRelease.tag}</span>
+                <span class="ghost" style="font-size: 10px">{ghRelease.published}</span>
+              </div>
+              <div style="font-size: 11px; color: var(--dc-text-dim)">{ghRelease.name} · {(ghRelease.size / 1024).toFixed(0)} KB</div>
+              <button
+                id="ota-github-flash-btn"
+                class="btn btn--info btn--sm"
+                style="margin-top: 4px"
+                onclick={downloadAndFlash}
+                disabled={!app.connected || otaBusy || ghDownloading}
+              >
+                {ghDownloading ? 'Downloading…' : 'Download & flash'}
+              </button>
+            </div>
+          {/if}
+
+          {#if ghError}
+            <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{ghError}</span>
+          {/if}
+        </div>
       </div>
+
+      <!-- OTA progress -->
+      {#if otaBusy || otaDone}
+        <div class="field" style="grid-column: 1 / -1">
+          <div class="ota-progress-wrap">
+            <div class="ota-progress-bar" style="width: {otaProgress}%"></div>
+          </div>
+        </div>
+        <div class="field">
+          <span></span>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span class="mono" style="font-size: 11px; color: {otaDone ? 'var(--dc-ok)' : 'var(--dc-text-dim)'}">
+              {otaStatus}
+            </span>
+            {#if otaBusy}
+              <button class="btn btn--sm btn--danger" onclick={abortOTA}>Abort</button>
+            {/if}
+          </div>
+        </div>
+      {/if}
+
+      {#if otaError}
+        <div class="field">
+          <span></span>
+          <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{otaError}</span>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -213,4 +413,34 @@
     display: grid; grid-template-columns: 140px 1fr; gap: 8px;
     align-items: center; font-size: 12px; color: var(--dc-text-dim);
   }
+
+  .ota-progress-wrap {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--dc-bg-2, #222);
+    overflow: hidden;
+  }
+  .ota-progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--dc-accent, #6e8efb);
+    transition: width 0.15s ease;
+  }
+
+  .ota-release-card {
+    background: var(--dc-bg-2, #1a1a2e);
+    border: 1px solid var(--dc-border, #333);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ota-release-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 </style>
+
