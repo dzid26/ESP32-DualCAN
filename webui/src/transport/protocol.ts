@@ -66,10 +66,13 @@ export class Protocol {
   /** Register a callback for subscribed signal updates. Pass null to clear. */
   onSignal(cb: ((s: SignalUpdate) => void) | null) { this.signalCallback = cb; }
 
-  // Conservative chunk size for BLE writes. Real MTU is usually higher
-  // after negotiation, but Web Bluetooth doesn't expose it. 100 B works
-  // on every stack we've tested.
-  private readonly CHUNK = 100;
+  // Per-write chunk size for the underlying transport. The firmware
+  // requests an ATT_MTU of 512 and Chrome/desktop hosts typically settle
+  // on 247–517; 180 stays under MTU-3 on every stack we've tested
+  // (including older Android builds that cap at 185) while leaving the
+  // old 100-byte ceiling well behind — that bound was overly cautious
+  // and was the main rate-limit on OTA chunk throughput.
+  private readonly CHUNK = 180;
 
   private txMutex = Promise.resolve();
 
