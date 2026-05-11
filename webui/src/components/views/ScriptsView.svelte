@@ -267,7 +267,7 @@
         class="sel"
         onchange={loadExample}
         title="Load a bundled Berry example into the editor (firmware/scripts_examples)"
-        style="width: auto; padding-right: 24px"
+        style="flex: 1 1 auto; min-width: 80px; max-width: 160px; padding-right: 24px"
       >
         <option value="">Load example…</option>
         {#each examples as ex}
