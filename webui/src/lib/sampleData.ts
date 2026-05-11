@@ -117,7 +117,7 @@ export type GalleryDbc = {
 
 export const GALLERY_DBCS: GalleryDbc[] = [
   // opendbc (mirrored from commaai/opendbc)
-  { n: 'Tesla Model 3 / Y — VehicleCAN', bus: 0, desc: 'Reverse-engineered from the Model 3/Y party bus. 61 messages, 428 signals.', file: 'tesla_model3_party.dbc',     sigs: 428, msgs: 61, ver: '2026.03', size: '2.1 KB', brands: ['Tesla'],          source: 'opendbc',  url: '/dbc/tesla_model3_vehicle.dbc' },
+  { n: 'Tesla Model 3 / Y — VehicleCAN', bus: 0, desc: 'Reverse-engineered from the Model 3/Y party bus. 61 messages, 428 signals.', file: 'tesla_model3_party.dbc',     sigs: 428, msgs: 61, ver: '2026.03', size: '2.1 KB', brands: ['Tesla'],          source: 'opendbc',  url: `${import.meta.env.BASE_URL}dbc/tesla_model3_vehicle.dbc` },
   { n: 'Toyota — RAV4 / Prius / Corolla', bus: 0, desc: 'Shared Toyota powertrain DBC. Brake, accel, steering torque, ACC.',         file: 'toyota_rav4_2019_pt.dbc',    sigs: 215, msgs: 38, ver: '2026.02', size: '1.2 KB', brands: ['Toyota'],          source: 'opendbc' },
   { n: 'Honda — Civic / Accord / CR-V',  bus: 0, desc: 'Bosch radar architecture Honda powertrain. Auto-generated.',                 file: 'honda_civic_2022_can_generated.dbc', sigs: 244, msgs: 41, ver: '2026.02', size: '1.4 KB', brands: ['Honda'], source: 'opendbc' },
   { n: 'Hyundai EV — Ioniq 5 / EV6',     bus: 0, desc: 'E-GMP platform. BMS, charge, regen, vehicle dynamics.',                      file: 'hyundai_ev_2022.dbc',        sigs: 271, msgs: 44, ver: '2026.02', size: '1.5 KB', brands: ['Hyundai', 'Kia'], source: 'opendbc' },

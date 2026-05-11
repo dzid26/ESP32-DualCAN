@@ -43,7 +43,7 @@
   async function loadTeslaDefaults(): Promise<void> {
     status = 'Loading Tesla Model 3 vehicle DBC…';
     try {
-      const resp = await fetch('/dbc/tesla_model3_vehicle.dbc');
+      const resp = await fetch(`${import.meta.env.BASE_URL}dbc/tesla_model3_vehicle.dbc`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const text = await resp.text();
       loadText(text, 'Tesla Model 3 Vehicle');
