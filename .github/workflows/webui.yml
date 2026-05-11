@@ -9,6 +9,9 @@ on:
     paths:
       - 'webui/**'
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Tests (UI smoke + protocol round-trip)
@@ -60,3 +63,43 @@ jobs:
           name: playwright-report
           path: webui/playwright-report/
           retention-days: 7
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: webui
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: webui/package-lock.json
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: webui/dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
