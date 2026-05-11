@@ -8,7 +8,6 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-#include "mbedtls/base64.h"
 
 #include "ble/ble_transport.h"
 #include "protocol/frame_buf.h"
@@ -481,12 +480,6 @@ static void handle_signal_unsubscribe(int id, cJSON *req)
 
 /* ---- OTA handlers ---- */
 
-/* Static scratch for decoded OTA chunks. The TS client sends ~4 KB raw
- * payload per chunk (≈5.5 KB base64); 5 KB gives slack without putting
- * pressure on the heap during the few seconds of an active flash. */
-#define OTA_CHUNK_SCRATCH 5120
-static uint8_t s_ota_chunk_buf[OTA_CHUNK_SCRATCH];
-
 static void handle_ota_begin(int id)
 {
     char err[128];
@@ -498,41 +491,6 @@ static void handle_ota_begin(int id)
     cJSON *result = cJSON_CreateObject();
     cJSON_AddNumberToObject(result, "max_size", (double)max_size);
     send_ok(id, result);
-}
-
-/* The web UI sends chunks as {"op":"ota.write","data":"<base64>"}.
- * Decode into a module-static scratch buffer so we don't malloc/free on
- * every chunk during a multi-second flash — that was producing hundreds
- * of allocations and noticeable heap churn. */
-static void handle_ota_write(int id, cJSON *req)
-{
-    const cJSON *data_j = cJSON_GetObjectItem(req, "data");
-    if (!cJSON_IsString(data_j) || data_j->valuestring == NULL) {
-        send_err(id, "missing data");
-        return;
-    }
-
-    const char *b64 = data_j->valuestring;
-    size_t b64_len = strlen(b64);
-    size_t decoded_len = 0;
-    int rc = mbedtls_base64_decode(s_ota_chunk_buf, sizeof(s_ota_chunk_buf),
-                                   &decoded_len,
-                                   (const unsigned char *)b64, b64_len);
-    if (rc != 0) {
-        /* MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL means the client sent a
-         * chunk bigger than our static scratch — bug in the TS client. */
-        send_err(id, rc == MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL
-                     ? "chunk exceeds device scratch"
-                     : "invalid base64");
-        return;
-    }
-
-    char err[128];
-    if (ota_write(s_ota_chunk_buf, decoded_len, err, sizeof(err)) != 0) {
-        send_err(id, err);
-        return;
-    }
-    send_ok(id, NULL);
 }
 
 static void handle_ota_end(int id, cJSON *req)
@@ -637,7 +595,6 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "wifi.status") == 0)    handle_wifi_status(id);
     else if (strcmp(op_s, "wifi.set_creds") == 0) handle_wifi_set_creds(id, req);
     else if (strcmp(op_s, "ota.begin") == 0)      handle_ota_begin(id);
-    else if (strcmp(op_s, "ota.write") == 0)      handle_ota_write(id, req);
     else if (strcmp(op_s, "ota.end") == 0)        handle_ota_end(id, req);
     else if (strcmp(op_s, "ota.abort") == 0)      handle_ota_abort(id);
     else send_err(id, "unknown op");
