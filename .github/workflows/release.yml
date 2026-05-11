@@ -1,10 +1,15 @@
 name: Firmware Release
 
 # Triggered exclusively by version tags. Builds the production binary,
-# runs host tests, and publishes a GitHub pre-release with the .bin attached.
+# runs host tests, and publishes a GitHub release with the .bin attached.
+#
+# Tag conventions:
+#   v1.2.3        -> stable release
+#   v1.2.3-rc1    -> pre-release (any tag containing a hyphen after the version)
 #
 # Usage:
-#   git tag v0.2.0
+#   git tag v0.2.0       # stable
+#   git tag v0.2.0-rc1   # pre-release
 #   git push origin v0.2.0
 
 on:
@@ -61,15 +66,18 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
-      - name: Inject version from tag
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          echo "FW_VERSION=$VERSION" >> $GITHUB_ENV
-          # Override the version in platformio.ini build_flags
-          sed -i "s/DORKY_FIRMWARE_VERSION=\\\\\".*\\\\\"/DORKY_FIRMWARE_VERSION=\\\\\"${VERSION}\\\\\"/" firmware/platformio.ini
+      - name: Resolve version from tag
+        run: echo "FW_VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_ENV"
 
       - name: Build production firmware
-        run: pio run -d firmware -e esp32-c6
+        # PlatformIO appends PLATFORMIO_BUILD_FLAGS to the env's build_flags,
+        # overriding the -D DORKY_FIRMWARE_VERSION baked into platformio.ini.
+        # Cleaner than sed-rewriting the ini file and immune to whitespace
+        # or formatting changes there. The shell-quoting dance keeps the
+        # version string a literal C string in the compiled binary.
+        run: |
+          export PLATFORMIO_BUILD_FLAGS="-DDORKY_FIRMWARE_VERSION=\\\"${FW_VERSION}\\\""
+          pio run -d firmware -e esp32-c6
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
@@ -78,7 +86,7 @@ jobs:
           path: firmware/.pio/build/esp32-c6/firmware.bin
 
   release:
-    name: Create pre-release
+    name: Create release
     needs: [host-tests, build]
     runs-on: ubuntu-latest
     permissions:
@@ -88,25 +96,32 @@ jobs:
         with:
           name: firmware-bin
 
-      - name: Rename binary with version
+      - name: Resolve version + channel from tag
+        id: meta
+        # prerelease is true for any tag with a hyphen after the version
+        # (v1.2.3-rc1, v1.2.3-beta.2, …) and false for plain semver (v1.2.3).
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
-          cp firmware.bin "dorky-commander-${VERSION}.bin"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          mv firmware.bin "dorky-commander-${VERSION}.bin"
 
-      - name: Create GitHub pre-release
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: true
+          prerelease: ${{ steps.meta.outputs.prerelease }}
           generate_release_notes: true
-          files: |
-            dorky-commander-*.bin
-            firmware.bin
+          files: dorky-commander-*.bin
           name: "Firmware ${{ github.ref_name }}"
           body: |
             ## Firmware ${{ github.ref_name }}
 
-            Automated pre-release build from tag `${{ github.ref_name }}`.
+            Automated build from tag `${{ github.ref_name }}`.
 
             ### Installation
             - **BLE OTA**: Open the Dorky Commander web UI → Settings → Firmware → "Check GitHub" or upload the `.bin` manually
-            - **USB**: `esptool.py write_flash 0x10000 firmware.bin`
+            - **USB**: `esptool.py write_flash 0x10000 dorky-commander-*.bin`
