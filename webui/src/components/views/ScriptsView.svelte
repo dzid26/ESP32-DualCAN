@@ -45,51 +45,46 @@
     return () => mq.removeEventListener('change', update);
   });
 
-  function startEditorResize(e: MouseEvent) {
+  function startEditorResize(e: PointerEvent) {
     resizeType = 'editor-height';
     isResizing = true;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
   }
 
-  function startSplitterDrag(e: MouseEvent) {
+  function startSplitterDrag(e: PointerEvent) {
     splitterDragStartX = e.clientX;
     splitterHasDragged = false;
     resizeType = 'scripts-width';
     isResizing = true;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
   }
 
-  $effect(() => {
+  function handleResizeMove(e: PointerEvent) {
     if (!isResizing) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      if (resizeType === 'editor-height' && editorPanelEl) {
-        const rect = editorPanelEl.getBoundingClientRect();
-        editorPanelHeight = Math.max(100, e.clientY - rect.top);
-      } else if (resizeType === 'scripts-width' && gridEl) {
-        if (Math.abs(e.clientX - splitterDragStartX) > 3) splitterHasDragged = true;
-        const rect = gridEl.getBoundingClientRect();
-        const newWidth = e.clientX - rect.left;
-        if (newWidth < 80) {
-          scriptsCollapsed = true;
-          splitterHasDragged = true;
-        } else {
-          scriptsPanelWidth = Math.max(150, Math.min(500, newWidth));
-        }
+    if (resizeType === 'editor-height' && editorPanelEl) {
+      const rect = editorPanelEl.getBoundingClientRect();
+      editorPanelHeight = Math.max(100, e.clientY - rect.top);
+    } else if (resizeType === 'scripts-width' && gridEl) {
+      if (Math.abs(e.clientX - splitterDragStartX) > 3) splitterHasDragged = true;
+      const rect = gridEl.getBoundingClientRect();
+      const newWidth = e.clientX - rect.left;
+      if (newWidth < 80) {
+        scriptsCollapsed = true;
+        splitterHasDragged = true;
+      } else {
+        scriptsPanelWidth = Math.max(150, Math.min(500, newWidth));
       }
-    };
-    const handleMouseUp = () => {
-      if (resizeType === 'scripts-width' && !splitterHasDragged)
-        scriptsCollapsed = !scriptsCollapsed;
-      isResizing = false;
-      resizeType = null;
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  });
+    }
+  }
+
+  function handleResizeEnd() {
+    if (resizeType === 'scripts-width' && !splitterHasDragged)
+      scriptsCollapsed = !scriptsCollapsed;
+    isResizing = false;
+    resizeType = null;
+  }
 
   async function refresh(): Promise<void> {
     if (!app.connected) return;
@@ -334,7 +329,8 @@
   >
     <div
       class="frame"
-      style="display: flex; flex-direction: column; min-height: 0; overflow: hidden"
+      style="display: flex; flex-direction: column; overflow: hidden"
+      style:min-height={isMobile ? '85px' : '0'}
     >
       {#if !scriptsCollapsed}
         <div class="frame__head">
@@ -391,7 +387,9 @@
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       class="scripts-splitter"
-      onmousedown={startSplitterDrag}
+      onpointerdown={startSplitterDrag}
+      onpointermove={handleResizeMove}
+      onpointerup={handleResizeEnd}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); scriptsCollapsed = !scriptsCollapsed; } }}
       title="Drag to resize · Click to collapse"
       role="button"
@@ -442,17 +440,17 @@
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
         <CodeMirrorEditor bind:value={code} height="100%" onSave={save} />
-        {#if !isMobile}
-          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-          <div
-            class="resize-corner-editor"
-            onmousedown={startEditorResize}
-            title="Drag to resize editor"
-            role="button"
-            aria-label="Resize editor"
-            tabindex="0"
-          ></div>
-        {/if}
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+        <div
+          class="resize-corner-editor"
+          onpointerdown={startEditorResize}
+          onpointermove={handleResizeMove}
+          onpointerup={handleResizeEnd}
+          title="Drag to resize editor"
+          role="button"
+          aria-label="Resize editor"
+          tabindex="0"
+        ></div>
       </div>
     </div>
   </div>
@@ -521,6 +519,7 @@
     user-select: none;
     position: relative;
     overflow: visible;
+    touch-action: none;
   }
 
   .scripts-splitter:hover {
@@ -545,12 +544,13 @@
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 12px;
-    height: 12px;
+    width: 20px;
+    height: 20px;
     cursor: nwse-resize;
     background: linear-gradient(135deg, transparent 50%, var(--dc-border-2) 50%);
     border-radius: 0 0 4px 0;
     pointer-events: auto;
+    touch-action: none;
   }
 
   .resize-corner-editor:hover {
