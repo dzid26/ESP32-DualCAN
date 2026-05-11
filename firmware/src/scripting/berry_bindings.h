@@ -9,7 +9,7 @@ can_t *berry_get_bus(int bus);
 void berry_register_bindings(bvm *vm);
 
 /* ---- Per-script context ----
- * Bindings that register callbacks (can_signal_on, timer.*, actions.register) tag
+ * Bindings that register callbacks (on_can_signal, timer.*, actions.register) tag
  * each entry with the "current script id". The script_loader sets this
  * before calling a script's setup() and clears it after. On disable, the
  * loader calls berry_cleanup_script(id) to revoke every tagged registration.
@@ -19,7 +19,7 @@ void berry_register_bindings(bvm *vm);
 void berry_set_current_script(int script_id);
 int  berry_current_script(void);
 
-/* Revoke every can_signal_on / timer / action registered with this script_id. */
+/* Revoke every on_can_signal / timer / action registered with this script_id. */
 void berry_cleanup_script(int script_id);
 
 /* ---- Function ref helpers (used by script_loader) ---- */

@@ -37,7 +37,7 @@ static can_t *get_bus(int bus)
 }
 
 /* ---- Berry function ref storage (list at global ".refs") ----
- * Each registered callback (can_signal_on, timer, action) stores its function in
+ * Each registered callback (on_can_signal, timer, action) stores its function in
  * the .refs list and remembers the index. To revoke, we nil out the slot
  * (the list grows monotonically; we don't compact it). */
 
@@ -119,7 +119,7 @@ int berry_call_ref(bvm *vm, int ref)
     return 0;
 }
 
-/* ---- can_signal_on callbacks ---- */
+/* ---- on_can_signal callbacks ---- */
 
 #define MAX_BERRY_CBS 16
 
@@ -156,17 +156,17 @@ static void can_on_trampoline(int sig_idx, float value, float prev, void *ctx)
     be_pop(s_vm, 2);
 
     if (be_pcall(s_vm, 1) != 0) {
-        ESP_LOGE(TAG_BB, "can_signal_on callback error: %s", be_tostring(s_vm, -1));
+        ESP_LOGE(TAG_BB, "on_can_signal callback error: %s", be_tostring(s_vm, -1));
     }
     be_pop(s_vm, 2);   /* pop result + .refs */
 }
 
-/* can_signal_on(msg:str, sig:str, fn:function [, bus:int]) -> nil
+/* on_can_signal(msg:str, sig:str, fn:function [, bus:int]) -> nil
  *
  * Invoke fn(sig_map) every time the named signal changes. Scoped by message
  * because DBC signal names are unique only within a message.
  */
-static int l_can_signal_on(bvm *vm)
+static int l_on_can_signal(bvm *vm)
 {
     if (be_top(vm) < 3 || !be_isstring(vm, 1) || !be_isstring(vm, 2) || !be_isfunction(vm, 3)) {
         be_return_nil(vm);
@@ -182,7 +182,7 @@ static int l_can_signal_on(bvm *vm)
         if (!s_can_cbs[i].in_use) { slot = i; break; }
     }
     if (slot < 0) {
-        ESP_LOGE(TAG_BB, "can_signal_on registry full");
+        ESP_LOGE(TAG_BB, "on_can_signal registry full");
         be_return_nil(vm);
     }
 
@@ -190,7 +190,7 @@ static int l_can_signal_on(bvm *vm)
     if (can_on_change_scoped(eng, msg_name, sig_name, can_on_trampoline,
                               (void *)(intptr_t)ref, s_current_script_id) != 0) {
         refs_free(vm, ref);
-        ESP_LOGW(TAG_BB, "can_signal_on: %s.%s not found on bus %d",
+        ESP_LOGW(TAG_BB, "on_can_signal: %s.%s not found on bus %d",
                  msg_name, sig_name, bus);
         be_return_nil(vm);
     }
@@ -426,7 +426,7 @@ void berry_cleanup_script(int script_id)
         }
     }
 
-    /* Drop can_signal_on callbacks */
+    /* Drop on_can_signal callbacks */
     for (int i = 0; i < MAX_BERRY_CBS; i++) {
         if (s_can_cbs[i].in_use && s_can_cbs[i].script_id == script_id) {
             refs_free(s_vm, s_can_cbs[i].ref);
@@ -695,13 +695,13 @@ void berry_register_bindings(bvm *vm)
     /* CAN API — naming hierarchy is can_<level>_<verb>:
      *   raw frame:  can_send_raw, can_recv_raw
      *   message:    can_msg_get, can_msg_set, can_msg_send
-     *   signal:     can_signal_get, can_signal_on
+     *   signal:     can_signal_get, on_can_signal
      * Signal-level ops require a message name as well, since DBC signal
      * names are unique only inside a message. */
     be_regfunc(vm, "can_send_raw",   l_can_send_raw);
     be_regfunc(vm, "can_recv_raw",   l_can_recv_raw);
     be_regfunc(vm, "can_signal_get", l_can_signal_get);
-    be_regfunc(vm, "can_signal_on",  l_can_signal_on);
+    be_regfunc(vm, "on_can_signal",  l_on_can_signal);
     be_regfunc(vm, "can_msg_get",    l_can_msg_get);
     be_regfunc(vm, "can_msg_set",    l_can_msg_set);
     be_regfunc(vm, "can_msg_send",   l_can_msg_send);

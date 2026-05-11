@@ -17,7 +17,7 @@ var handle_start_ms = 0
 var handle_held = false
 
 def setup()
-  can_signal_on("VCRIGHT_doorStatus", "VCRIGHT_frontHandlePulled", def(sig)
+  on_can_signal("VCRIGHT_doorStatus", "VCRIGHT_frontHandlePulled", def(sig)
     if sig['value'] > 0
       if !handle_held
         handle_held = true
@@ -32,7 +32,7 @@ def setup()
     end
   end)
 
-  can_signal_on("VCRIGHT_doorStatus", "VCRIGHT_frontLatchStatus", def(sig)
+  on_can_signal("VCRIGHT_doorStatus", "VCRIGHT_frontLatchStatus", def(sig)
     if sig['value'] > 0
       print("Door open, latch=" .. str(sig['value']))
     end

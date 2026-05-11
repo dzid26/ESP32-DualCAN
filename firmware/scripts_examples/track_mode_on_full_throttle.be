@@ -16,7 +16,7 @@ var full_throttle_start = 0
 var track_requested = false
 
 def setup()
-  can_signal_on("DI_torque", "DI_accelPedalPos", def(sig)
+  on_can_signal("DI_torque", "DI_accelPedalPos", def(sig)
     var pedal = sig['value']
     if pedal >= 99.0
       if !track_requested

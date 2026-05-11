@@ -16,7 +16,7 @@
 
 static const char *BINDING_NAMES[] = {
     "can_send_raw", "can_recv_raw",
-    "can_signal_get", "can_signal_on",
+    "can_signal_get", "on_can_signal",
     "can_msg_get", "can_msg_set", "can_msg_send",
     "led_set", "led_off",
     "state_set", "state_get", "state_remove",

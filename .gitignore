@@ -1,5 +1,6 @@
 firmware/build/
 .codex
+.claude
 test-results/
 webui/node_modules/
 webui-mock/
