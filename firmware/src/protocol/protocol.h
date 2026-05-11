@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef DORKY_FIRMWARE_VERSION
+#define DORKY_FIRMWARE_VERSION "0.0.1-dev"
+#endif
+
 /*
  * Wire protocol between the web UI and firmware.
  *
