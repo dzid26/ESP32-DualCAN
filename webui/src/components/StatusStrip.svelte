@@ -40,30 +40,32 @@
   <BusPip id={1} name="ChassisCAN" active={app.bus1} rate="122 f/s" />
 
   <span class="spacer"></span>
-  
-  <VersionPip 
-    version={app.fwVersion ?? 'v?.?.?'} 
-    latest={!app.protoMismatch} 
-    channel="stable" 
-    progress={app.otaBusy || app.otaDone ? app.otaProgress : null}
-    onclick={() => app.setView('settings')}
-  />
 
   <button class="btn btn--sm btn--ghost" onclick={onPalette} title="Cmd-K">
     <Icon name="search" size={14} /><span>⌘K</span>
   </button>
-  <button
-    class={'btn btn--sm' + (app.simulation ? ' btn--info' : '')}
-    onclick={() => app.toggleSim()}
-    title="Simulation mode — all sends routed to the log instead of CAN bus"
-  >
-    <Icon name="sim" size={14} /><span>Sim</span>
-  </button>
-  <button
-    class={'btn btn--sm' + (app.killed ? ' btn--danger' : '')}
-    onclick={() => app.toggleKill()}
-    title="Disable ALL scripts — fail-safe"
-  >
-    <Icon name="power" size={14} /><span>{app.killed ? 'Release' : 'Kill'}</span>
-  </button>
+
+  {#if app.connected}
+    <VersionPip 
+      version={app.fwVersion ?? 'v?.?.?'} 
+      latest={!app.protoMismatch} 
+      channel="stable" 
+      progress={app.otaBusy || app.otaDone ? app.otaProgress : null}
+      onclick={() => app.setView('settings')}
+    />
+    <button
+      class={'btn btn--sm' + (app.simulation ? ' btn--info' : '')}
+      onclick={() => app.toggleSim()}
+      title="Simulation mode — all sends routed to the log instead of CAN bus"
+    >
+      <Icon name="sim" size={14} /><span>Sim</span>
+    </button>
+    <button
+      class={'btn btn--sm' + (app.killed ? ' btn--danger' : '')}
+      onclick={() => app.toggleKill()}
+      title="Disable ALL scripts — fail-safe"
+    >
+      <Icon name="power" size={14} /><span>{app.killed ? 'Release' : 'Kill'}</span>
+    </button>
+  {/if}
 </div>
