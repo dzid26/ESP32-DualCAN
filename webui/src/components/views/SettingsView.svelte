@@ -118,9 +118,9 @@
       await app.doOTA(buf, `${ghRelease.tag}.bin`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      // CORS errors on GitHub CDN — fall back to manual download link
+      // CORS errors on GitHub CDN — fall back to download link + manual upload
       if (msg.includes('CORS') || msg.includes('Failed to fetch')) {
-        ghError = `Browser blocked CDN access. Visit releases page to download manually.`;
+        ghError = `Browser can't access CDN. Use Download button below, then Upload .bin.`;
       } else {
         ghError = msg;
       }
@@ -295,15 +295,24 @@
                   <span class="ghost" style="font-size: 10px">{ghRelease.published}</span>
                 </div>
                 <div style="font-size: 11px; color: var(--dc-text-dim)">{ghRelease.name} · {(ghRelease.size / 1024).toFixed(0)} KB</div>
-                <button
-                  id="ota-github-flash-btn"
-                  class="btn btn--info btn--sm"
-                  style="margin-top: 4px"
-                  onclick={downloadAndFlash}
-                  disabled={!app.connected || app.otaBusy || ghDownloading}
-                >
-                  {ghDownloading ? 'Downloading…' : 'Download & flash'}
-                </button>
+                <div style="display: flex; gap: 6px; margin-top: 4px">
+                  <button
+                    id="ota-github-flash-btn"
+                    class="btn btn--info btn--sm"
+                    onclick={downloadAndFlash}
+                    disabled={!app.connected || app.otaBusy || ghDownloading}
+                  >
+                    {ghDownloading ? 'Downloading…' : 'Download & flash'}
+                  </button>
+                  <a
+                    href={`https://github.com/dzid26/ESP32-DualCAN/releases/download/${ghRelease.tag}/dorky-commander-${ghRelease.tag.slice(1)}.bin`}
+                    class="btn btn--sm"
+                    download
+                    title="Download .bin file to upload manually"
+                  >
+                    Download
+                  </a>
+                </div>
               </div>
             {/if}
             {#if ghError}
