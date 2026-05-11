@@ -245,7 +245,7 @@ button { font: inherit; color: inherit; }
   padding: 0 4px;
 }
 .ota-mini-bg {
-  width: 70px; height: 8px; background: var(--dc-surface);
+  width: 70px; height: 8px; background: var(--dc-bg-2, #222);
   border-radius: 4px; overflow: hidden; border: 1px solid var(--dc-border);
 }
 .ota-mini-fill {
