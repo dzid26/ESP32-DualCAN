@@ -91,7 +91,7 @@
       ghRelease = {
         tag: pre.tag_name,
         name: pre.name ?? pre.tag_name,
-        url: asset.browser_download_url,
+        url: asset.url,
         size: asset.size,
         published: new Date(pre.published_at).toLocaleDateString(),
       };
@@ -109,13 +109,21 @@
     ghError = null;
     try {
       app.otaStatus = 'Downloading from GitHub…';
-      const resp = await fetch(ghRelease.url);
+      const resp = await fetch(ghRelease.url, {
+        headers: { 'Accept': 'application/octet-stream' }
+      });
       if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
       const buf = new Uint8Array(await resp.arrayBuffer());
       ghDownloading = false;
       await app.doOTA(buf, `${ghRelease.tag}.bin`);
     } catch (e) {
-      ghError = e instanceof Error ? e.message : String(e);
+      const msg = e instanceof Error ? e.message : String(e);
+      // CORS errors on GitHub CDN — fall back to manual download link
+      if (msg.includes('CORS') || msg.includes('Failed to fetch')) {
+        ghError = `Browser blocked CDN access. Visit releases page to download manually.`;
+      } else {
+        ghError = msg;
+      }
       ghDownloading = false;
     }
   }
@@ -236,7 +244,7 @@
     </div>
   </div>
 
-  <div class="frame">
+  <div class="frame" id="firmware-frame">
     <div class="frame__head">Firmware</div>
     <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
       <div class="field">
@@ -255,17 +263,55 @@
       {/if}
 
       <div class="field">
-        <span>Update from file</span>
-        <button
-          id="ota-upload-btn"
-          class="btn btn--info"
-          style="justify-self: start"
-          onclick={uploadFromFile}
-          disabled={!app.connected || app.otaBusy}
-        >
-          <Icon name="up" size={13} />Upload .bin
-        </button>
+        <span>Update firmware</span>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center">
+          <button
+            id="ota-upload-btn"
+            class="btn btn--info btn--sm"
+            onclick={uploadFromFile}
+            disabled={!app.connected || app.otaBusy}
+          >
+            <Icon name="up" size={13} />Upload .bin
+          </button>
+          <button
+            id="ota-github-check-btn"
+            class="btn btn--sm"
+            onclick={checkGitHub}
+            disabled={ghChecking || app.otaBusy}
+          >
+            {ghChecking ? 'Checking…' : 'Check GitHub Releases'}
+          </button>
+        </div>
       </div>
+
+      {#if ghRelease || ghError}
+        <div class="field">
+          <span></span>
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
+            {#if ghRelease}
+              <div class="ota-release-card">
+                <div class="ota-release-row">
+                  <span class="mono" style="font-weight: 600; color: var(--dc-accent)">{ghRelease.tag}</span>
+                  <span class="ghost" style="font-size: 10px">{ghRelease.published}</span>
+                </div>
+                <div style="font-size: 11px; color: var(--dc-text-dim)">{ghRelease.name} · {(ghRelease.size / 1024).toFixed(0)} KB</div>
+                <button
+                  id="ota-github-flash-btn"
+                  class="btn btn--info btn--sm"
+                  style="margin-top: 4px"
+                  onclick={downloadAndFlash}
+                  disabled={!app.connected || app.otaBusy || ghDownloading}
+                >
+                  {ghDownloading ? 'Downloading…' : 'Download & flash'}
+                </button>
+              </div>
+            {/if}
+            {#if ghError}
+              <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{ghError}</span>
+            {/if}
+          </div>
+        </div>
+      {/if}
 
       <div class="field">
         <span>After update</span>
@@ -277,44 +323,6 @@
           />
           Reboot automatically
         </label>
-      </div>
-
-      <!-- GitHub release check -->
-      <div class="field">
-        <span>Update from GitHub</span>
-        <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
-          <button
-            id="ota-github-check-btn"
-            class="btn btn--sm"
-            onclick={checkGitHub}
-            disabled={ghChecking || app.otaBusy}
-          >
-            {ghChecking ? 'Checking…' : 'Check for updates'}
-          </button>
-
-          {#if ghRelease}
-            <div class="ota-release-card">
-              <div class="ota-release-row">
-                <span class="mono" style="font-weight: 600; color: var(--dc-accent)">{ghRelease.tag}</span>
-                <span class="ghost" style="font-size: 10px">{ghRelease.published}</span>
-              </div>
-              <div style="font-size: 11px; color: var(--dc-text-dim)">{ghRelease.name} · {(ghRelease.size / 1024).toFixed(0)} KB</div>
-              <button
-                id="ota-github-flash-btn"
-                class="btn btn--info btn--sm"
-                style="margin-top: 4px"
-                onclick={downloadAndFlash}
-                disabled={!app.connected || app.otaBusy || ghDownloading}
-              >
-                {ghDownloading ? 'Downloading…' : 'Download & flash'}
-              </button>
-            </div>
-          {/if}
-
-          {#if ghError}
-            <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{ghError}</span>
-          {/if}
-        </div>
       </div>
 
       <!-- OTA progress -->
