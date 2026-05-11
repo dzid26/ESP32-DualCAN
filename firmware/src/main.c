@@ -21,6 +21,7 @@
 #include "scripting/script_loader.h"
 #include "protocol/protocol.h"
 #include "wifi/wifi.h"
+#include "ota/ota.h"
 
 static const char *TAG = "dorky";
 
@@ -66,6 +67,7 @@ static void hw_init(void)
 void app_main(void)
 {
     ESP_LOGI(TAG, "Dorky Commander starting (version %s)", DORKY_FIRMWARE_VERSION);
+    ota_log_boot_info();
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     hw_init();

@@ -21,6 +21,12 @@ void ota_init(void);
 /* Returns true if an OTA session is in progress. */
 bool ota_in_progress(void);
 
+/* Print which partition the firmware booted from, its address, and its
+ * OTA-state label. After a successful BLE OTA + reboot this should flip
+ * from ota_0 -> ota_1 (or vice versa) — call from app_main on startup
+ * so the serial log makes the swap obvious. */
+void ota_log_boot_info(void);
+
 /* Phase 1: prepare the next OTA partition.
  * Returns 0 on success, populating *max_size with the partition capacity.
  * On error returns -1 and writes a human-readable message into err_buf. */

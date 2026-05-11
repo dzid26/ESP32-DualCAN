@@ -39,6 +39,38 @@ bool ota_in_progress(void)
     return s_in_progress;
 }
 
+void ota_log_boot_info(void)
+{
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    const esp_partition_t *next    = esp_ota_get_next_update_partition(NULL);
+    if (!running) {
+        ESP_LOGW(TAG, "boot: no running partition reported");
+        return;
+    }
+
+    esp_ota_img_states_t state = ESP_OTA_IMG_UNDEFINED;
+    /* OK if this fails (e.g. factory boot) — we still want to log the label. */
+    esp_ota_get_state_partition(running, &state);
+    const char *state_name;
+    switch (state) {
+        case ESP_OTA_IMG_NEW:            state_name = "new";            break;
+        case ESP_OTA_IMG_PENDING_VERIFY: state_name = "pending-verify"; break;
+        case ESP_OTA_IMG_VALID:          state_name = "valid";          break;
+        case ESP_OTA_IMG_INVALID:        state_name = "invalid";        break;
+        case ESP_OTA_IMG_ABORTED:        state_name = "aborted";        break;
+        case ESP_OTA_IMG_UNDEFINED:      state_name = "undefined";      break;
+        default:                         state_name = "?";              break;
+    }
+
+    ESP_LOGI(TAG, "boot: running=%s @ 0x%08" PRIx32 " size=%" PRIu32 " state=%s",
+             running->label, (uint32_t)running->address,
+             (uint32_t)running->size, state_name);
+    if (next) {
+        ESP_LOGI(TAG, "boot: next OTA slot=%s @ 0x%08" PRIx32,
+                 next->label, (uint32_t)next->address);
+    }
+}
+
 int ota_begin(size_t *max_size, char *err_buf, size_t err_buf_len)
 {
     if (s_in_progress) {
