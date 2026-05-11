@@ -4,7 +4,7 @@
   import { dbcStore } from '../../dbcStore.svelte';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, untrack } from 'svelte';
 
   const LS_KEY = 'dorky-watched-signals';
   const SPARK_LEN = 60;
@@ -126,11 +126,10 @@
   });
 
   $effect(() => {
-    void app.connected;
     if (app.connected) {
-      void subscribeAll();
+      untrack(() => void subscribeAll());
     } else {
-      watched = watched.map(w => ({ ...w, state: null, error: null }));
+      watched = untrack(() => watched.map(w => ({ ...w, state: null, error: null })));
     }
   });
 
