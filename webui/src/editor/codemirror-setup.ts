@@ -297,7 +297,20 @@ const warmTheme = EditorView.theme({
   },
 }, { dark: true });
 
-export function createCodeMirrorExtensions(onSave?: () => void, language = 'berry'): Extension[] {
+/**
+ * @param onSave     Called when the user triggers a save (Mod-s).
+ * @param language   Language mode: 'berry' (default) or plain text.
+ * @param checkAuth  Optional guard invoked before every save attempt.
+ *                   Return `true` to allow the save, `false` to block it.
+ *                   Defaults to always-allow so existing callers are unaffected,
+ *                   but callers that handle privileged operations (e.g. uploading
+ *                   scripts to the device) MUST supply a real auth check here.
+ */
+export function createCodeMirrorExtensions(
+  onSave?: () => void,
+  language = 'berry',
+  checkAuth: () => boolean = () => true,
+): Extension[] {
   const languageExtensions = language === 'berry'
     ? [
         berryLanguage,
@@ -326,6 +339,7 @@ export function createCodeMirrorExtensions(onSave?: () => void, language = 'berr
         key: 'Mod-s',
         preventDefault: true,
         run: () => {
+          if (!checkAuth()) return true;
           onSave?.();
           return true;
         },
