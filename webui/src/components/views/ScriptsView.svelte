@@ -233,6 +233,17 @@
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
   >
     {#snippet actions()}
+      <a
+        href="https://berry-lang.github.io/"
+        target="_blank"
+        rel="noopener"
+        class="btn btn--sm"
+        title="Berry language docs — syntax, stdlib, examples"
+        style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none"
+      >
+        Berry guide
+        <span aria-hidden="true" style="font-size: 9px; opacity: 0.7">↗</span>
+      </a>
       <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
       <select
         class="sel"
@@ -324,17 +335,6 @@
             style="flex: 1; max-width: 280px; height: 22px; font-size: 12px"
           />
           {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px">● unsaved</span>{/if}
-          <a
-            href="https://berry-lang.github.io/"
-            target="_blank"
-            rel="noopener"
-            class="mono"
-            title="Berry language docs — syntax, stdlib, examples"
-            style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dc-text-fade); text-decoration: none; padding: 2px 6px; border: 1px solid var(--dc-border); border-radius: 3px"
-          >
-            Berry guide
-            <span aria-hidden="true" style="font-size: 9px; opacity: 0.7">↗</span>
-          </a>
         </span>
         <span class="row-flex">
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy || !dirty} title="Save without changing enable state">

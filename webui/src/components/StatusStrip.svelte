@@ -36,8 +36,10 @@
 
   <CarPip car={app.car} onOpen={() => (app.carPickerOpen = true)} />
 
-  <BusPip id={0} name="VehicleCAN" active={app.bus0} rate="488 f/s" />
-  <BusPip id={1} name="ChassisCAN" active={app.bus1} rate="122 f/s" />
+  <div class="bus-group">
+    <BusPip id={0} name="VehicleCAN" active={app.bus0} rate="488 f/s" />
+    <BusPip id={1} name="ChassisCAN" active={app.bus1} rate="122 f/s" />
+  </div>
 
   <span class="spacer"></span>
 
