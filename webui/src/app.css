@@ -240,6 +240,20 @@ button { font: inherit; color: inherit; }
   .status { flex-wrap: wrap; }
 }
 
+.ota-pip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 4px;
+}
+.ota-mini-bg {
+  width: 70px; height: 8px; background: var(--dc-surface);
+  border-radius: 4px; overflow: hidden; border: 1px solid var(--dc-border);
+}
+.ota-mini-fill {
+  height: 100%; background: var(--dc-accent);
+  transition: width 0.2s ease;
+}
+
+
 /* ===== Pips ===== */
 .pip {
   display: inline-flex; align-items: center; gap: 6px;

@@ -182,6 +182,14 @@ static void handle_ping(int id)
     send_ok(id, cJSON_CreateString("pong"));
 }
 
+void reboot_task(void *arg)
+{
+    (void)arg;
+    /* Give BLE stack time to flush the final notify. */
+    vTaskDelay(pdMS_TO_TICKS(500));
+    esp_restart();
+}
+
 static void handle_system_info(int id)
 {
     cJSON *result = cJSON_CreateObject();
@@ -190,6 +198,13 @@ static void handle_system_info(int id)
      * features that the firmware doesn't recognise yet. */
     cJSON_AddNumberToObject(result, "proto_version", 1);
     send_ok(id, result);
+}
+
+static void handle_system_reboot(int id)
+{
+    send_ok(id, NULL);
+    /* Defer the restart so the BLE notify has time to flush. */
+    xTaskCreate(reboot_task, "reboot", 2048, NULL, 5, NULL);
 }
 
 static void handle_script_list(int id)
@@ -550,14 +565,6 @@ static void handle_ota_write(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
-static void reboot_task(void *arg)
-{
-    (void)arg;
-    /* Give BLE stack time to flush the final notify. */
-    vTaskDelay(pdMS_TO_TICKS(500));
-    esp_restart();
-}
-
 static void handle_ota_end(int id, cJSON *req)
 {
     bool reboot = true;
@@ -633,6 +640,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
 
     if (strcmp(op_s, "ping") == 0)                handle_ping(id);
     else if (strcmp(op_s, "system.info") == 0)    handle_system_info(id);
+    else if (strcmp(op_s, "system.reboot") == 0)  handle_system_reboot(id);
     else if (strcmp(op_s, "script.list") == 0)    handle_script_list(id);
     else if (strcmp(op_s, "script.write") == 0)   handle_script_write(id, req);
     else if (strcmp(op_s, "script.read") == 0)    handle_script_read(id, req);

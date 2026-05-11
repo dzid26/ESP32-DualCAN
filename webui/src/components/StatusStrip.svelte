@@ -40,8 +40,14 @@
   <BusPip id={1} name="ChassisCAN" active={app.bus1} rate="122 f/s" />
 
   <span class="spacer"></span>
-
-  <VersionPip version="v0.3.1" latest={true} channel="stable" />
+  
+  <VersionPip 
+    version={app.fwVersion ?? 'v?.?.?'} 
+    latest={!app.protoMismatch} 
+    channel="stable" 
+    progress={app.otaBusy || app.otaDone ? app.otaProgress : null}
+    onclick={() => app.setView('settings')}
+  />
 
   <button class="btn btn--sm btn--ghost" onclick={onPalette} title="Cmd-K">
     <Icon name="search" size={14} /><span>⌘K</span>

@@ -54,14 +54,6 @@
     }
   }
 
-  // ---- OTA state ----
-  let otaBusy = $state(false);
-  let otaProgress = $state(0);   // 0–100
-  let otaTotal = $state(0);      // total bytes
-  let otaStatus = $state('');    // human-readable status line
-  let otaError = $state<string | null>(null);
-  let otaDone = $state(false);
-
   // GitHub release state
   let ghChecking = $state(false);
   let ghRelease = $state<{ tag: string; name: string; url: string; size: number; published: string } | null>(null);
@@ -76,7 +68,7 @@
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
-      await doOTA(new Uint8Array(await file.arrayBuffer()), file.name);
+      await app.doOTA(new Uint8Array(await file.arrayBuffer()), file.name);
     };
     input.click();
   }
@@ -116,65 +108,16 @@
     ghDownloading = true;
     ghError = null;
     try {
-      otaStatus = 'Downloading from GitHub…';
+      app.otaStatus = 'Downloading from GitHub…';
       const resp = await fetch(ghRelease.url);
       if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
       const buf = new Uint8Array(await resp.arrayBuffer());
       ghDownloading = false;
-      await doOTA(buf, `${ghRelease.tag}.bin`);
+      await app.doOTA(buf, `${ghRelease.tag}.bin`);
     } catch (e) {
       ghError = e instanceof Error ? e.message : String(e);
       ghDownloading = false;
     }
-  }
-
-  /** Core OTA upload flow. */
-  async function doOTA(bin: Uint8Array, label: string): Promise<void> {
-    if (!app.connected) { otaError = 'Not connected'; return; }
-    otaBusy = true;
-    otaError = null;
-    otaDone = false;
-    otaProgress = 0;
-    otaTotal = bin.length;
-    otaStatus = `Preparing flash for ${label} (${(bin.length / 1024).toFixed(0)} KB)…`;
-    app.pushLog(`OTA: starting upload of ${label} (${bin.length} bytes)`, 'info', 'ota');
-
-    try {
-      await app.proto.uploadFirmware(bin, (sent, total) => {
-        otaTotal = total;
-        otaProgress = Math.round((sent / total) * 100);
-        otaStatus = `Flashing… ${otaProgress}% (${(sent / 1024).toFixed(0)} / ${(total / 1024).toFixed(0)} KB)`;
-      });
-      otaDone = true;
-      otaStatus = 'Update complete — device is rebooting…';
-      app.pushLog('OTA: firmware installed, device rebooting', 'info', 'ota');
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      otaError = msg;
-      otaStatus = '';
-      app.pushLog(`OTA failed: ${msg}`, 'error', 'ota');
-      try { await app.proto.otaAbort(); } catch { /* best-effort */ }
-    } finally {
-      otaBusy = false;
-    }
-  }
-
-  async function abortOTA(): Promise<void> {
-    try {
-      await app.proto.otaAbort();
-      otaStatus = 'Aborted';
-      otaBusy = false;
-      app.pushLog('OTA aborted by user', 'warn', 'ota');
-    } catch { /* ignore */ }
-  }
-
-  function resetOtaState(): void {
-    otaBusy = false;
-    otaProgress = 0;
-    otaTotal = 0;
-    otaStatus = '';
-    otaError = null;
-    otaDone = false;
   }
 
   onMount(() => { refreshInfo(); refreshWifi(); });
@@ -182,9 +125,6 @@
     if (app.connected) {
       refreshInfo();
       refreshWifi();
-      resetOtaState();
-    } else {
-      resetOtaState();
     }
   });
 </script>
@@ -314,7 +254,6 @@
         </div>
       {/if}
 
-      <!-- OTA upload from file -->
       <div class="field">
         <span>Update from file</span>
         <button
@@ -322,7 +261,7 @@
           class="btn btn--info"
           style="justify-self: start"
           onclick={uploadFromFile}
-          disabled={!app.connected || otaBusy}
+          disabled={!app.connected || app.otaBusy}
         >
           <Icon name="up" size={13} />Upload .bin
         </button>
@@ -336,7 +275,7 @@
             id="ota-github-check-btn"
             class="btn btn--sm"
             onclick={checkGitHub}
-            disabled={ghChecking || otaBusy}
+            disabled={ghChecking || app.otaBusy}
           >
             {ghChecking ? 'Checking…' : 'Check for updates'}
           </button>
@@ -353,7 +292,7 @@
                 class="btn btn--info btn--sm"
                 style="margin-top: 4px"
                 onclick={downloadAndFlash}
-                disabled={!app.connected || otaBusy || ghDownloading}
+                disabled={!app.connected || app.otaBusy || ghDownloading}
               >
                 {ghDownloading ? 'Downloading…' : 'Download & flash'}
               </button>
@@ -367,31 +306,52 @@
       </div>
 
       <!-- OTA progress -->
-      {#if otaBusy || otaDone}
-        <div class="field" style="grid-column: 1 / -1">
-          <div class="ota-progress-wrap">
-            <div class="ota-progress-bar" style="width: {otaProgress}%"></div>
-          </div>
-        </div>
+      {#if app.otaBusy || app.otaDone}
         <div class="field">
-          <span></span>
-          <div style="display: flex; align-items: center; gap: 8px">
-            <span class="mono" style="font-size: 11px; color: {otaDone ? 'var(--dc-ok)' : 'var(--dc-text-dim)'}">
-              {otaStatus}
-            </span>
-            {#if otaBusy}
-              <button class="btn btn--sm btn--danger" onclick={abortOTA}>Abort</button>
-            {/if}
+          <span>Flash progress</span>
+          <div style="display: flex; flex-direction: column; gap: 6px; width: 100%">
+            <div class="ota-progress-wrap">
+              <div class="ota-progress-bar" style="width: {app.otaProgress}%"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span class="mono" style="font-size: 11px; color: {app.otaDone ? 'var(--dc-ok)' : 'var(--dc-text-dim)'}">
+                {app.otaStatus}
+              </span>
+              {#if app.otaBusy}
+                <button class="btn btn--sm btn--danger" onclick={() => app.abortOTA()}>Abort</button>
+              {/if}
+            </div>
           </div>
         </div>
       {/if}
 
-      {#if otaError}
+      {#if app.otaError}
         <div class="field">
           <span></span>
-          <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{otaError}</span>
+          <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{app.otaError}</span>
         </div>
       {/if}
+
+      <div class="field">
+        <span>System power</span>
+        <button
+          class={'btn btn--sm ' + (app.otaDone ? 'btn--info' : 'btn--danger')}
+          style="justify-self: start"
+          onclick={() => app.otaBusy ? (app.rebootAfterUpdate = !app.rebootAfterUpdate) : app.rebootDevice()}
+          disabled={!app.connected}
+        >
+          {#if app.otaBusy}
+            <Icon name={app.rebootAfterUpdate ? 'check' : 'power'} size={12} />
+            <span>{app.rebootAfterUpdate ? 'Reset when done' : 'Manual reset'}</span>
+          {:else if app.otaDone}
+            <Icon name="power" size={12} />
+            <span>Reboot now</span>
+          {:else}
+            <Icon name="power" size={12} />
+            <span>Reboot device</span>
+          {/if}
+        </button>
+      </div>
     </div>
   </div>
 

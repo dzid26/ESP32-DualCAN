@@ -93,6 +93,15 @@ class AppState {
    * here, then setView('dbc'). DbcView consumes + clears. */
   dbcViewBus = $state<number | null>(null);
 
+  // ---- OTA (Over-the-Air firmware update) ----
+  otaBusy = $state(false);
+  otaProgress = $state(0);   // 0–100
+  otaTotal = $state(0);      // total bytes
+  otaStatus = $state('');    // human-readable status line
+  otaError = $state<string | null>(null);
+  otaDone = $state(false);
+  rebootAfterUpdate = $state(true); // User can toggle this
+
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));
@@ -141,6 +150,7 @@ class AppState {
       this.killed = false;
       this.bus0 = false;
       this.bus1 = false;
+      this.resetOtaState();
       this.pushLog('disconnected', 'warn', 'ble');
       return;
     }
@@ -153,6 +163,86 @@ class AppState {
         : null;
     } catch {
       this.protoMismatch = 'firmware too old (no system.info) — please update';
+    }
+  }
+
+  // ---- OTA Actions ----
+
+  resetOtaState(): void {
+    this.otaBusy = false;
+    this.otaProgress = 0;
+    this.otaTotal = 0;
+    this.otaStatus = '';
+    this.otaError = null;
+    this.otaDone = false;
+  }
+
+  async doOTA(bin: Uint8Array, label: string): Promise<void> {
+    if (!this.connected) {
+      this.otaError = 'Not connected';
+      return;
+    }
+    this.otaBusy = true;
+    this.otaError = null;
+    this.otaDone = false;
+    this.otaProgress = 0;
+    this.otaTotal = bin.length;
+    this.otaStatus = `Preparing flash for ${label} (${(bin.length / 1024).toFixed(0)} KB)…`;
+    this.pushLog(`OTA: starting upload of ${label} (${bin.length} bytes)`, 'info', 'ota');
+
+    try {
+      await this.proto.uploadFirmware(bin, (sent, total) => {
+        this.otaTotal = total;
+        this.otaProgress = Math.round((sent / total) * 100);
+        this.otaStatus = `Flashing… ${this.otaProgress}% (${(sent / 1024).toFixed(0)} / ${(total / 1024).toFixed(0)} KB)`;
+      });
+
+      // Fetch the LATEST value of rebootAfterUpdate just before ending
+      const reboot = this.rebootAfterUpdate;
+      await this.proto.otaEnd(reboot);
+
+      this.otaDone = true;
+      if (reboot) {
+        this.otaStatus = 'Update complete — device is rebooting…';
+        this.pushLog('OTA: firmware installed, device rebooting', 'info', 'ota');
+      } else {
+        this.otaStatus = 'Update complete — manual reboot required';
+        this.pushLog('OTA: firmware installed, manual reboot required', 'info', 'ota');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.otaError = msg;
+      this.otaStatus = '';
+      this.pushLog(`OTA failed: ${msg}`, 'error', 'ota');
+      try {
+        await this.proto.otaAbort();
+      } catch {
+        /* best-effort */
+      }
+    } finally {
+      this.otaBusy = false;
+    }
+  }
+
+  async abortOTA(): Promise<void> {
+    try {
+      await this.proto.otaAbort();
+      this.otaStatus = 'Aborted';
+      this.otaBusy = false;
+      this.pushLog('OTA aborted by user', 'warn', 'ota');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async rebootDevice(): Promise<void> {
+    try {
+      await this.proto.systemReboot();
+      this.pushLog('Device reboot command sent', 'info', 'system');
+      this.otaStatus = 'Rebooting…';
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.pushLog(`Reboot failed: ${msg}`, 'error', 'system');
     }
   }
 

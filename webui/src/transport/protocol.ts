@@ -174,6 +174,10 @@ export class Protocol {
     return this.call('system.info');
   }
 
+  systemReboot(): Promise<void> {
+    return this.call('system.reboot');
+  }
+
   listScripts(): Promise<{ scripts: ScriptInfo[] }> {
     return this.call('script.list');
   }
@@ -283,7 +287,6 @@ export class Protocol {
   async uploadFirmware(
     bin: Uint8Array,
     onProgress?: (sent: number, total: number) => void,
-    reboot = true,
   ): Promise<void> {
     const { max_size } = await this.otaBegin();
     if (bin.length > max_size) {
@@ -303,8 +306,6 @@ export class Protocol {
       sent = end;
       onProgress?.(sent, bin.length);
     }
-
-    await this.otaEnd(reboot);
   }
 }
 
