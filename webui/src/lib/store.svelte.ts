@@ -191,8 +191,7 @@ class AppState {
     this.pushLog(`OTA: starting upload of ${label} (${bin.length} bytes)`, 'info', 'ota');
 
     try {
-      await this.proto.uploadFirmware(bin, (sent, total) => {
-        this.otaTotal = total;
+      await this.proto.streamFirmware(bin, (sent, total) => {
         this.otaProgress = Math.round((sent / total) * 100);
         this.otaStatus = `Flashing… ${this.otaProgress}% (${(sent / 1024).toFixed(0)} / ${(total / 1024).toFixed(0)} KB)`;
       });

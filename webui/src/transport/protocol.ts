@@ -280,15 +280,18 @@ export class Protocol {
   }
 
   /**
-   * High-level: upload an entire firmware binary via BLE OTA.
+   * Stream a firmware binary through ota.begin + ota.write. Does NOT call
+   * ota.end — the caller must follow up with otaEnd() (to commit) or
+   * otaAbort() (to discard). Splitting finalisation lets the caller decide
+   * the reboot flag *after* the upload finishes.
    *
-   * `bin` — the raw firmware ArrayBuffer / Uint8Array.
-   * `onProgress(sent, total)` — called after each chunk is acknowledged.
-   * `reboot` — restart into new firmware when done (default true).
+   * `bin` — the raw firmware bytes.
+   * `onProgress(sent, total)` — invoked after each acknowledged chunk.
    *
-   * Throws on any error (caller should catch and show to user).
+   * Throws on any transport / device error. The caller is responsible for
+   * catching and calling otaAbort() to free firmware-side resources.
    */
-  async uploadFirmware(
+  async streamFirmware(
     bin: Uint8Array,
     onProgress?: (sent: number, total: number) => void,
   ): Promise<void> {

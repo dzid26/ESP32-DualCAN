@@ -267,6 +267,18 @@
         </button>
       </div>
 
+      <div class="field">
+        <span>After update</span>
+        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: var(--dc-text-dim)">
+          <input
+            type="checkbox"
+            bind:checked={app.rebootAfterUpdate}
+            disabled={!app.connected}
+          />
+          Reboot automatically
+        </label>
+      </div>
+
       <!-- GitHub release check -->
       <div class="field">
         <span>Update from GitHub</span>
@@ -337,19 +349,11 @@
         <button
           class={'btn btn--sm ' + (app.otaDone ? 'btn--info' : 'btn--danger')}
           style="justify-self: start"
-          onclick={() => app.otaBusy ? (app.rebootAfterUpdate = !app.rebootAfterUpdate) : app.rebootDevice()}
-          disabled={!app.connected}
+          onclick={() => app.rebootDevice()}
+          disabled={!app.connected || app.otaBusy}
         >
-          {#if app.otaBusy}
-            <Icon name={app.rebootAfterUpdate ? 'check' : 'power'} size={12} />
-            <span>{app.rebootAfterUpdate ? 'Reset when done' : 'Manual reset'}</span>
-          {:else if app.otaDone}
-            <Icon name="power" size={12} />
-            <span>Reboot now</span>
-          {:else}
-            <Icon name="power" size={12} />
-            <span>Reboot device</span>
-          {/if}
+          <Icon name="power" size={12} />
+          <span>{app.otaDone ? 'Reboot now' : 'Reboot device'}</span>
         </button>
       </div>
     </div>
