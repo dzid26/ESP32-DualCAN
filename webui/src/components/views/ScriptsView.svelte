@@ -27,12 +27,68 @@
   let lastScriptStatusSeq = 0;
 
   let isMobile = $state(false);
+  let editorPanelHeight = $state<number | null>(null);
+  let scriptsPanelWidth = $state(250);
+  let isResizing = $state(false);
+  let resizeType = $state<'editor-height' | 'scripts-width' | null>(null);
+  let splitterDragStartX = 0;
+  let splitterHasDragged = false;
+  let editorPanelEl: HTMLElement | undefined;
+  let gridEl: HTMLElement | undefined;
+  let scriptsCollapsed = $state(false);
+
   $effect(() => {
     const mq = window.matchMedia('(max-width: 720px)');
     const update = () => { isMobile = mq.matches; };
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
+  });
+
+  function startEditorResize(e: MouseEvent) {
+    resizeType = 'editor-height';
+    isResizing = true;
+    e.preventDefault();
+  }
+
+  function startSplitterDrag(e: MouseEvent) {
+    splitterDragStartX = e.clientX;
+    splitterHasDragged = false;
+    resizeType = 'scripts-width';
+    isResizing = true;
+    e.preventDefault();
+  }
+
+  $effect(() => {
+    if (!isResizing) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizeType === 'editor-height' && editorPanelEl) {
+        const rect = editorPanelEl.getBoundingClientRect();
+        editorPanelHeight = Math.max(100, e.clientY - rect.top);
+      } else if (resizeType === 'scripts-width' && gridEl) {
+        if (Math.abs(e.clientX - splitterDragStartX) > 3) splitterHasDragged = true;
+        const rect = gridEl.getBoundingClientRect();
+        const newWidth = e.clientX - rect.left;
+        if (newWidth < 80) {
+          scriptsCollapsed = true;
+          splitterHasDragged = true;
+        } else {
+          scriptsPanelWidth = Math.max(150, Math.min(500, newWidth));
+        }
+      }
+    };
+    const handleMouseUp = () => {
+      if (resizeType === 'scripts-width' && !splitterHasDragged)
+        scriptsCollapsed = !scriptsCollapsed;
+      isResizing = false;
+      resizeType = null;
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
   });
 
   async function refresh(): Promise<void> {
@@ -268,23 +324,29 @@
   {/if}
 
   <div
+    bind:this={gridEl}
     style:display="grid"
-    style:gap="10px"
+    style:row-gap="10px"
     style:flex="1"
     style:min-height="0"
-    style:grid-template-columns={isMobile ? '1fr' : 'minmax(220px, 280px) 1fr'}
+    style:overflow="auto"
+    style:grid-template-columns={isMobile ? '1fr' : scriptsCollapsed ? '0px 6px 1fr' : `${scriptsPanelWidth}px 6px 1fr`}
   >
-    <div class="frame" style="display: flex; flex-direction: column; min-height: 0">
-      <div class="frame__head">
-        Installed <span class="ghost mono">{scripts.length}</span>
-      </div>
-      <div style="overflow-y: auto; flex: 1">
-        {#if !app.connected}
-          <div class="empty" style="margin: 10px">Not connected.</div>
-        {:else if scripts.length === 0}
-          <div class="empty" style="margin: 10px">No scripts installed. Use New or Import to add one.</div>
-        {/if}
-        {#each scripts as s (s.filename)}
+    <div
+      class="frame"
+      style="display: flex; flex-direction: column; min-height: 0; overflow: hidden"
+    >
+      {#if !scriptsCollapsed}
+        <div class="frame__head">
+          Installed <span class="ghost mono">{scripts.length}</span>
+        </div>
+        <div style="overflow-y: auto; flex: 1">
+          {#if !app.connected}
+            <div class="empty" style="margin: 10px">Not connected.</div>
+          {:else if scripts.length === 0}
+            <div class="empty" style="margin: 10px">No scripts installed. Use New or Import to add one.</div>
+          {/if}
+          {#each scripts as s (s.filename)}
           <div
             class="srow"
             style:background={selFn === s.filename ? 'var(--dc-surface-2)' : 'transparent'}
@@ -305,10 +367,10 @@
               <span class="tog__knob"></span>
             </span>
             <div style="min-width: 0">
-              <div style="font-size: 13px; color: var(--dc-text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
+              <div style="font-size: 12px; color: var(--dc-text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                 {s.filename}
               </div>
-              <div class="mono" style:font-size="10.5px" style:color={s.errored ? 'var(--dc-err-text)' : 'var(--dc-text-fade)'} title={s.error ?? ''}>
+              <div class="mono" style:font-size="10px" style:color={s.errored ? 'var(--dc-err-text)' : 'var(--dc-text-fade)'} title={s.error ?? ''}>
                 {s.errored ? 'error' : s.enabled ? 'running' : 'disabled'}
               </div>
             </div>
@@ -322,10 +384,29 @@
             </button>
           </div>
         {/each}
-      </div>
+        </div>
+      {/if}
     </div>
 
-    <div class="frame" style="display: flex; flex-direction: column; min-height: 0">
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div
+      class="scripts-splitter"
+      onmousedown={startSplitterDrag}
+      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); scriptsCollapsed = !scriptsCollapsed; } }}
+      title="Drag to resize · Click to collapse"
+      role="button"
+      aria-label={scriptsCollapsed ? 'Expand scripts panel' : 'Collapse scripts panel'}
+      tabindex="0"
+    >
+      <span class="splitter-dots">⋮</span>
+    </div>
+
+    <div
+      class="frame"
+      style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
+      bind:this={editorPanelEl}
+      style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
+    >
       <div class="frame__head">
         <span class="row-flex" style="min-width: 0; flex: 1">
           <input
@@ -358,8 +439,19 @@
         </div>
       {/if}
 
-      <div style="flex: 1; min-height: 0; display: flex">
+      <div style="flex: 1; min-height: 0; display: flex; position: relative">
         <CodeMirrorEditor bind:value={code} height="100%" onSave={save} />
+        {#if !isMobile}
+          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+          <div
+            class="resize-corner-editor"
+            onmousedown={startEditorResize}
+            title="Drag to resize editor"
+            role="button"
+            aria-label="Resize editor"
+            tabindex="0"
+          ></div>
+        {/if}
       </div>
     </div>
   </div>
@@ -409,9 +501,58 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px 8px 12px;
+    gap: 8px;
+    padding: 6px 8px 6px 10px;
     border-bottom: 1px solid var(--dc-border);
     cursor: pointer;
+    min-height: 0;
+  }
+
+  .scripts-splitter {
+    width: 6px;
+    height: 100%;
+    background: var(--dc-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: col-resize;
+    transition: background 80ms linear;
+    user-select: none;
+    position: relative;
+    overflow: visible;
+  }
+
+  .scripts-splitter:hover {
+    background: var(--dc-border-hi);
+  }
+
+  .splitter-dots {
+    position: absolute;
+    color: var(--dc-text-ghost);
+    font-size: 10px;
+    line-height: 1;
+    pointer-events: none;
+    letter-spacing: -2px;
+    transition: color 80ms linear;
+  }
+
+  .scripts-splitter:hover .splitter-dots {
+    color: var(--dc-text-fade);
+  }
+
+  .resize-corner-editor {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--dc-border-2) 50%);
+    border-radius: 0 0 4px 0;
+    pointer-events: auto;
+  }
+
+  .resize-corner-editor:hover {
+    background: linear-gradient(135deg, transparent 50%, var(--dc-border-hi) 50%);
   }
 </style>
