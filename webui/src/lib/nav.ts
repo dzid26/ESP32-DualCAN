@@ -9,12 +9,12 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'events',    label: 'Events',        icon: 'events',   group: 'Automations' },
+  { id: 'events',    label: 'Events',        icon: 'bolt',     group: 'Automations' },
   { id: 'scripts',   label: 'Automations',   icon: 'scripts',  group: 'Automations' },
+  { id: 'dbc',       label: 'DBC',           icon: 'dbc',      group: 'Automations' },
   { id: 'ai',        label: 'AI assistant',  icon: 'sparkle',  group: 'Automations' },
   { id: 'gallery',   label: 'Gallery',       icon: 'gallery',  group: 'Automations' },
   { id: 'dashboard', label: 'Dashboard',     icon: 'dash',     group: 'Signals' },
-  { id: 'dbc',       label: 'DBC',           icon: 'dbc',      group: 'Signals' },
   { id: 'trace',     label: 'Trace',         icon: 'trace',    group: 'Reverse eng.' },
   { id: 'capture',   label: 'Capture',       icon: 'capture',  group: 'Reverse eng.' },
   { id: 'settings',  label: 'Settings',      icon: 'settings', group: 'Device' },
