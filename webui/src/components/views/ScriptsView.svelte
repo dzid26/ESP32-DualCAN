@@ -406,6 +406,7 @@
       style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
       bind:this={editorPanelEl}
       style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
+      style:min-height={isMobile ? '300px' : '0'}
     >
       <div class="frame__head">
         <span class="row-flex" style="min-width: 0; flex: 1">
