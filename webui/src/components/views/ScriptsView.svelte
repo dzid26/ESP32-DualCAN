@@ -354,17 +354,17 @@
       style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
       style:min-height={isMobile ? '300px' : '0'}
     >
-      <div class="frame__head">
+      <div class="frame__head" style="flex-wrap: wrap">
         <span class="row-flex" style="min-width: 0; flex: 1">
           <input
             class="inp"
             bind:value={editorFilename}
             placeholder="filename.be"
-            style="flex: 1; max-width: 280px; height: 22px; font-size: 12px"
+            style="flex: 1; min-width: 160px; max-width: 280px; height: 22px; font-size: 12px"
           />
           {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px">● unsaved</span>{/if}
         </span>
-        <span class="row-flex">
+        <span class="row-flex" style="flex-shrink: 0; flex-wrap: wrap">
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy || !dirty} title="Save without changing enable state">
             <Icon name="up" size={13} />Save
           </button>
