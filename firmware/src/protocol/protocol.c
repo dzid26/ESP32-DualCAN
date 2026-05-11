@@ -24,7 +24,7 @@ static const char *TAG = "proto";
 #define FRAME_HDR_LEN       4
 #define DISPATCH_QUEUE_LEN  8
 
-typedef struct { uint8_t *data; size_t len; } frame_item_t;
+typedef struct { uint8_t *data; size_t len; uint8_t type; } frame_item_t;
 
 static script_loader_t *s_loader;
 static uint8_t          s_rx_buf[RX_BUF_MAX];
@@ -669,7 +669,7 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx)
         uint8_t *copy = malloc(plen);
         if (copy) {
             memcpy(copy, payload, plen);
-            frame_item_t fi = { copy, plen };
+            frame_item_t fi = { copy, plen, frame_buf_last_type(&s_rx_fb) };
             if (xQueueSend(s_frame_queue, &fi, 0) != pdTRUE) {
                 ESP_LOGW(TAG, "dispatch queue full, frame dropped");
                 free(copy);
@@ -679,11 +679,44 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx)
     }
 }
 
+/* Binary OTA write frame layout (after the 4-byte length header whose top
+ * nibble = FRAME_TYPE_OTA_WRITE):
+ *   bytes [0..4)  : u32 LE request id
+ *   bytes [4..N)  : raw firmware bytes
+ * Response is a normal JSON {ok,id} or {error,id} so the client uses the
+ * same pending-promise machinery as JSON requests. */
+static void dispatch_ota_write_binary(const uint8_t *payload, size_t len)
+{
+    if (len < 4) {
+        ESP_LOGW(TAG, "binary ota.write frame too short (%zu)", len);
+        return;
+    }
+    int id = (int)((uint32_t)payload[0]
+                 | ((uint32_t)payload[1] << 8)
+                 | ((uint32_t)payload[2] << 16)
+                 | ((uint32_t)payload[3] << 24));
+
+    char err[128];
+    if (ota_write(payload + 4, len - 4, err, sizeof(err)) != 0) {
+        send_err(id, err);
+        return;
+    }
+    send_ok(id, NULL);
+}
+
 void protocol_tick(void)
 {
     frame_item_t fi;
     while (xQueueReceive(s_frame_queue, &fi, 0) == pdTRUE) {
-        dispatch_frame(fi.data, fi.len);
+        switch (fi.type) {
+            case FRAME_TYPE_OTA_WRITE:
+                dispatch_ota_write_binary(fi.data, fi.len);
+                break;
+            case FRAME_TYPE_JSON:
+            default:
+                dispatch_frame(fi.data, fi.len);
+                break;
+        }
         free(fi.data);
     }
 }

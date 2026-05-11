@@ -21,7 +21,8 @@ static frame_buf_t fb;
 void setUp(void) { frame_buf_init(&fb, backing, sizeof(backing)); }
 void tearDown(void) {}
 
-/* Helper: prepend a 4-byte little-endian length header to a payload. */
+/* Helper: prepend a 4-byte little-endian length header to a payload.
+ * Default type is JSON (0). */
 static void encode(uint8_t *out, const uint8_t *payload, size_t plen)
 {
     out[0] = (uint8_t)(plen & 0xFF);
@@ -29,6 +30,13 @@ static void encode(uint8_t *out, const uint8_t *payload, size_t plen)
     out[2] = (uint8_t)((plen >> 16) & 0xFF);
     out[3] = (uint8_t)((plen >> 24) & 0xFF);
     memcpy(out + 4, payload, plen);
+}
+
+/* Same as encode() but stamps a frame-type into the top nibble of the header. */
+static void encode_typed(uint8_t *out, uint8_t type, const uint8_t *payload, size_t plen)
+{
+    encode(out, payload, plen);
+    out[3] = (out[3] & 0x0F) | ((type & 0x0F) << 4);
 }
 
 void test_single_frame_in_one_append(void)
@@ -141,6 +149,29 @@ void test_append_overflow_resets(void)
     TEST_ASSERT_EQUAL_MEMORY("y", p, 1);
 }
 
+/* The top nibble of the length header carries the frame type. JSON frames
+ * have type 0 (default for legacy frames); binary opcodes use 1..15. */
+void test_frame_type_round_trip(void)
+{
+    uint8_t json_frame[4 + 4];
+    encode_typed(json_frame, FRAME_TYPE_JSON, (const uint8_t *)"json", 4);
+    TEST_ASSERT_EQUAL(0, frame_buf_append(&fb, json_frame, sizeof(json_frame)));
+
+    const uint8_t *p; size_t plen;
+    TEST_ASSERT_EQUAL(1, frame_buf_next(&fb, &p, &plen));
+    TEST_ASSERT_EQUAL(FRAME_TYPE_JSON, frame_buf_last_type(&fb));
+    TEST_ASSERT_EQUAL_MEMORY("json", p, 4);
+    frame_buf_consume(&fb);
+
+    uint8_t bin_frame[4 + 3];
+    encode_typed(bin_frame, FRAME_TYPE_OTA_WRITE, (const uint8_t *)"raw", 3);
+    TEST_ASSERT_EQUAL(0, frame_buf_append(&fb, bin_frame, sizeof(bin_frame)));
+    TEST_ASSERT_EQUAL(1, frame_buf_next(&fb, &p, &plen));
+    TEST_ASSERT_EQUAL(FRAME_TYPE_OTA_WRITE, frame_buf_last_type(&fb));
+    TEST_ASSERT_EQUAL(3, plen);
+    TEST_ASSERT_EQUAL_MEMORY("raw", p, 3);
+}
+
 /* consume() with no preceding successful next() is a no-op. */
 void test_consume_without_peek_is_safe(void)
 {
@@ -165,6 +196,7 @@ int main(void)
     RUN_TEST(test_zero_length_payload);
     RUN_TEST(test_oversized_length_resets);
     RUN_TEST(test_append_overflow_resets);
+    RUN_TEST(test_frame_type_round_trip);
     RUN_TEST(test_consume_without_peek_is_safe);
     return UNITY_END();
 }

@@ -8,6 +8,7 @@ void frame_buf_init(frame_buf_t *fb, uint8_t *backing, size_t cap)
     fb->cap = cap;
     fb->len = 0;
     fb->peek_total = 0;
+    fb->peek_type = 0;
 }
 
 int frame_buf_append(frame_buf_t *fb, const uint8_t *data, size_t n)
@@ -27,10 +28,13 @@ int frame_buf_next(frame_buf_t *fb, const uint8_t **payload, size_t *payload_len
     fb->peek_total = 0;
     if (fb->len < FRAME_BUF_HDR_LEN) return 0;
 
-    uint32_t jlen = (uint32_t)fb->buf[0]
-                  | ((uint32_t)fb->buf[1] << 8)
-                  | ((uint32_t)fb->buf[2] << 16)
-                  | ((uint32_t)fb->buf[3] << 24);
+    uint32_t header = (uint32_t)fb->buf[0]
+                    | ((uint32_t)fb->buf[1] << 8)
+                    | ((uint32_t)fb->buf[2] << 16)
+                    | ((uint32_t)fb->buf[3] << 24);
+    /* Top nibble = frame type, bottom 28 bits = payload length. */
+    uint8_t  type = (uint8_t)((header >> 28) & 0xF);
+    uint32_t jlen = header & 0x0FFFFFFFu;
     if (jlen > fb->cap - FRAME_BUF_HDR_LEN) {
         fb->len = 0;
         return -1;
@@ -40,6 +44,7 @@ int frame_buf_next(frame_buf_t *fb, const uint8_t **payload, size_t *payload_len
     *payload = fb->buf + FRAME_BUF_HDR_LEN;
     *payload_len = jlen;
     fb->peek_total = FRAME_BUF_HDR_LEN + jlen;
+    fb->peek_type = type;
     return 1;
 }
 

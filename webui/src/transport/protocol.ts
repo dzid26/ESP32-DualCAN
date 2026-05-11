@@ -3,9 +3,16 @@ import type { Transport } from './types';
 /**
  * JSON-over-BLE protocol client.
  *
- * Wire format: 4-byte little-endian length prefix + UTF-8 JSON payload.
+ * Wire format: 4-byte little-endian header + payload. The top nibble of
+ * the header is a frame-type discriminator (0 = JSON, 1 = binary OTA
+ * write); the bottom 28 bits are the payload length. Existing JSON
+ * frames remain bit-compatible with the old format (top nibble = 0).
  * BLE fragments may split a frame; the receiver buffers until complete.
  */
+
+/* Must mirror frame_buf.h on the firmware side. */
+const FRAME_TYPE_JSON = 0x0;
+const FRAME_TYPE_OTA_WRITE = 0x1;
 
 export interface ScriptInfo {
   filename: string;
@@ -71,28 +78,23 @@ export class Protocol {
     transport.onReceive((data) => this.onRx(data));
   }
 
-  async call<T = any>(op: string, params: Record<string, unknown> = {}, timeoutMs = 5000): Promise<T> {
-    if (!this.transport.connected) throw new Error('Not connected');
+  /** Build a 4-byte little-endian length+type header. */
+  private buildHeader(payloadLen: number, type: number): Uint8Array {
+    if ((payloadLen & 0x0fffffff) !== payloadLen) {
+      throw new Error(`payload too large for frame header: ${payloadLen}`);
+    }
+    const hdr = new Uint8Array(4);
+    hdr[0] = payloadLen & 0xff;
+    hdr[1] = (payloadLen >>> 8) & 0xff;
+    hdr[2] = (payloadLen >>> 16) & 0xff;
+    hdr[3] = ((payloadLen >>> 24) & 0x0f) | ((type & 0xf) << 4);
+    return hdr;
+  }
 
-    const id = this.nextId++;
-    const reqBytes = this.encoder.encode(JSON.stringify({ op, id, ...params }));
-    const frame = new Uint8Array(4 + reqBytes.length);
-    const len = reqBytes.length;
-    frame[0] = len & 0xff;
-    frame[1] = (len >> 8) & 0xff;
-    frame[2] = (len >> 16) & 0xff;
-    frame[3] = (len >> 24) & 0xff;
-    frame.set(reqBytes, 4);
-
-    const promise = new Promise<T>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      setTimeout(() => {
-        if (this.pending.delete(id)) {
-          reject(new Error(`Timeout waiting for response to ${op}`));
-        }
-      }, timeoutMs);
-    });
-
+  /** Send a fully-built frame (header + payload) on the wire, serialised
+   * through txMutex. The pending-promise must already be registered by
+   * the caller and reachable via the response's id field. */
+  private dispatchFrame(id: number, frame: Uint8Array): void {
     const doSend = async () => {
       try {
         for (let off = 0; off < frame.length; off += this.CHUNK) {
@@ -107,9 +109,58 @@ export class Protocol {
         }
       }
     };
-
     this.txMutex = this.txMutex.then(doSend);
+  }
 
+  async call<T = any>(op: string, params: Record<string, unknown> = {}, timeoutMs = 5000): Promise<T> {
+    if (!this.transport.connected) throw new Error('Not connected');
+
+    const id = this.nextId++;
+    const reqBytes = this.encoder.encode(JSON.stringify({ op, id, ...params }));
+    const hdr = this.buildHeader(reqBytes.length, FRAME_TYPE_JSON);
+    const frame = new Uint8Array(4 + reqBytes.length);
+    frame.set(hdr, 0);
+    frame.set(reqBytes, 4);
+
+    const promise = new Promise<T>((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      setTimeout(() => {
+        if (this.pending.delete(id)) {
+          reject(new Error(`Timeout waiting for response to ${op}`));
+        }
+      }, timeoutMs);
+    });
+
+    this.dispatchFrame(id, frame);
+    return promise;
+  }
+
+  /** Send a raw firmware chunk in a binary frame.
+   * Body = u32 LE id + raw bytes. Response is normal JSON {ok,id}. */
+  private otaWriteBinary(bytes: Uint8Array, timeoutMs = 15_000): Promise<void> {
+    if (!this.transport.connected) return Promise.reject(new Error('Not connected'));
+
+    const id = this.nextId++;
+    const bodyLen = 4 + bytes.length;
+    const hdr = this.buildHeader(bodyLen, FRAME_TYPE_OTA_WRITE);
+    const frame = new Uint8Array(4 + bodyLen);
+    frame.set(hdr, 0);
+    frame[4] = id & 0xff;
+    frame[5] = (id >>> 8) & 0xff;
+    frame[6] = (id >>> 16) & 0xff;
+    frame[7] = (id >>> 24) & 0xff;
+    frame.set(bytes, 8);
+
+    const promise = new Promise<void>((resolve, reject) => {
+      this.pending.set(id, { resolve: () => resolve(), reject });
+      setTimeout(() => {
+        if (this.pending.delete(id)) {
+          reject(new Error('Timeout waiting for response to ota.write (binary)'));
+        }
+      }, timeoutMs);
+    });
+
+    this.dispatchFrame(id, frame);
     return promise;
   }
 
@@ -259,11 +310,6 @@ export class Protocol {
     return this.call('ota.begin', {}, 30_000);
   }
 
-  /** Send one base64-encoded chunk of firmware data. */
-  otaWriteChunk(b64: string): Promise<void> {
-    return this.call('ota.write', { data: b64 }, 15_000);
-  }
-
   /** Finalise and validate the written firmware image. If `reboot` is true
    * (default), the device restarts into the new firmware.
    * If `size` is provided, the device verifies the byte count matches what
@@ -301,26 +347,16 @@ export class Protocol {
       throw new Error(`Firmware too large (${bin.length} bytes, max ${max_size})`);
     }
 
-    // Send in ~4 KB raw chunks → ~5.3 KB base64.  Keeps JSON frames well
-    // under the 16 KB RX buffer on the firmware side.
+    // Send raw bytes in a binary frame — no base64 inflation, no JSON
+    // parse on the firmware side. 4 KB stays under the device's 5 KB
+    // OTA scratch + 16 KB RX buffer with room for the 8-byte header.
     const CHUNK = 4096;
     let sent = 0;
     while (sent < bin.length) {
       const end = Math.min(sent + CHUNK, bin.length);
-      const slice = bin.subarray(sent, end);
-      const b64 = uint8ToBase64(slice);
-      await this.otaWriteChunk(b64);
+      await this.otaWriteBinary(bin.subarray(sent, end));
       sent = end;
       onProgress?.(sent, bin.length);
     }
   }
-}
-
-/** Encode Uint8Array to standard base64 string. */
-function uint8ToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
 }
