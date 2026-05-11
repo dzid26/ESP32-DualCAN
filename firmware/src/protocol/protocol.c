@@ -202,6 +202,12 @@ static void handle_system_info(int id)
 
 static void handle_system_reboot(int id)
 {
+    /* A mid-flash reboot would leave a half-written app partition; the bootloader
+     * may then refuse to boot or fall back to the previous slot in an unclear
+     * state. Abort the OTA session cleanly first. */
+    if (ota_in_progress()) {
+        ota_abort();
+    }
     send_ok(id, NULL);
     /* Defer the restart so the BLE notify has time to flush. */
     xTaskCreate(reboot_task, "reboot", 2048, NULL, 5, NULL);
@@ -571,11 +577,20 @@ static void handle_ota_end(int id, cJSON *req)
     const cJSON *reboot_j = cJSON_GetObjectItem(req, "reboot");
     if (cJSON_IsBool(reboot_j)) reboot = cJSON_IsTrue(reboot_j);
 
+    /* Optional client-claimed total. If present, ota_end fails the call
+     * when the actual write count doesn't match — catches silently lost
+     * chunks before we flip the boot partition. */
+    size_t expected_len = 0;
+    const cJSON *size_j = cJSON_GetObjectItem(req, "size");
+    if (cJSON_IsNumber(size_j) && size_j->valuedouble >= 0) {
+        expected_len = (size_t)size_j->valuedouble;
+    }
+
     /* Validate + set boot partition, but DON'T reboot inside ota_end —
      * we need to send the ok response first so the client sees success
      * instead of a 15 s timeout. */
     char err[128];
-    if (ota_end(false, err, sizeof(err)) != 0) {
+    if (ota_end(false, expected_len, err, sizeof(err)) != 0) {
         send_err(id, err);
         return;
     }

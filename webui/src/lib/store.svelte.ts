@@ -199,7 +199,7 @@ class AppState {
 
       // Fetch the LATEST value of rebootAfterUpdate just before ending
       const reboot = this.rebootAfterUpdate;
-      await this.proto.otaEnd(reboot);
+      await this.proto.otaEnd(reboot, bin.length);
 
       this.otaDone = true;
       if (reboot) {

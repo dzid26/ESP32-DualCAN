@@ -265,9 +265,13 @@ export class Protocol {
   }
 
   /** Finalise and validate the written firmware image. If `reboot` is true
-   * (default), the device restarts into the new firmware. */
-  otaEnd(reboot = true): Promise<void> {
-    return this.call('ota.end', { reboot }, 15_000);
+   * (default), the device restarts into the new firmware.
+   * If `size` is provided, the device verifies the byte count matches what
+   * was actually written before flipping the boot partition. */
+  otaEnd(reboot = true, size?: number): Promise<void> {
+    const params: Record<string, unknown> = { reboot };
+    if (size !== undefined) params.size = size;
+    return this.call('ota.end', params, 15_000);
   }
 
   /** Abort an in-progress OTA session and free firmware-side resources. */

@@ -98,10 +98,18 @@ int ota_write(const uint8_t *data, size_t len, char *err_buf, size_t err_buf_len
     return 0;
 }
 
-int ota_end(bool reboot, char *err_buf, size_t err_buf_len)
+int ota_end(bool reboot, size_t expected_len, char *err_buf, size_t err_buf_len)
 {
     if (!s_in_progress) {
         snprintf(err_buf, err_buf_len, "no OTA session active");
+        return -1;
+    }
+
+    if (expected_len != 0 && expected_len != s_written) {
+        snprintf(err_buf, err_buf_len,
+                 "size mismatch: expected %" PRIu32 ", got %" PRIu32,
+                 (uint32_t)expected_len, (uint32_t)s_written);
+        ota_abort();
         return -1;
     }
 

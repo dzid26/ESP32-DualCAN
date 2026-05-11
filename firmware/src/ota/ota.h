@@ -33,8 +33,10 @@ int ota_write(const uint8_t *data, size_t len, char *err_buf, size_t err_buf_len
 
 /* Phase 3: finalise, validate the image, set boot partition.
  * If `reboot` is true the chip restarts after ~500 ms.
+ * If `expected_len` is non-zero, it is compared against the number of bytes
+ * actually written; a mismatch fails the call with a clear error.
  * Returns 0 on success, -1 on error (message in err_buf). */
-int ota_end(bool reboot, char *err_buf, size_t err_buf_len);
+int ota_end(bool reboot, size_t expected_len, char *err_buf, size_t err_buf_len);
 
 /* Cancel an in-progress OTA and free resources. Safe to call even when
  * no session is active. */
