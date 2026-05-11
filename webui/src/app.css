@@ -193,6 +193,7 @@ button { font: inherit; color: inherit; }
   background: transparent; border: none; cursor: pointer;
   color: var(--dc-text-fade);
   transition: color 80ms linear, background 80ms linear;
+  touch-action: manipulation;
 }
 .railItem:hover { background: var(--dc-surface); color: var(--dc-text-dim); }
 .railItem--active { color: var(--dc-text); }

@@ -56,7 +56,7 @@
       const resp = await fetch(`${import.meta.env.BASE_URL}dbc/tesla_model3_vehicle.dbc`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const text = await resp.text();
-      loadText(text, 'Tesla Model 3 Vehicle');
+      void loadText(text, 'Tesla Model 3 Vehicle');
     } catch (e) {
       status = `load failed: ${e instanceof Error ? e.message : e}`;
     }
