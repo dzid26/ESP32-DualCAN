@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "mbedtls/base64.h"
 
 #include "ble/ble_transport.h"
 #include "protocol/frame_buf.h"
@@ -478,47 +479,13 @@ static void handle_signal_unsubscribe(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
-/* ---- base64 decode (RFC 4648, no padding required) ---- */
-
-static const int8_t b64_lut[256] = {
-    [0 ... 255] = -1,
-    ['A'] = 0,  ['B'] = 1,  ['C'] = 2,  ['D'] = 3,  ['E'] = 4,  ['F'] = 5,
-    ['G'] = 6,  ['H'] = 7,  ['I'] = 8,  ['J'] = 9,  ['K'] = 10, ['L'] = 11,
-    ['M'] = 12, ['N'] = 13, ['O'] = 14, ['P'] = 15, ['Q'] = 16, ['R'] = 17,
-    ['S'] = 18, ['T'] = 19, ['U'] = 20, ['V'] = 21, ['W'] = 22, ['X'] = 23,
-    ['Y'] = 24, ['Z'] = 25,
-    ['a'] = 26, ['b'] = 27, ['c'] = 28, ['d'] = 29, ['e'] = 30, ['f'] = 31,
-    ['g'] = 32, ['h'] = 33, ['i'] = 34, ['j'] = 35, ['k'] = 36, ['l'] = 37,
-    ['m'] = 38, ['n'] = 39, ['o'] = 40, ['p'] = 41, ['q'] = 42, ['r'] = 43,
-    ['s'] = 44, ['t'] = 45, ['u'] = 46, ['v'] = 47, ['w'] = 48, ['x'] = 49,
-    ['y'] = 50, ['z'] = 51,
-    ['0'] = 52, ['1'] = 53, ['2'] = 54, ['3'] = 55, ['4'] = 56, ['5'] = 57,
-    ['6'] = 58, ['7'] = 59, ['8'] = 60, ['9'] = 61,
-    ['+'] = 62, ['/'] = 63,
-};
-
-/* Decode base64 from src into dst. Returns decoded length, or -1 on bad input. */
-static int b64_decode(const char *src, size_t src_len, uint8_t *dst)
-{
-    size_t si = 0, di = 0;
-    uint32_t accum = 0;
-    int bits = 0;
-    while (si < src_len) {
-        char c = src[si++];
-        if (c == '=' || c == '\n' || c == '\r') continue;
-        int8_t v = b64_lut[(unsigned char)c];
-        if (v < 0) return -1;
-        accum = (accum << 6) | (uint32_t)v;
-        bits += 6;
-        if (bits >= 8) {
-            bits -= 8;
-            dst[di++] = (uint8_t)(accum >> bits);
-        }
-    }
-    return (int)di;
-}
-
 /* ---- OTA handlers ---- */
+
+/* Static scratch for decoded OTA chunks. The TS client sends ~4 KB raw
+ * payload per chunk (≈5.5 KB base64); 5 KB gives slack without putting
+ * pressure on the heap during the few seconds of an active flash. */
+#define OTA_CHUNK_SCRATCH 5120
+static uint8_t s_ota_chunk_buf[OTA_CHUNK_SCRATCH];
 
 static void handle_ota_begin(int id)
 {
@@ -533,9 +500,10 @@ static void handle_ota_begin(int id)
     send_ok(id, result);
 }
 
-/* The web UI sends chunks as {"op":"ota.write","data":"<base64>"}
- * Chunk size is limited by BLE MTU / JSON overhead — typically 4–8 KB
- * of base64 (3–6 KB decoded). */
+/* The web UI sends chunks as {"op":"ota.write","data":"<base64>"}.
+ * Decode into a module-static scratch buffer so we don't malloc/free on
+ * every chunk during a multi-second flash — that was producing hundreds
+ * of allocations and noticeable heap churn. */
 static void handle_ota_write(int id, cJSON *req)
 {
     const cJSON *data_j = cJSON_GetObjectItem(req, "data");
@@ -546,28 +514,24 @@ static void handle_ota_write(int id, cJSON *req)
 
     const char *b64 = data_j->valuestring;
     size_t b64_len = strlen(b64);
-    /* Worst case decoded size = 3/4 of base64 length. */
-    size_t max_decoded = (b64_len * 3) / 4 + 4;
-    uint8_t *buf = malloc(max_decoded);
-    if (!buf) {
-        send_err(id, "out of memory");
-        return;
-    }
-
-    int decoded = b64_decode(b64, b64_len, buf);
-    if (decoded < 0) {
-        free(buf);
-        send_err(id, "invalid base64");
+    size_t decoded_len = 0;
+    int rc = mbedtls_base64_decode(s_ota_chunk_buf, sizeof(s_ota_chunk_buf),
+                                   &decoded_len,
+                                   (const unsigned char *)b64, b64_len);
+    if (rc != 0) {
+        /* MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL means the client sent a
+         * chunk bigger than our static scratch — bug in the TS client. */
+        send_err(id, rc == MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL
+                     ? "chunk exceeds device scratch"
+                     : "invalid base64");
         return;
     }
 
     char err[128];
-    if (ota_write(buf, (size_t)decoded, err, sizeof(err)) != 0) {
-        free(buf);
+    if (ota_write(s_ota_chunk_buf, decoded_len, err, sizeof(err)) != 0) {
         send_err(id, err);
         return;
     }
-    free(buf);
     send_ok(id, NULL);
 }
 
