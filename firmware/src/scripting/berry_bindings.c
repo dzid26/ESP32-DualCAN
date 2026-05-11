@@ -1,5 +1,6 @@
 #include "scripting/berry_bindings.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include "can/can.h"
@@ -460,7 +461,19 @@ static int l_can_send_raw(bvm *vm)
         size_t len = 0;
         const uint8_t *data = be_tobytes(vm, 3, &len);
         if (len > 8) len = 8;
-        can_bus_send(bus, id, data, (uint8_t)len, 50);
+        can_t *c = get_bus(bus);
+        if (c && c->sim_mode) {
+            char hex[17] = {0};
+            for (size_t i = 0; i < len; i++) {
+                hex[2*i]     = "0123456789ABCDEF"[(data[i] >> 4) & 0xF];
+                hex[2*i + 1] = "0123456789ABCDEF"[data[i]        & 0xF];
+            }
+            char msg[48];
+            snprintf(msg, sizeof(msg), "SIM tx bus%d 0x%03X [%d] %s", bus, (unsigned)id, (int)len, hex);
+            berry_log_push(msg);
+        } else {
+            can_bus_send(bus, id, data, (uint8_t)len, 50);
+        }
     }
     be_return_nil(vm);
 }
