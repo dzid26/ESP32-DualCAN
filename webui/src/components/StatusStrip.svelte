@@ -9,6 +9,12 @@
   let { onPalette }: { onPalette: () => void } = $props();
 
   let latestStableVersion: string | null = $state(null);
+  let confirmDisconn = $state(false);
+
+  function handleConnClick() {
+    if (app.connected) { confirmDisconn = true; return; }
+    app.toggleConnect();
+  }
 
   const connState = $derived(
     app.connecting ? 'connecting' :
@@ -60,15 +66,24 @@
 </script>
 
 <div class="status">
-  <button class="pip pip--clickable" onclick={() => app.toggleConnect()} title="Toggle connection">
-    {#if app.transport === 'ws'}
-      <Icon name="wifi" size={14} />
-    {:else}
+  {#if confirmDisconn}
+    <span class="pip">
       <Icon name="ble" size={14} />
-    {/if}
-    <span class={'pip__dot ' + dotClass}></span>
-    <span>{stateLabel}</span>
-  </button>
+      <span>Disconnect?</span>
+    </span>
+    <button class="btn btn--sm btn--danger" onclick={() => { confirmDisconn = false; app.toggleConnect(); }}>Yes</button>
+    <button class="btn btn--sm btn--ghost" onclick={() => (confirmDisconn = false)}>No</button>
+  {:else}
+    <button class="pip pip--clickable" onclick={handleConnClick} title="Toggle connection">
+      {#if app.transport === 'ws'}
+        <Icon name="wifi" size={14} />
+      {:else}
+        <Icon name="ble" size={14} />
+      {/if}
+      <span class={'pip__dot ' + dotClass}></span>
+      <span>{stateLabel}</span>
+    </button>
+  {/if}
 
   <CarPip car={app.car} onOpen={() => (app.carPickerOpen = true)} />
 

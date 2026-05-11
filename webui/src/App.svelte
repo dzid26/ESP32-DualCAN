@@ -3,6 +3,16 @@
   import Shell from './components/Shell.svelte';
   import CarPicker from './components/CarPicker.svelte';
 
+  $effect(() => {
+    if (!app.connected) return;
+    function guard(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+    window.addEventListener('beforeunload', guard);
+    return () => window.removeEventListener('beforeunload', guard);
+  });
+
   import EventsView from './components/views/EventsView.svelte';
   import ScriptsView from './components/views/ScriptsView.svelte';
   import AIView from './components/views/AIView.svelte';
