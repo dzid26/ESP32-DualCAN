@@ -28,14 +28,7 @@
 
   let isMobile = $state(false);
   let editorPanelHeight = $state<number | null>(null);
-  let scriptsPanelWidth = $state(250);
-  let isResizing = $state(false);
-  let resizeType = $state<'editor-height' | 'scripts-width' | null>(null);
-  let splitterDragStartX = 0;
-  let splitterHasDragged = false;
   let editorPanelEl: HTMLElement | undefined;
-  let gridEl: HTMLElement | undefined;
-  let scriptsCollapsed = $state(false);
 
   $effect(() => {
     const mq = window.matchMedia('(max-width: 720px)');
@@ -46,45 +39,19 @@
   });
 
   function startEditorResize(e: PointerEvent) {
-    resizeType = 'editor-height';
-    isResizing = true;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    e.preventDefault();
-  }
-
-  function startSplitterDrag(e: PointerEvent) {
-    splitterDragStartX = e.clientX;
-    splitterHasDragged = false;
-    resizeType = 'scripts-width';
-    isResizing = true;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
   }
 
   function handleResizeMove(e: PointerEvent) {
-    if (!isResizing) return;
-    if (resizeType === 'editor-height' && editorPanelEl) {
+    if (!e.buttons) return;
+    if (editorPanelEl) {
       const rect = editorPanelEl.getBoundingClientRect();
       editorPanelHeight = Math.max(100, e.clientY - rect.top);
-    } else if (resizeType === 'scripts-width' && gridEl) {
-      if (Math.abs(e.clientX - splitterDragStartX) > 3) splitterHasDragged = true;
-      const rect = gridEl.getBoundingClientRect();
-      const newWidth = e.clientX - rect.left;
-      if (newWidth < 80) {
-        scriptsCollapsed = true;
-        splitterHasDragged = true;
-      } else {
-        scriptsPanelWidth = Math.max(150, Math.min(500, newWidth));
-      }
     }
   }
 
-  function handleResizeEnd() {
-    if (resizeType === 'scripts-width' && !splitterHasDragged)
-      scriptsCollapsed = !scriptsCollapsed;
-    isResizing = false;
-    resizeType = null;
-  }
+  function handleResizeEnd() {}
 
   async function refresh(): Promise<void> {
     if (!app.connected) return;
@@ -319,24 +286,21 @@
   {/if}
 
   <div
-    bind:this={gridEl}
     style:display="grid"
-    style:row-gap="10px"
+    style:gap="10px"
     style:flex="1"
     style:min-height="0"
     style:overflow="auto"
-    style:grid-template-columns={isMobile ? '1fr' : scriptsCollapsed ? '0px 6px 1fr' : `${scriptsPanelWidth}px 6px 1fr`}
+    style:grid-template-columns={isMobile ? '1fr' : 'minmax(180px, 240px) 1fr'}
   >
     <div
       class="frame"
-      style="display: flex; flex-direction: column; overflow: hidden"
-      style:min-height={isMobile ? '85px' : '0'}
+      style="display: flex; flex-direction: column; overflow: hidden; min-height: 130px"
     >
-      {#if !scriptsCollapsed}
-        <div class="frame__head">
-          Installed <span class="ghost mono">{scripts.length}</span>
-        </div>
-        <div style="overflow-y: auto; flex: 1">
+      <div class="frame__head">
+        Installed <span class="ghost mono">{scripts.length}</span>
+      </div>
+      <div style="overflow-y: auto; flex: 1">
           {#if !app.connected}
             <div class="empty" style="margin: 10px">Not connected.</div>
           {:else if scripts.length === 0}
@@ -380,23 +344,7 @@
             </button>
           </div>
         {/each}
-        </div>
-      {/if}
-    </div>
-
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <div
-      class="scripts-splitter"
-      onpointerdown={startSplitterDrag}
-      onpointermove={handleResizeMove}
-      onpointerup={handleResizeEnd}
-      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); scriptsCollapsed = !scriptsCollapsed; } }}
-      title="Drag to resize · Click to collapse"
-      role="button"
-      aria-label={scriptsCollapsed ? 'Expand scripts panel' : 'Collapse scripts panel'}
-      tabindex="0"
-    >
-      <span class="splitter-dots">⋮</span>
+      </div>
     </div>
 
     <div
@@ -505,39 +453,6 @@
     border-bottom: 1px solid var(--dc-border);
     cursor: pointer;
     min-height: 0;
-  }
-
-  .scripts-splitter {
-    width: 6px;
-    height: 100%;
-    background: var(--dc-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: col-resize;
-    transition: background 80ms linear;
-    user-select: none;
-    position: relative;
-    overflow: visible;
-    touch-action: none;
-  }
-
-  .scripts-splitter:hover {
-    background: var(--dc-border-hi);
-  }
-
-  .splitter-dots {
-    position: absolute;
-    color: var(--dc-text-ghost);
-    font-size: 10px;
-    line-height: 1;
-    pointer-events: none;
-    letter-spacing: -2px;
-    transition: color 80ms linear;
-  }
-
-  .scripts-splitter:hover .splitter-dots {
-    color: var(--dc-text-fade);
   }
 
   .resize-corner-editor {
