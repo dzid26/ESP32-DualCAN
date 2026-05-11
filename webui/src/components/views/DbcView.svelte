@@ -10,6 +10,7 @@
   let loadedFrom = $state<string | null>(null);
   let status = $state('No DBC loaded');
   let busy = $state(false);
+  let openMessages = $state(new Set<number>());
 
   function publishSignals(): void {
     const flat = messages.flatMap(m =>
@@ -18,9 +19,18 @@
     dbcStore.setSignals(flat);
   }
 
-  function loadText(text: string, label: string): void {
+  function toggleMessage(e: Event, id: number): void {
+    const s = new Set(openMessages);
+    (e.currentTarget as HTMLDetailsElement).open ? s.add(id) : s.delete(id);
+    openMessages = s;
+  }
+
+  async function loadText(text: string, label: string): Promise<void> {
+    status = `Parsing ${label}…`;
+    await new Promise(r => setTimeout(r, 0));
     try {
       messages = parseDbc(text);
+      openMessages = new Set();
       const totalSigs = messages.reduce((n, m) => n + m.signals.length, 0);
       status = `${label}: ${messages.length} messages, ${totalSigs} signals`;
       loadedFrom = label;
@@ -36,7 +46,7 @@
     input.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => loadText(reader.result as string, file.name);
+    reader.onload = () => { void loadText(reader.result as string, file.name); };
     reader.readAsText(file);
   }
 
@@ -88,7 +98,7 @@
         const resp = await fetch(p.url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const text = await resp.text();
-        loadText(text, p.name);
+        await loadText(text, p.name);
         if (app.ble.connected) await upload(p.busId);
       } catch (e) {
         status = `gallery load failed: ${e instanceof Error ? e.message : e}`;
@@ -160,17 +170,19 @@
       </div>
       <div class="dtable__body">
         {#each messages as m (m.id)}
-          <details style="border-bottom: 1px solid var(--dc-border)">
+          <details style="border-bottom: 1px solid var(--dc-border)" ontoggle={(e) => toggleMessage(e, m.id)}>
             <summary class="mono" style="display: grid; grid-template-columns: 80px 1fr 90px; gap: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px; align-items: center">
               <span>{hex3(m.id)}</span>
               <span style="font-family: var(--dc-font-sans); color: var(--dc-text)">{m.name}</span>
               <span class="muted">{m.signals.length} signals</span>
             </summary>
-            <ul class="mono" style="margin: 0; padding: 4px 10px 8px 28px; font-size: 11px; color: var(--dc-text-fade); list-style: square">
-              {#each m.signals as sig}
-                <li>{sig.name} <span class="ghost">[{sig.startBit}|{sig.bitLength}] scale={sig.scale} offset={sig.offset}</span></li>
-              {/each}
-            </ul>
+            {#if openMessages.has(m.id)}
+              <ul class="mono" style="margin: 0; padding: 4px 10px 8px 28px; font-size: 11px; color: var(--dc-text-fade); list-style: square">
+                {#each m.signals as sig}
+                  <li>{sig.name} <span class="ghost">[{sig.startBit}|{sig.bitLength}] scale={sig.scale} offset={sig.offset}</span></li>
+                {/each}
+              </ul>
+            {/if}
           </details>
         {/each}
       </div>
