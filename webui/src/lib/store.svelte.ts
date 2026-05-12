@@ -24,10 +24,16 @@ export type ViewId =
   | 'settings' | 'tesla'
   | 'engine';
 
+const VALID_VIEWS = new Set<string>([
+  'events','scripts','ai','gallery','signals','dbc','trace','capture','settings','tesla','engine'
+]);
+
 function loadView(): ViewId {
   try {
-    const v = localStorage.getItem('dc-view') as ViewId | null;
-    return v ?? 'events';
+    const v = localStorage.getItem('dc-view');
+    if (v === 'dashboard') return 'events'; // renamed
+    if (v && VALID_VIEWS.has(v)) return v as ViewId;
+    return 'events';
   } catch { return 'events'; }
 }
 
