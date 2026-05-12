@@ -113,41 +113,40 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 
 ---
 
-## Phase 2 — Reverse engineering toolkit, WiFi fallback, second automation
+## Phase 2 — Reverse engineering toolkit, PWA install, second automation
 
-**Goal**: make the board useful for discovering unknown messages. Add WiFi as an alternative transport for iOS users and bulk transfers. Ship the track-mode automation as a second example.
+**Goal**: make the board useful for discovering unknown messages. Ship the trace/diff/capture RE toolkit, add PWA installability so users can pin the GH Pages app to their home screen or desktop, and ship the track-mode automation as a second example.
 
-**Demo at end of phase**: user enables WiFi station mode, connects laptop to same network, opens the same web UI, performs an action in the car, and the trace/diff view highlights exactly which signals changed.
+**Note**: WiFi + HTTP server dropped — users install the GH Pages web app as a PWA instead. BLE is the transport; no WebSocket layer needed.
+
+**Demo at end of phase**: user pins the web app to their phone home screen, connects to the board over BLE, performs an action in the car, and the trace/diff view highlights exactly which signals changed.
 
 ### Tasks
 
-1. **WiFi + HTTP server**:
-   - Station mode with NVS-stored credentials.
-   - SoftAP fallback when no credentials.
-   - mDNS (`dorky.local`).
-   - HTTP server serving the web UI from LittleFS.
-   - WebSocket endpoint implementing the same CBOR protocol as BLE.
-2. **Transport adapter in the UI**:
-   - WebSocket transport implementation.
-   - Runtime selection: WS if page served from device, BLE otherwise, user-overridable.
-3. **Live trace view**:
-   - Firmware: `trace.start` / `trace.stop` / `trace.frame` (notification) topics.
-   - UI: virtualized table, filters by id/bus/signal/text, pause, export to candump/CSV.
-4. **Signal diff mode**: UI-side, subscribe to a set of signals and highlight changes within a sliding window.
-5. **Event-triggered capture**: UI-driven, starts/stops trace based on a signal predicate, saves to a file.
-6. **Baseline diff tool**: UI-side, snapshot A / perform action / snapshot B / render diff.
-7. **Replay**: load a saved capture, send frames in order (respects timestamps or at fixed rate), works in simulation mode too.
-8. **Second automation** (`scripts_examples/track_mode_on_full_throttle.be`):
+1. **PWA install button**:
+   - `manifest.json` with name, icons, `display: standalone`, `theme_color`.
+   - Minimal service worker (enables installability; cache-first optional later).
+   - Capture `beforeinstallprompt` in app state; expose "Add to home screen" button in Settings.
+   - Detect already-installed (standalone mode) to hide the button.
+2. **Live trace view** *(largely done — wired in TraceView.svelte)*:
+   - Firmware: `trace.start` / `trace.stop` topics ✓, push `{type:'trace'}` ✓.
+   - UI: table, filters, pause, export to candump/CSV ✓.
+3. **Signal diff mode**: UI-side, subscribe to a set of signals and highlight changes within a sliding window.
+4. **Event-triggered capture**: UI-driven, starts/stops trace based on a signal predicate, saves to a file.
+5. **Baseline diff tool**: UI-side, snapshot A / perform action / snapshot B / render diff.
+6. **Replay**: load a saved capture, send frames in order (respects timestamps or at fixed rate), works in simulation mode too.
+7. **Second automation** (`scripts_examples/track_mode_on_full_throttle.be`):
    - Uses `UI_trackModeRequest` signal from the larger DBC.
    - Holds full-throttle detection and edge debouncing.
-9. **Signal graphs on the Dashboard** (uPlot).
-10. **Tests for phase 2 features**:
-    - Host: trace buffer behavior under load, event-capture trigger evaluation, replay frame ordering with fake timestamps.
-    - Web UI: Playwright E2E against an in-process mock firmware — full flow of "upload DBC → enable script → see frame in trace".
+8. **Signal graphs on the Dashboard** *(uPlot — partially scaffolded in DashboardView.svelte)*.
+9. **Tests for phase 2 features**:
+   - Host: trace buffer behavior under load, event-capture trigger evaluation, replay frame ordering with fake timestamps.
+   - Web UI: Playwright E2E against an in-process mock firmware — full flow of "upload DBC → enable script → see frame in trace".
 
 ### Exit criteria
 
-- iOS user on Bluefy or any WiFi-connected laptop can fully use the tool.
+- User can install the web app from GH Pages on Android / desktop and use it fully over BLE.
+- iOS user on Bluefy can fully use the tool.
 - A previously unknown message can be identified end-to-end using the RE tools alone.
 - Track-mode script works on a Performance/Plaid car.
 
