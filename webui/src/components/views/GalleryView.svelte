@@ -3,6 +3,7 @@
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
   import { GALLERY_SCRIPTS, GALLERY_DBCS, DBC_SOURCE, type GalleryDbc } from '../../lib/sampleData';
+  import { examples } from '../../examples';
 
   type Tab = 'scripts' | 'dbcs';
   let tab = $state<Tab>('scripts');
@@ -16,10 +17,18 @@
   const opendbcDbcs  = $derived(dbcs.filter(d => d.source === 'opendbc'));
   const communityDbcs = $derived(dbcs.filter(d => d.source === 'community'));
 
-  // Per-card chosen bus (Tesla VehicleCAN defaults to bus 0, ChassisCAN to bus 1).
+  // Per-card chosen bus.
   let pickedBus = $state<Record<string, number>>({});
   function busFor(d: { n: string; bus: number }): number {
     return pickedBus[d.n] ?? d.bus;
+  }
+
+  // Script preview expansion state.
+  let expanded = $state<Record<string, boolean>>({});
+
+  function installScript(filename: string): void {
+    app.pendingExample = filename;
+    app.setView('scripts');
   }
 
   function loadDbc(d: { n: string; file: string; url?: string }, busId: number): void {
@@ -84,6 +93,7 @@
   {#if tab === 'scripts'}
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px">
       {#each scripts as ex}
+        {@const preview = examples.find(e => e.filename === ex.filename)}
         <div class="frame gal-card">
           <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
             <div class="row-flex" style="justify-content: space-between; align-items: flex-start; gap: 8px">
@@ -91,6 +101,9 @@
               <span class={'gal-bus gal-bus--' + ex.bus} title={`Targets bus ${ex.bus}`}>bus {ex.bus}</span>
             </div>
             <div style="font-size: 12px; color: var(--dc-text-fade); line-height: 1.45; flex: 1">{ex.desc}</div>
+            {#if expanded[ex.filename] && preview}
+              <pre class="mono gal-preview">{preview.code}</pre>
+            {/if}
             <div class="row-flex gal-meta" style="flex-wrap: wrap; gap: 6px">
               {#if ex.brands?.includes('*')}
                 <span class="gal-brand gal-brand--any mono">universal</span>
@@ -104,8 +117,18 @@
               <span class="ghost mono" style="font-size: 11px">★ {ex.stars}</span>
             </div>
             <div class="row-flex gal-actions" style="justify-content: flex-end">
-              <button class="btn btn--sm btn--ghost">Preview</button>
-              <button class="btn btn--sm btn--primary"><Icon name="down" size={13} />Install</button>
+              {#if preview}
+                <button class="btn btn--sm btn--ghost"
+                  onclick={() => (expanded[ex.filename] = !expanded[ex.filename])}>
+                  {expanded[ex.filename] ? 'Hide' : 'Preview'}
+                </button>
+                <button class="btn btn--sm btn--primary"
+                  onclick={() => installScript(ex.filename)}>
+                  <Icon name="down" size={13} />Install
+                </button>
+              {:else}
+                <span class="ghost mono" style="font-size: 10px">{ex.filename}</span>
+              {/if}
             </div>
           </div>
         </div>
@@ -218,3 +241,13 @@
     {/if}
   {/if}
 </div>
+
+<style>
+  .gal-preview {
+    font-size: 10px; line-height: 1.5; overflow-x: auto;
+    background: var(--dc-bg); border: 1px solid var(--dc-border);
+    border-radius: 4px; padding: 8px 10px; margin: 0;
+    max-height: 200px; overflow-y: auto;
+    color: var(--dc-text-dim); white-space: pre;
+  }
+</style>

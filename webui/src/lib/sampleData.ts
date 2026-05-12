@@ -89,17 +89,21 @@ export const DBC_MSGS: DbcMsg[] = [
 ];
 
 export type GalleryScript = {
-  n: string; bus: number; desc: string;
+  n: string;
+  /** Basename in firmware/scripts_examples/ — used to load bundled content. */
+  filename: string;
+  bus: number; desc: string;
   author: string; stars: number; brands: string[];
 };
 
 export const GALLERY_SCRIPTS: GalleryScript[] = [
-  { n: 'Window drop on long handle pull', bus: 0, desc: 'Lower driver window when door is open and handle held 2s+.', author: 'dzid26',    stars: 42, brands: ['Tesla'] },
-  { n: 'Track mode on full throttle',     bus: 0, desc: 'Arms track mode when throttle pedal pinned for 3s.',          author: 'dzid26',    stars: 31, brands: ['Tesla'] },
-  { n: 'Lock confirm honk',               bus: 0, desc: 'Short horn tap on double-lock.',                                author: 'community', stars: 18, brands: ['*'] },
-  { n: 'Charge port LED mirror',          bus: 0, desc: 'Mirror charge state to the onboard RGB LED.',                  author: 'community', stars: 12, brands: ['Tesla', 'Hyundai', 'Kia'] },
-  { n: 'Wiper auto-park on shutdown',     bus: 0, desc: 'Force wipers to park before sleep — fixes random mid-windshield stop.', author: 'community', stars: 24, brands: ['Toyota', 'Honda'] },
-  { n: 'TPMS warning chime mute',         bus: 0, desc: "Suppress the cabin chime once you've acknowledged a TPMS warning.", author: 'dzid26', stars: 9, brands: ['Subaru', 'Mazda'] },
+  { n: 'Window drop on handle pull',    filename: 'window_drop_on_handle_pull.be',   bus: 0, desc: 'Lower window when door is open and handle held 2s+. Template — TX ID needs verification.',                  author: 'dzid26', stars: 42, brands: ['Tesla'] },
+  { n: 'Track mode on full throttle',   filename: 'track_mode_on_full_throttle.be',  bus: 0, desc: 'Arms track mode when throttle pedal pinned >1s. Template — signals need verification.',                      author: 'dzid26', stars: 31, brands: ['Tesla'] },
+  { n: 'Tesla Doors Sim',               filename: 'tesla_doors_sim.be',              bus: 0, desc: 'Simulates door open/close every 2s. Useful for testing door-based scripts without a car.',                   author: 'dzid26', stars: 12, brands: ['Tesla'] },
+  { n: 'Tiles demo',                    filename: 'tiles_demo.be',                   bus: 0, desc: 'Registers blip_red/green/blue/rainbow action tiles that blink the LED. Verifies the full BLE→tile path.',   author: 'dzid26', stars: 15, brands: ['*'] },
+  { n: 'Hello log',                     filename: 'hello_log.be',                    bus: 0, desc: 'Heartbeat every 5s + greet action. No CAN bus needed — good first script.',                                  author: 'dzid26', stars: 8,  brands: ['*'] },
+  { n: 'Bench test',                    filename: 'bench_test.be',                   bus: 0, desc: 'Sends periodic counter frames on bus 0 and logs RX. Use with loopback wiring.',                              author: 'dzid26', stars: 10, brands: ['*'] },
+  { n: 'Loopback LED',                  filename: 'loopback_led.be',                 bus: 0, desc: 'TX on CAN0, green LED if CAN1 echoes back, red on miss. Also bridges CAN0→CAN1.',                           author: 'dzid26', stars: 6,  brands: ['*'] },
 ];
 
 export const DBC_SOURCE = { repo: 'commaai/opendbc', url: 'https://github.com/commaai/opendbc' };
