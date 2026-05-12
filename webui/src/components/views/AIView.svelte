@@ -1,226 +1,351 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
+  import { dbcStore } from '../../dbcStore.svelte';
+  import { examples } from '../../examples';
   import Icon from '../Icon.svelte';
 
-  type ToolStep = { kind: 'tool'; name: string; args: Record<string, unknown>; result: string };
-  type ReasonStep = { kind: 'reason'; text: string };
-  type ProseStep = { kind: 'prose'; text: string };
-  type ProposeEventStep = { kind: 'propose-event'; evId: string; name: string; desc: string };
-  type ProposeScriptStep = { kind: 'propose-script'; name: string; code: string };
-  type Step = ToolStep | ReasonStep | ProseStep | ProposeEventStep | ProposeScriptStep;
-
-  type UserTurn = { role: 'user'; text: string };
-  type AgentTurn = { role: 'agent'; steps: Step[] };
+  // ---- types ----
+  type UserTurn  = { role: 'user';      text: string };
+  type AgentTurn = { role: 'assistant'; text: string; streaming: boolean };
   type Turn = UserTurn | AgentTurn;
 
-  let { hostingHttp = false }: { hostingHttp?: boolean } = $props();
-
-  const SAMPLE_TURNS: Turn[] = [
-    { role: 'user', text: 'Turn on the headlights' },
-    { role: 'agent', steps: [
-      { kind: 'reason', text: 'User wants headlights on. Check available events first — safer than crafting a raw CAN frame.' },
-      { kind: 'tool', name: 'list_events', args: {}, result: '9 events · 6 vehicle, 3 safe' },
-      { kind: 'tool', name: 'lookup_event', args: { q: 'headlights' }, result: '"Headlights ON" · CAN1 0x3E9 byte4 bit0=1 · vehicle write' },
-      { kind: 'propose-event', evId: 'hl-on', name: 'Headlights ON', desc: 'CAN1 0x3E9 byte4 bit0=1' },
-      { kind: 'prose', text: 'I can fire the **Headlights ON** event. It writes to the body bus. Confirm below to send.' },
-    ]},
-    { role: 'user', text: 'Make a script that beeps when the battery drops below 20%' },
-    { role: 'agent', steps: [
-      { kind: 'reason', text: 'Need to find SOC signal in the loaded DBC, then build an event-handler script that triggers a beep.' },
-      { kind: 'tool', name: 'lookup_signal', args: { q: 'battery state of charge' }, result: 'BMS_socUI · message 0x292 · scale 0.5%/bit · CAN0' },
-      { kind: 'tool', name: 'list_events', args: { tag: 'beep' }, result: 'Cabin beep · safe' },
-      { kind: 'propose-script', name: 'Low SOC alert',
-        code: `# meta: automation
-# Beep once when SOC dips below 20% — re-arms above 25%.
-import dbc
-import events
-
-var armed = true
-
-dbc.on('BMS_socUI', def(soc)
-  if soc < 20 && armed
-    events.fire('beep')
-    armed = false
-  elif soc > 25
-    armed = true
-  end
-end)` },
-      { kind: 'prose', text: 'Save this to a slot? It uses **events.fire("beep")** so you can keep tweaking the beep tile separately.' },
-    ]},
-  ];
-
-  let turns = $state<Turn[]>(SAMPLE_TURNS);
-  let draft = $state('');
-  let busy = $state(false);
+  // ---- state ----
+  let turns    = $state<Turn[]>([]);
+  let draft    = $state('');
+  let busy     = $state(false);
+  let errorMsg = $state('');
   let endEl: HTMLDivElement | undefined = $state();
+
+  /** API-side conversation history for multi-turn context. */
+  let history: { role: 'user' | 'assistant'; content: string }[] = [];
 
   $effect(() => {
     void turns.length;
     endEl?.scrollIntoView({ block: 'end' });
   });
 
-  function send(): void {
-    const text = draft.trim();
-    if (!text) return;
-    turns = [...turns, { role: 'user', text }];
-    draft = '';
-    busy = true;
-    setTimeout(() => {
-      turns = [...turns, { role: 'agent', steps: [
-        { kind: 'reason', text: '(mock) I would call window.claude.complete() with the tool catalog and your message here.' },
-        { kind: 'prose',  text: 'In a wired build this is where streaming output appears. Tools render as cards as they fire.' },
-      ]}];
-      busy = false;
-    }, 700);
+  // ---- system prompt ----
+  function buildSystemPrompt(): string {
+    const signals = dbcStore.signals.slice(0, 60).map(s => `${s.name} (${s.message})`).join(', ');
+    const exSnippets = examples.slice(0, 3)
+      .map(e => `### ${e.name}\n\`\`\`berry\n${e.code}\n\`\`\``).join('\n\n');
+
+    return `You are an AI assistant embedded in Dorky Commander — an open-source ESP32-C6 device for Tesla car automation using Berry scripting and CAN bus signals.
+
+## Berry Scripting API
+Scripts must define \`def setup()\` (called on enable). Optionally \`def teardown()\` (called on disable).
+
+Available global functions:
+- \`on_can_signal(msg, sig, fn)\` — call fn(sig) on change; \`sig['value']\`, \`sig['prev']\`
+- \`can_signal_get(msg, sig)\` — current value (map or nil)
+- \`can_send_raw(bus, id, bytes)\` — send raw frame
+- \`can_recv_raw(bus)\` — receive next frame (bytes or nil)
+- \`can_msg_get(id)\` + \`can_msg_set(msg, sig, val)\` + \`can_msg_send(msg)\` — encode + send with auto checksum
+- \`action_register(name, fn)\` — register Dashboard tile
+- \`timer_after(ms, fn)\` / \`timer_every(ms, fn)\` / \`timer_cancel(fn)\`
+- \`led_set(r, g, b)\` / \`led_off()\` — onboard RGB LED
+- \`state_set(key, val)\` / \`state_get(key)\` — NVS persistence
+- \`millis()\` — ms since boot
+- \`print(msg)\` — log panel
+
+Berry syntax: \`var\`, \`def\`, \`if/elif/else/end\`, \`while\`, \`for i:0..n\`, \`bytes()\`, \`str(v)\`, \`format(fmt,...)\`, \`/-> expr\` (lambda).
+
+## Device context
+${app.connected ? '✓ Connected' : '⚠ Not connected'}
+${Object.entries(app.loadedDbc).filter(([,v])=>v).map(([k,v])=>`Bus ${k}: ${v}`).join('\n') || 'No DBC loaded'}
+${signals ? `\nAvailable signals: ${signals}` : ''}
+
+## Example scripts
+${exSnippets}
+
+## Instructions
+- Write complete Berry scripts in \`\`\`berry code blocks
+- Always include \`def setup()\`
+- Use signal names from the DBC list when available
+- Keep scripts focused and commented
+- Propose scripts rather than claiming to fire CAN frames directly`;
   }
 
-  function onTextareaKey(e: KeyboardEvent): void {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      send();
+  // ---- streaming fetch ----
+  async function streamResponse(onChunk: (text: string) => void): Promise<void> {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': app.aiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: app.aiModel,
+        max_tokens: 2048,
+        stream: true,
+        system: buildSystemPrompt(),
+        messages: history,
+      }),
+    });
+
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      throw new Error((body as any)?.error?.message ?? `HTTP ${resp.status}`);
+    }
+
+    const reader = resp.body!.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() ?? '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') return;
+        try {
+          const evt = JSON.parse(data);
+          if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+            onChunk(evt.delta.text as string);
+          }
+        } catch { /* skip malformed SSE */ }
+      }
     }
   }
 
-  // very light markdown — bold + inline code
-  type ProsePart = { kind: 'b' | 'c' | 't'; v: string };
-  function splitProse(text: string): ProsePart[] {
-    const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-    return parts.map(p => {
-      if (p.startsWith('**') && p.endsWith('**')) return { kind: 'b', v: p.slice(2, -2) };
-      if (p.startsWith('`')  && p.endsWith('`'))  return { kind: 'c', v: p.slice(1, -1) };
-      return { kind: 't', v: p };
-    });
+  // ---- send ----
+  async function send(): Promise<void> {
+    const text = draft.trim();
+    if (!text || busy) return;
+    errorMsg = '';
+    draft = '';
+    turns = [...turns, { role: 'user', text }];
+    history = [...history, { role: 'user', content: text }];
+
+    const agentTurn: AgentTurn = { role: 'assistant', text: '', streaming: true };
+    turns = [...turns, agentTurn];
+    busy = true;
+    try {
+      if (!app.aiKey) throw new Error('No API key — add one in Settings → AI assistant');
+      await streamResponse((chunk) => {
+        agentTurn.text += chunk;
+        turns = turns; // nudge reactivity
+      });
+      history = [...history, { role: 'assistant', content: agentTurn.text }];
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : String(e);
+      turns = turns.filter(t => t !== agentTurn);
+      history = history.slice(0, -1);
+    } finally {
+      agentTurn.streaming = false;
+      busy = false;
+    }
   }
 
-  const disabled = $derived(hostingHttp || !app.connected || app.killed);
+  function onKey(e: KeyboardEvent): void {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void send(); }
+  }
+
+  // ---- script install ----
+  let installStatus = $state<Record<number, string>>({});
+
+  async function installScript(turnIdx: number, code: string, enable: boolean): Promise<void> {
+    if (!app.connected) {
+      installStatus = { ...installStatus, [turnIdx]: 'connect to device first' };
+      return;
+    }
+    const nameLine = code.match(/^#\s*@?name\s+(.+)$/m);
+    const base = (nameLine?.[1] ?? `ai_script_${turnIdx}`)
+      .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 32);
+    const filename = base + '.be';
+    try {
+      installStatus = { ...installStatus, [turnIdx]: 'writing…' };
+      await app.proto.writeScript(filename, code);
+      if (enable) {
+        installStatus = { ...installStatus, [turnIdx]: 'enabling…' };
+        await app.proto.enableScript(filename);
+      }
+      installStatus = { ...installStatus, [turnIdx]: `✓ saved as ${filename}${enable ? ' (enabled)' : ''}` };
+      app.pushLog(`AI script "${filename}" ${enable ? 'installed and enabled' : 'installed'}`, 'info', 'ai');
+    } catch (err) {
+      installStatus = { ...installStatus, [turnIdx]: `error: ${err instanceof Error ? err.message : err}` };
+    }
+  }
+
+  // ---- response renderer ----
+  type Seg = { kind: 'prose'; text: string } | { kind: 'code'; lang: string; code: string };
+
+  function parseSegments(text: string): Seg[] {
+    const segs: Seg[] = [];
+    const re = /```(\w*)\n([\s\S]*?)```/g;
+    let last = 0, m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) segs.push({ kind: 'prose', text: text.slice(last, m.index) });
+      segs.push({ kind: 'code', lang: m[1] || 'text', code: m[2].trimEnd() });
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) segs.push({ kind: 'prose', text: text.slice(last) });
+    return segs;
+  }
+
+  type Span = { t: 'b' | 'c' | 'text'; v: string };
+  function parseSpans(text: string): Span[] {
+    return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map(p => {
+      if (p.startsWith('**') && p.endsWith('**')) return { t: 'b' as const, v: p.slice(2, -2) };
+      if (p.startsWith('`')  && p.endsWith('`'))  return { t: 'c' as const, v: p.slice(1, -1) };
+      return { t: 'text' as const, v: p };
+    });
+  }
 </script>
 
 <div class="view view--ai">
   <header class="view__head">
     <div>
-      <h2 class="view__title row-flex"><Icon name="sparkle" size={18} /> AI assistant</h2>
-      <p class="view__sub">Describe what you want. The agent reads signals, fires events, and proposes scripts — vehicle writes always confirm.</p>
+      <h2 class="view__title row-flex"><Icon name="sparkle" size={18} />AI assistant</h2>
+      <p class="view__sub">Describe what you want. Responses stream from Claude; Berry code blocks become installable scripts.</p>
     </div>
-    <div class="row-flex">
-      <span class={'pill ' + (hostingHttp ? 'pill--warn' : 'pill--ok')}>
-        {hostingHttp ? 'AI disabled · open hosted UI' : 'Hosted · BYOK ready'}
-      </span>
-    </div>
+    {#if !app.aiKey}
+      <button class="pill pill--warn" onclick={() => app.setView('settings')}>
+        Set API key in Settings
+      </button>
+    {:else}
+      <span class="pill pill--ok">BYOK · {app.aiModel.split('-').slice(1,3).join('-')}</span>
+    {/if}
   </header>
 
   <div class="ai-stage">
-    {#if hostingHttp}
-      <div class="ai-banner">
-        <Icon name="sparkle" size={14} />
-        <span>
-          This page is served from the device over HTTP, so the browser blocks calls to api.anthropic.com.
-          Open <a href="https://dzid26.github.io/dorky-commander" target="_blank" rel="noopener">the hosted UI</a> to enable AI.
-          The hosted page still talks to your device over Web Bluetooth.
-        </span>
-      </div>
-    {/if}
-
     <div class="frame ai-frame">
       <div class="ai-chat">
-        {#each turns as t, i (i)}
-          {#if t.role === 'user'}
+
+        {#if turns.length === 0}
+          <div class="ai-empty">
+            <Icon name="sparkle" size={28} />
+            <p>Ask anything about your car's CAN bus, or request a Berry script.</p>
+            {#if !app.aiKey}
+              <p class="ghost" style="font-size: 11px">Add your Anthropic API key in Settings first.</p>
+            {/if}
+          </div>
+        {/if}
+
+        {#each turns as turn, i (i)}
+          {#if turn.role === 'user'}
             <div class="ai-msg ai-msg--user">
-              <div class="ai-msg__bubble">{t.text}</div>
+              <div class="ai-msg__bubble">{turn.text}</div>
             </div>
           {:else}
             <div class="ai-msg ai-msg--agent">
-              {#each t.steps as s, j (j)}
-                {#if s.kind === 'reason'}
-                  <details class="ai-reason">
-                    <summary class="mono">↳ reasoning</summary>
-                    <div>{s.text}</div>
-                  </details>
-                {:else if s.kind === 'tool'}
-                  <div class="ai-tool mono">
-                    <span class="ai-tool__name"><Icon name="tool" size={12} /> {s.name}</span>
-                    <span class="ai-tool__args">{JSON.stringify(s.args)}</span>
-                    <span class="ai-tool__sep">→</span>
-                    <span class="ai-tool__result">{s.result}</span>
+              {#each parseSegments(turn.text) as seg}
+                {#if seg.kind === 'prose'}
+                  <div class="ai-prose">
+                    {#each seg.text.split('\n') as line, li}
+                      {#if li > 0}<br />{/if}
+                      {#each parseSpans(line) as sp}
+                        {#if sp.t === 'b'}<strong>{sp.v}</strong>
+                        {:else if sp.t === 'c'}<code class="mono">{sp.v}</code>
+                        {:else}{sp.v}{/if}
+                      {/each}
+                    {/each}
                   </div>
-                {:else if s.kind === 'propose-event'}
-                  <div class="ai-card ai-card--event">
-                    <div class="ai-card__head">
-                      <Icon name="bolt" size={14} /> Proposed action — fire event
-                    </div>
-                    <div class="ai-card__body">
-                      <div class="ai-card__title">{s.name}</div>
-                      <div class="mono ai-card__sub">{s.desc}</div>
-                      <div class="row-flex" style="justify-content: flex-end; margin-top: 10px">
-                        <button class="btn btn--sm btn--ghost">Cancel</button>
-                        <button class="btn btn--sm btn--primary" {disabled}>
-                          <Icon name="bolt" size={13} />Fire
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                {:else if s.kind === 'propose-script'}
+                {:else}
                   <div class="ai-card ai-card--script">
                     <div class="ai-card__head">
-                      <Icon name="scripts" size={14} /> Proposed script
+                      <Icon name="scripts" size={13} />
+                      {seg.lang === 'berry' || seg.lang === 'be' ? 'Berry script' : seg.lang || 'code'}
                     </div>
                     <div class="ai-card__body">
-                      <input class="inp" value={s.name} style="margin-bottom: 6px; width: 100%" />
-                      <div class="ai-card__editor">
-                        <pre class="mono">{s.code}</pre>
-                      </div>
-                      <div class="row-flex" style="justify-content: space-between; margin-top: 10px">
-                        <span class="mono ghost">type: automation · {s.code.split('\n').length} lines</span>
-                        <span class="row-flex">
-                          <button class="btn btn--sm btn--ghost">Discard</button>
-                          <button class="btn btn--sm">Install only</button>
-                          <button class="btn btn--sm btn--primary"><Icon name="check" size={13} />Install &amp; enable</button>
-                        </span>
-                      </div>
+                      <pre class="mono ai-code">{seg.code}</pre>
+                      {#if seg.lang === 'berry' || seg.lang === 'be'}
+                        <div class="row-flex" style="justify-content: space-between; margin-top: 8px; flex-wrap: wrap; gap: 6px">
+                          <span class="mono ghost" style="font-size: 11px">{installStatus[i] ?? ''}</span>
+                          <span class="row-flex" style="gap: 6px">
+                            <button class="btn btn--sm"
+                              onclick={() => installScript(i, seg.code, false)}
+                              disabled={!app.connected}>
+                              Install only
+                            </button>
+                            <button class="btn btn--sm btn--primary"
+                              onclick={() => installScript(i, seg.code, true)}
+                              disabled={!app.connected}>
+                              <Icon name="check" size={13} />Install &amp; enable
+                            </button>
+                          </span>
+                        </div>
+                      {/if}
                     </div>
-                  </div>
-                {:else if s.kind === 'prose'}
-                  <div class="ai-prose">
-                    {#each splitProse(s.text) as p}
-                      {#if p.kind === 'b'}<strong>{p.v}</strong>
-                      {:else if p.kind === 'c'}<code class="mono">{p.v}</code>
-                      {:else}{p.v}{/if}
-                    {/each}
                   </div>
                 {/if}
               {/each}
+              {#if turn.streaming}
+                <span class="ai-cursor">▊</span>
+              {/if}
             </div>
           {/if}
         {/each}
-        {#if busy}
-          <div class="ai-typing mono">agent is thinking<span class="ai-typing__dots"></span></div>
+
+        {#if errorMsg}
+          <div class="ai-error mono">{errorMsg}</div>
         {/if}
+
         <div bind:this={endEl}></div>
       </div>
 
       <footer class="ai-input">
         <div class="ai-suggest mono">
-          <button class="chip" onclick={() => (draft = 'Lock the doors')}>🔒 Lock the doors</button>
-          <button class="chip" onclick={() => (draft = 'What does message 0x292 contain?')}>🔍 Decode 0x292</button>
-          <button class="chip" onclick={() => (draft = 'Beep when reverse gear is engaged')}>🔔 Beep on reverse</button>
+          <button class="chip" onclick={() => (draft = 'What signals are in the loaded DBC?')}>
+            🔍 List signals
+          </button>
+          <button class="chip" onclick={() => (draft = 'Write a script that blinks the LED when speed exceeds 100 km/h')}>
+            💡 LED on speed
+          </button>
+          <button class="chip" onclick={() => (draft = 'Beep once when reverse gear is engaged')}>
+            🔔 Beep on reverse
+          </button>
         </div>
         <div class="ai-inputrow">
           <textarea
             class="inp ai-textarea"
-            placeholder="Describe what you want… ('turn on headlights', 'log every CAN1 frame with id 0x3E9 for 30s')"
+            placeholder="Describe what you want… (⌘↵ or Ctrl↵ to send)"
             bind:value={draft}
-            onkeydown={onTextareaKey}
+            onkeydown={onKey}
             rows="2"
-            disabled={hostingHttp}
           ></textarea>
-          <button class="btn btn--primary" onclick={send} disabled={busy || !draft.trim() || hostingHttp}>
+          <button class="btn btn--primary" onclick={send} disabled={busy || !draft.trim()}>
             <Icon name="sparkle" size={13} />Send
           </button>
         </div>
         <div class="ai-foot mono">
-          <span>{hostingHttp ? '⚠ AI disabled in device-hosted mode' : 'haiku-4.5 · BYOK · responses streamed'}</span>
+          <button class="btn btn--sm btn--ghost"
+            onclick={() => { turns = []; history = []; errorMsg = ''; installStatus = {}; }}
+            disabled={turns.length === 0}>Clear</button>
           <span>⌘↵ to send</span>
         </div>
       </footer>
     </div>
   </div>
 </div>
+
+<style>
+  .ai-empty {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px; padding: 40px 20px; color: var(--dc-text-fade); text-align: center;
+  }
+  .ai-empty p { margin: 0; font-size: 13px; }
+
+  .ai-code {
+    font-size: 11px; line-height: 1.55; overflow-x: auto; white-space: pre;
+    background: var(--dc-bg); border-radius: 4px; padding: 10px 12px; margin: 0;
+    max-height: 320px; overflow-y: auto; color: var(--dc-text);
+  }
+
+  .ai-error {
+    background: var(--dc-err-bg, #2a1010); border: 1px solid var(--dc-err-border, #5a2020);
+    border-radius: 6px; padding: 8px 12px; font-size: 12px; color: var(--dc-err-text);
+    margin: 4px 0;
+  }
+
+  .ai-cursor {
+    display: inline-block; animation: blink .7s step-end infinite;
+    color: var(--dc-accent); font-size: 14px; line-height: 1;
+  }
+  @keyframes blink { 50% { opacity: 0 } }
+</style>
