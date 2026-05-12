@@ -408,7 +408,7 @@ ${exSnippets}
           </button>
         </div>
 
-        <!-- Attachment bar: badge when script attached, picker when open -->
+        <!-- Attachment area: sits above textarea, mutually exclusive states -->
         {#if attachedScript}
           <div class="ai-attach-bar">
             <span class="mono" style="font-size: 11px">📎 {attachedScript.filename}</span>
@@ -427,6 +427,13 @@ ${exSnippets}
             <button class="btn btn--sm btn--ghost" style="padding: 1px 6px"
               onclick={() => (attachPickerOpen = false)}>✕</button>
           </div>
+        {:else}
+          <button class="btn btn--sm btn--ghost ai-attach-btn"
+            onclick={openAttachPicker}
+            disabled={!app.connected || attachLoading}
+            title="Attach a script from the device as context">
+            {attachLoading ? '…' : '📎 Attach script'}
+          </button>
         {/if}
 
         <div class="ai-inputrow">
@@ -442,17 +449,9 @@ ${exSnippets}
           </button>
         </div>
         <div class="ai-foot mono">
-          <span class="row-flex" style="gap: 4px">
-            <button class="btn btn--sm btn--ghost"
-              onclick={() => { turns = []; history = []; errorMsg = ''; installStatus = {}; attachedScript = null; }}
-              disabled={turns.length === 0}>Clear</button>
-            <button class="btn btn--sm btn--ghost"
-              onclick={openAttachPicker}
-              disabled={!app.connected || attachLoading}
-              title="Attach a script from the device as context">
-              {attachLoading ? '…' : '📎 Attach script'}
-            </button>
-          </span>
+          <button class="btn btn--sm btn--ghost"
+            onclick={() => { turns = []; history = []; errorMsg = ''; installStatus = {}; attachedScript = null; }}
+            disabled={turns.length === 0}>Clear</button>
           <span>⌘↵ to send</span>
         </div>
       </footer>
@@ -476,6 +475,9 @@ ${exSnippets}
   .ai-attach-badge {
     font-size: 10px; color: var(--dc-text-fade); font-family: var(--dc-mono);
     margin-bottom: 2px; text-align: right;
+  }
+  .ai-attach-btn {
+    font-size: 11px; padding: 3px 8px; align-self: flex-start; margin-bottom: 2px;
   }
   .ai-attach-bar {
     display: flex; align-items: center; gap: 6px;

@@ -354,17 +354,17 @@
       style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
       style:min-height={isMobile ? '300px' : '0'}
     >
-      <div class="frame__head" style="flex-wrap: wrap">
-        <span class="row-flex" style="min-width: 0; flex: 1">
+      <div class="frame__head" style="flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 10px">
+        <div class="row-flex" style="min-width: 0; gap: 6px">
           <input
             class="inp"
             bind:value={editorFilename}
             placeholder="filename.be"
-            style="flex: 1; min-width: 160px; max-width: 280px; height: 22px; font-size: 12px"
+            style="flex: 1; min-width: 0; max-width: 280px; height: 22px; font-size: 12px"
           />
-          {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px">● unsaved</span>{/if}
-        </span>
-        <span class="row-flex" style="flex-shrink: 0; flex-wrap: wrap; gap: 4px">
+          {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px; white-space: nowrap">● unsaved</span>{/if}
+        </div>
+        <div class="row-flex" style="flex-wrap: wrap; gap: 4px">
           <button class="btn btn--sm"
             onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
             title="Send this script to the AI assistant for editing">
@@ -382,7 +382,7 @@
               <Icon name="trash" size={13} />Uninstall
             </button>
           {/if}
-        </span>
+        </div>
       </div>
 
       {#if status}
