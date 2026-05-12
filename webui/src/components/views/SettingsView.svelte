@@ -268,11 +268,11 @@
         <span>Anthropic API key</span>
         <div style="display: flex; flex-direction: column; gap: 4px">
           <span style="font-size: 11px; color: var(--dc-text-fade)">
-            Stored in browser + device NVS. Loaded from device on connect (BLE encrypted). Calls go directly from browser to api.anthropic.com.
+            Stored in browser + device NVS (unencrypted). Loaded from device on connect. Calls go directly from browser to api.anthropic.com.
             <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener"
               style="color: var(--dc-accent); text-decoration: none">Get key ↗</a>
           </span>
-          <input type="password" class="inp" placeholder="sk-ant-…"
+          <input type="password" class="inp" placeholder="sk-ant-…" autocomplete="new-password"
             value={app.aiKey}
             oninput={(e) => app.setAiKey((e.target as HTMLInputElement).value)} />
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
