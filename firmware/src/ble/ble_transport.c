@@ -18,6 +18,7 @@
 #include "host/util/util.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
+#include "nimble/nimble_npl.h"
 
 static const char *TAG = "ble";
 
@@ -41,6 +42,7 @@ static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_tx_attr_handle;
 static ble_request_cb_t s_on_request;
 static void *s_on_request_ctx;
+static struct ble_npl_callout s_adv_callout;
 
 /* ---- GATT access handler ---- */
 
@@ -89,6 +91,14 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
 /* ---- GAP event handler ---- */
 
 static int gap_event_cb(struct ble_gap_event *event, void *arg);
+static void start_advertising(void);
+
+static void adv_callout_fn(struct ble_npl_event *ev) { start_advertising(); }
+
+static void schedule_advertising(void)
+{
+    ble_npl_callout_reset(&s_adv_callout, ble_npl_time_ms_to_ticks32(200));
+}
 
 static void start_advertising(void)
 {
@@ -125,19 +135,28 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
+            if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+                ESP_LOGI(TAG, "new connection, kicking handle=%d", s_conn_handle);
+                ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+            }
             s_conn_handle = event->connect.conn_handle;
             ESP_LOGI(TAG, "connected (handle=%d)", s_conn_handle);
             ble_att_set_preferred_mtu(512);
-        } else {
-            s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+            /* Defer advertising restart — HCI buffers are busy right after connect. */
+            schedule_advertising();
+        } else if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
             start_advertising();
         }
         break;
 
     case BLE_GAP_EVENT_DISCONNECT:
-        ESP_LOGI(TAG, "disconnected (reason=%d)", event->disconnect.reason);
-        s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
-        start_advertising();
+        ESP_LOGI(TAG, "disconnected handle=%d (reason=%d)",
+                 event->disconnect.conn.conn_handle, event->disconnect.reason);
+        if (event->disconnect.conn.conn_handle == s_conn_handle) {
+            s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+            start_advertising();
+        }
+        /* else: kicked old connection — ignore, current handle still valid. */
         break;
 
     case BLE_GAP_EVENT_ADV_COMPLETE:
@@ -210,6 +229,8 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
     if (rc != 0) { ESP_LOGE(TAG, "gatts_add_svcs: %d", rc); return -1; }
 
     ble_svc_gap_device_name_set("Dorky");
+
+    ble_npl_callout_init(&s_adv_callout, nimble_port_get_dflt_eventq(), adv_callout_fn, NULL);
 
     nimble_port_freertos_init(nimble_host_task);
 
