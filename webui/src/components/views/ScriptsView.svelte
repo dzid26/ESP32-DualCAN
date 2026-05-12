@@ -263,10 +263,6 @@
         <span aria-hidden="true" style="font-size: 9px; opacity: 0.7">↗</span>
       </a>
       <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
-      <button class="btn btn--sm" title="Send current script to AI assistant for editing"
-        onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}>
-        <Icon name="sparkle" size={13} />Ask AI
-      </button>
       <select
         class="sel"
         onchange={loadExample}
@@ -368,7 +364,12 @@
           />
           {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px">● unsaved</span>{/if}
         </span>
-        <span class="row-flex" style="flex-shrink: 0; flex-wrap: wrap">
+        <span class="row-flex" style="flex-shrink: 0; flex-wrap: wrap; gap: 4px">
+          <button class="btn btn--sm"
+            onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
+            title="Send this script to the AI assistant for editing">
+            <Icon name="sparkle" size={13} />📎 AI
+          </button>
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy || !dirty} title="Save without changing enable state">
             <Icon name="up" size={13} />Save
           </button>
