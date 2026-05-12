@@ -96,6 +96,10 @@ class AppState {
    * URL to fetch+parse+upload. DbcView consumes + clears. */
   pendingDbc = $state<{ url: string; busId: number; name: string } | null>(null);
 
+  /** Cross-view hand-off: Scripts → AI. Carries the current editor content
+   * so AIView can pre-attach it as context. AIView consumes + clears. */
+  pendingAiScript = $state<{ filename: string; code: string } | null>(null);
+
   /** Last-loaded DBC name per bus, indexed by bus id. Status pips link
    * to the DBC view + bus tab when a slot is populated. */
   loadedDbc = $state<Record<number, string | null>>({ 0: null, 1: null });

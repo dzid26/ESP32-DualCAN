@@ -263,6 +263,10 @@
         <span aria-hidden="true" style="font-size: 9px; opacity: 0.7">↗</span>
       </a>
       <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
+      <button class="btn btn--sm" title="Send current script to AI assistant for editing"
+        onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}>
+        <Icon name="sparkle" size={13} />Ask AI
+      </button>
       <select
         class="sel"
         onchange={loadExample}

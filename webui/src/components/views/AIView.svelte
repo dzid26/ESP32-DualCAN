@@ -5,7 +5,7 @@
   import Icon from '../Icon.svelte';
 
   // ---- types ----
-  type UserTurn  = { role: 'user';      text: string };
+  type UserTurn  = { role: 'user'; text: string; attached?: string };
   type AgentTurn = { role: 'assistant'; text: string; streaming: boolean };
   type Turn = UserTurn | AgentTurn;
 
@@ -16,13 +16,58 @@
   let errorMsg = $state('');
   let endEl: HTMLDivElement | undefined = $state();
 
+  /** Script attached for context — shown as a badge; prepended to the next send. */
+  let attachedScript = $state<{ filename: string; code: string } | null>(null);
+
+  /** Device script list for the "Attach from device" picker. */
+  let deviceScripts = $state<string[]>([]);
+  let attachPickerOpen = $state(false);
+  let attachLoading = $state(false);
+
   /** API-side conversation history for multi-turn context. */
   let history: { role: 'user' | 'assistant'; content: string }[] = [];
+
+  // Consume pendingAiScript hand-off from ScriptsView.
+  $effect(() => {
+    const p = app.pendingAiScript;
+    if (!p) return;
+    app.pendingAiScript = null;
+    attachedScript = p;
+  });
 
   $effect(() => {
     void turns.length;
     endEl?.scrollIntoView({ block: 'end' });
   });
+
+  async function openAttachPicker(): Promise<void> {
+    if (!app.connected) { errorMsg = 'Connect to device to list scripts'; return; }
+    attachLoading = true;
+    attachPickerOpen = false;
+    try {
+      const { scripts } = await app.proto.listScripts();
+      deviceScripts = scripts.map(s => s.filename);
+      attachPickerOpen = true;
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : String(e);
+    } finally {
+      attachLoading = false;
+    }
+  }
+
+  async function attachFromDevice(filename: string): Promise<void> {
+    attachPickerOpen = false;
+    if (!filename) return;
+    attachLoading = true;
+    try {
+      const { code } = await app.proto.readScript(filename);
+      attachedScript = { filename, code };
+    } catch (e) {
+      errorMsg = e instanceof Error ? e.message : String(e);
+    } finally {
+      attachLoading = false;
+    }
+  }
 
   // ---- system prompt ----
   function buildSystemPrompt(): string {
@@ -168,8 +213,17 @@ ${exSnippets}
     if (!text || busy) return;
     errorMsg = '';
     draft = '';
-    turns = [...turns, { role: 'user', text }];
-    history = [...history, { role: 'user', content: text }];
+
+    // If a script is attached, prepend it to the API content but display
+    // the user's words only (with a small attachment indicator).
+    const attached = attachedScript;
+    attachedScript = null;
+    const apiContent = attached
+      ? `Current script "${attached.filename}":\n\`\`\`berry\n${attached.code}\n\`\`\`\n\n${text}`
+      : text;
+
+    turns = [...turns, { role: 'user', text, attached: attached?.filename } as UserTurn & { attached?: string }];
+    history = [...history, { role: 'user', content: apiContent }];
 
     turns = [...turns, { role: 'assistant', text: '', streaming: true } as AgentTurn];
     const agentIdx = turns.length - 1;
@@ -279,6 +333,9 @@ ${exSnippets}
         {#each turns as turn, i (i)}
           {#if turn.role === 'user'}
             <div class="ai-msg ai-msg--user">
+              {#if turn.attached}
+                <div class="ai-attach-badge">📎 {turn.attached}</div>
+              {/if}
               <div class="ai-msg__bubble">{turn.text}</div>
             </div>
           {:else}
@@ -350,6 +407,28 @@ ${exSnippets}
             🔔 Beep on reverse
           </button>
         </div>
+
+        <!-- Attachment bar: badge when script attached, picker when open -->
+        {#if attachedScript}
+          <div class="ai-attach-bar">
+            <span class="mono" style="font-size: 11px">📎 {attachedScript.filename}</span>
+            <button class="btn btn--sm btn--ghost" style="padding: 1px 6px; font-size: 11px"
+              onclick={() => (attachedScript = null)}>✕</button>
+          </div>
+        {:else if attachPickerOpen}
+          <div class="ai-attach-bar">
+            <select class="sel" style="flex: 1; font-size: 11px"
+              onchange={(e) => attachFromDevice((e.target as HTMLSelectElement).value)}>
+              <option value="">— pick a script —</option>
+              {#each deviceScripts as fn}
+                <option value={fn}>{fn}</option>
+              {/each}
+            </select>
+            <button class="btn btn--sm btn--ghost" style="padding: 1px 6px"
+              onclick={() => (attachPickerOpen = false)}>✕</button>
+          </div>
+        {/if}
+
         <div class="ai-inputrow">
           <textarea
             class="inp ai-textarea"
@@ -363,9 +442,17 @@ ${exSnippets}
           </button>
         </div>
         <div class="ai-foot mono">
-          <button class="btn btn--sm btn--ghost"
-            onclick={() => { turns = []; history = []; errorMsg = ''; installStatus = {}; }}
-            disabled={turns.length === 0}>Clear</button>
+          <span class="row-flex" style="gap: 4px">
+            <button class="btn btn--sm btn--ghost"
+              onclick={() => { turns = []; history = []; errorMsg = ''; installStatus = {}; attachedScript = null; }}
+              disabled={turns.length === 0}>Clear</button>
+            <button class="btn btn--sm btn--ghost"
+              onclick={openAttachPicker}
+              disabled={!app.connected || attachLoading}
+              title="Attach a script from the device as context">
+              {attachLoading ? '…' : '📎 Attach script'}
+            </button>
+          </span>
           <span>⌘↵ to send</span>
         </div>
       </footer>
@@ -386,6 +473,15 @@ ${exSnippets}
     max-height: 320px; overflow-y: auto; color: var(--dc-text);
   }
 
+  .ai-attach-badge {
+    font-size: 10px; color: var(--dc-text-fade); font-family: var(--dc-mono);
+    margin-bottom: 2px; text-align: right;
+  }
+  .ai-attach-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 8px; background: var(--dc-surface);
+    border: 1px solid var(--dc-border); border-radius: 4px; margin-bottom: 4px;
+  }
   .ai-error {
     background: var(--dc-err-bg, #2a1010); border: 1px solid var(--dc-err-border, #5a2020);
     border-radius: 6px; padding: 8px 12px; font-size: 12px; color: var(--dc-err-text);
