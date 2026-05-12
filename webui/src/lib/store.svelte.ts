@@ -8,7 +8,7 @@ import type { LogLine } from './sampleData';
 import { type Car, loadCar, saveCar } from './cars';
 
 // Bump in lockstep with firmware proto_version when ops change.
-const UI_PROTO_VERSION = 1;
+const UI_PROTO_VERSION = 2;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -224,6 +224,10 @@ class AppState {
     } catch {
       this.protoMismatch = 'firmware too old (no system.info) — please update';
     }
+    try {
+      const r = await this.proto.getSecret('anthropic');
+      if (r.value) this.setAiKey(r.value);
+    } catch { /* key not set or firmware too old */ }
   }
 
   // ---- OTA Actions ----

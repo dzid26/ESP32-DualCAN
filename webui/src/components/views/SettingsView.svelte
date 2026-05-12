@@ -54,6 +54,51 @@
     }
   }
 
+  // Device-side Anthropic API key (stored in NVS)
+  let deviceKeySet = $state<boolean | null>(null);
+  let deviceKeyBusy = $state(false);
+  let deviceKeyError = $state<string | null>(null);
+
+  async function refreshDeviceKey(): Promise<void> {
+    if (!app.connected) return;
+    try {
+      const r = await app.proto.getSecret('anthropic');
+      deviceKeySet = r.value !== null;
+      if (r.value) app.setAiKey(r.value);
+    } catch {
+      deviceKeySet = false;
+    }
+  }
+
+  async function saveDeviceKey(): Promise<void> {
+    if (!app.aiKey.trim()) { deviceKeyError = 'Paste a key above first'; return; }
+    deviceKeyBusy = true;
+    deviceKeyError = null;
+    try {
+      await app.proto.setSecret('anthropic', app.aiKey.trim());
+      deviceKeySet = true;
+      app.pushLog('Anthropic API key saved to device NVS', 'info', 'settings');
+    } catch (e) {
+      deviceKeyError = e instanceof Error ? e.message : String(e);
+    } finally {
+      deviceKeyBusy = false;
+    }
+  }
+
+  async function clearDeviceKey(): Promise<void> {
+    deviceKeyBusy = true;
+    deviceKeyError = null;
+    try {
+      await app.proto.clearSecret('anthropic');
+      deviceKeySet = false;
+      app.pushLog('Anthropic API key cleared from device NVS', 'info', 'settings');
+    } catch (e) {
+      deviceKeyError = e instanceof Error ? e.message : String(e);
+    } finally {
+      deviceKeyBusy = false;
+    }
+  }
+
   // GitHub release state
   let ghChecking = $state(false);
   let ghRelease = $state<{ tag: string; name: string; url: string; size: number; published: string } | null>(null);
@@ -128,11 +173,12 @@
     }
   }
 
-  onMount(() => { refreshInfo(); refreshWifi(); });
+  onMount(() => { refreshInfo(); refreshWifi(); refreshDeviceKey(); });
   $effect(() => {
     if (app.connected) {
       refreshInfo();
       refreshWifi();
+      refreshDeviceKey();
     }
   });
 </script>
@@ -218,36 +264,46 @@
   <div class="frame">
     <div class="frame__head"><span class="row-flex"><Icon name="sparkle" size={13} />AI assistant</span></div>
     <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
-      <label class="field">
+      <div class="field">
         <span>Anthropic API key</span>
-        <input type="password" class="inp" placeholder="sk-ant-…"
-          value={app.aiKey}
-          oninput={(e) => app.setAiKey((e.target as HTMLInputElement).value)} />
-      </label>
-      <div class="field">
-        <span></span>
-        <span class="muted" style="font-size: 11px">
-          Stored locally in your browser. Never sent to the device. Use a key with a spend limit — calls go directly from your browser to api.anthropic.com.
-          <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener"
-            style="color: var(--dc-accent); text-decoration: none; margin-left: 4px">Get API key ↗</a>
-          ·
-          <a href="https://platform.claude.com/usage" target="_blank" rel="noopener"
-            style="color: var(--dc-accent); text-decoration: none; margin-left: 2px">Usage ↗</a>
-        </span>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 11px; color: var(--dc-text-fade)">
+            Stored in browser + device NVS. Loaded from device on connect (BLE encrypted). Calls go directly from browser to api.anthropic.com.
+            <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener"
+              style="color: var(--dc-accent); text-decoration: none">Get key ↗</a>
+          </span>
+          <input type="password" class="inp" placeholder="sk-ant-…"
+            value={app.aiKey}
+            oninput={(e) => app.setAiKey((e.target as HTMLInputElement).value)} />
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+            <button class="btn btn--sm" onclick={saveDeviceKey}
+              disabled={!app.connected || deviceKeyBusy || !app.aiKey.trim()}>
+              {deviceKeyBusy ? 'Saving…' : 'Save to device'}
+            </button>
+            <button class="btn btn--sm btn--danger" onclick={clearDeviceKey}
+              disabled={!app.connected || deviceKeyBusy || deviceKeySet !== true}>
+              Clear
+            </button>
+            <span style="font-size: 11px; color: var(--dc-text-fade)">
+              {#if deviceKeySet === true}<span style="color: var(--dc-ok)">saved on device ✓</span>{:else if deviceKeySet === false}not on device{:else if app.connected}checking…{/if}
+            </span>
+            {#if deviceKeyError}<span class="mono" style="font-size: 11px; color: var(--dc-err-text)">{deviceKeyError}</span>{/if}
+          </div>
+        </div>
       </div>
-      <label class="field">
+
+      <div class="field">
         <span>Model</span>
-        <select class="sel" value={app.aiModel} onchange={(e) => app.setAiModel((e.target as HTMLSelectElement).value)}>
-          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 · fast, cheap</option>
-          <option value="claude-sonnet-4-6">claude-sonnet-4-6 · stronger reasoning</option>
-        </select>
-      </label>
-      <div class="field">
-        <span>Status</span>
-        <span class="mono" style="font-size: 11px; color: {app.aiKey ? 'var(--dc-ok)' : 'var(--dc-text-fade)'}">
-          {app.aiKey ? `key set · ${app.aiModel.split('-').slice(1,3).join('-')}` : 'no key — paste above to enable'}
-        </span>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <select class="sel" value={app.aiModel} onchange={(e) => app.setAiModel((e.target as HTMLSelectElement).value)}>
+            <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 · fast, cheap</option>
+            <option value="claude-sonnet-4-6">claude-sonnet-4-6 · stronger reasoning</option>
+          </select>
+          <a href="https://platform.claude.com/usage" target="_blank" rel="noopener"
+            style="font-size: 11px; color: var(--dc-accent); text-decoration: none">Token usage ↗</a>
+        </div>
       </div>
+
       <div class="field">
         <span>Confirm vehicle writes</span>
         <label class="row-flex" style="gap: 6px">

@@ -305,6 +305,26 @@ export class Protocol {
     return this.call('wifi.set_creds', { ssid, psk });
   }
 
+  /** Write a named secret to NVS on the device. Write-only — never read back over BLE. */
+  setSecret(name: string, value: string): Promise<void> {
+    return this.call('settings.set_secret', { name, value });
+  }
+
+  /** Read a named secret from NVS. Returns null if not set. */
+  getSecret(name: string): Promise<{ value: string | null }> {
+    return this.call('settings.get_secret', { name });
+  }
+
+  /** Returns whether a named secret is currently stored on the device. */
+  hasSecret(name: string): Promise<{ set: boolean }> {
+    return this.call('settings.has_secret', { name });
+  }
+
+  /** Remove a named secret from NVS. No-op if it wasn't set. */
+  clearSecret(name: string): Promise<void> {
+    return this.call('settings.clear_secret', { name });
+  }
+
   // ---- OTA (Over-the-Air firmware update) ----
 
   /** Begin an OTA session. Returns the max firmware size (bytes) of the

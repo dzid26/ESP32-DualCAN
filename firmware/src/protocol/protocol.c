@@ -16,6 +16,8 @@
 #include "dbc/dbc_pack.h"
 #include "wifi/wifi.h"
 #include "ota/ota.h"
+#include "storage/state.h"
+#include "nvs.h"
 
 static const char *TAG = "proto";
 
@@ -196,7 +198,7 @@ static void handle_system_info(int id)
     cJSON_AddStringToObject(result, "fw_version", DORKY_FIRMWARE_VERSION);
     /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
      * features that the firmware doesn't recognise yet. */
-    cJSON_AddNumberToObject(result, "proto_version", 1);
+    cJSON_AddNumberToObject(result, "proto_version", 2);
     send_ok(id, result);
 }
 
@@ -387,6 +389,76 @@ static void handle_wifi_set_creds(int id, cJSON *req)
 
     if (wifi_set_creds(ssid_j->valuestring, psk) != 0) {
         send_err(id, "set failed");
+        return;
+    }
+    send_ok(id, NULL);
+}
+
+#define SECRETS_NS  "secrets"
+
+static void handle_settings_set_secret(int id, cJSON *req)
+{
+    const cJSON *name_j  = cJSON_GetObjectItem(req, "name");
+    const cJSON *value_j = cJSON_GetObjectItem(req, "value");
+    if (!cJSON_IsString(name_j)  || name_j->valuestring[0]  == '\0' ||
+        !cJSON_IsString(value_j) || value_j->valuestring[0] == '\0') {
+        send_err(id, "missing name or value");
+        return;
+    }
+    if (strlen(name_j->valuestring) > 15) {
+        send_err(id, "name too long (max 15)");
+        return;
+    }
+    if (state_set(SECRETS_NS, name_j->valuestring, value_j->valuestring) != ESP_OK) {
+        send_err(id, "write failed");
+        return;
+    }
+    send_ok(id, NULL);
+}
+
+static void handle_settings_has_secret(int id, cJSON *req)
+{
+    const cJSON *name_j = cJSON_GetObjectItem(req, "name");
+    if (!cJSON_IsString(name_j) || name_j->valuestring[0] == '\0') {
+        send_err(id, "missing name");
+        return;
+    }
+    char buf[4];
+    esp_err_t err = state_get(SECRETS_NS, name_j->valuestring, buf, sizeof(buf));
+    bool has = (err == ESP_OK || err == ESP_ERR_NVS_INVALID_LENGTH);
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddBoolToObject(result, "set", has);
+    send_ok(id, result);
+}
+
+static void handle_settings_get_secret(int id, cJSON *req)
+{
+    const cJSON *name_j = cJSON_GetObjectItem(req, "name");
+    if (!cJSON_IsString(name_j) || name_j->valuestring[0] == '\0') {
+        send_err(id, "missing name");
+        return;
+    }
+    char buf[256];
+    cJSON *result = cJSON_CreateObject();
+    esp_err_t err = state_get(SECRETS_NS, name_j->valuestring, buf, sizeof(buf));
+    if (err == ESP_OK) {
+        cJSON_AddStringToObject(result, "value", buf);
+    } else {
+        cJSON_AddNullToObject(result, "value");
+    }
+    send_ok(id, result);
+}
+
+static void handle_settings_clear_secret(int id, cJSON *req)
+{
+    const cJSON *name_j = cJSON_GetObjectItem(req, "name");
+    if (!cJSON_IsString(name_j) || name_j->valuestring[0] == '\0') {
+        send_err(id, "missing name");
+        return;
+    }
+    esp_err_t err = state_remove(SECRETS_NS, name_j->valuestring);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        send_err(id, "clear failed");
         return;
     }
     send_ok(id, NULL);
@@ -594,6 +666,10 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "sim.set") == 0)        handle_sim_set(id, req);
     else if (strcmp(op_s, "wifi.status") == 0)    handle_wifi_status(id);
     else if (strcmp(op_s, "wifi.set_creds") == 0) handle_wifi_set_creds(id, req);
+    else if (strcmp(op_s, "settings.set_secret") == 0)   handle_settings_set_secret(id, req);
+    else if (strcmp(op_s, "settings.get_secret") == 0)   handle_settings_get_secret(id, req);
+    else if (strcmp(op_s, "settings.has_secret") == 0)   handle_settings_has_secret(id, req);
+    else if (strcmp(op_s, "settings.clear_secret") == 0) handle_settings_clear_secret(id, req);
     else if (strcmp(op_s, "ota.begin") == 0)      handle_ota_begin(id);
     else if (strcmp(op_s, "ota.end") == 0)        handle_ota_end(id, req);
     else if (strcmp(op_s, "ota.abort") == 0)      handle_ota_abort(id);

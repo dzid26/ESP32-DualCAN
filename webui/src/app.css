@@ -301,6 +301,11 @@ button { font: inherit; color: inherit; }
 .pip--ver-stale  { border-color: var(--dc-warn-tint); cursor: help; }
 .pip--ver-err    { border-color: var(--dc-err-tint); cursor: help; }
 .pip--ver-dev    { border-color: transparent; }
+.pip__led--err {
+  background: var(--dc-danger);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.25), 0 0 6px var(--dc-danger), 0 0 10px var(--dc-danger-tint);
+  animation: led-pulse-warn 1.2s ease-in-out infinite;
+}
 .pip__led--dim   { background: var(--dc-text-ghost); box-shadow: none; }
 
 /* ===== Command palette ===== */
