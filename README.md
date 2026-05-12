@@ -3,6 +3,10 @@ Dorky Commander - open source alternative to S3XY Commander.
 
 Uses Molex connector compatible with Enhauto harnesses.
 
+See **[firmware/README.md](firmware/README.md)** for the user-facing install guide and first-use walkthrough.
+
+See **[SCRIPTING.md](SCRIPTING.md)** for the Berry scripting API reference.
+
 ## Development
 
 ### Firmware

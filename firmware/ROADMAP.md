@@ -201,4 +201,3 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 - Cloud relay / remote access.
 - Native mobile apps.
 - On-device Berry compile-error reporting via a Berry WASM build (nice-to-have for better editor integration).
-- BLE OTA (slow but possible; deferred until someone needs it).

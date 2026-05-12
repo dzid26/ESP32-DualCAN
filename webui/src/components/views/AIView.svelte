@@ -1,8 +1,8 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
   import { dbcStore } from '../../dbcStore.svelte';
-  import { examples } from '../../examples';
   import Icon from '../Icon.svelte';
+  import SCRIPTING_MD from '../../../../SCRIPTING.md?raw';
 
   // ---- types ----
   type UserTurn  = { role: 'user'; text: string; attached?: string };
@@ -71,91 +71,22 @@
 
   // ---- system prompt ----
   function buildSystemPrompt(): string {
-    // Format: "signal_name  (message: message_name)" so arg order is unambiguous.
     const signals = dbcStore.signals.slice(0, 80)
-      .map(s => `${s.name}  (message: ${s.message})`)
-      .join('\n');
-    const exSnippets = examples.slice(0, 3)
-      .map(e => `### ${e.name}\n\`\`\`berry\n${e.code}\n\`\`\``).join('\n\n');
+      .map(s => `${s.name}  (message: ${s.message})`).join('\n');
 
     return `You are an AI assistant embedded in Dorky Commander — an open-source ESP32-C6 device for Tesla car automation using Berry scripting and CAN bus signals.
 
-## Script structure
-Every script starts with optional metadata comments, then must define \`setup()\`:
-
-\`\`\`berry
-# @name My script
-# @description What it does
-# @bus 0
-
-def setup()
-  # runs on enable
-end
-
-def teardown()
-  # runs on disable (optional)
-end
-\`\`\`
-
-## Berry Scripting API
-
-### CAN signals (requires DBC loaded on device)
-- \`on_can_signal(message_name, signal_name, fn)\` — subscribe to a signal; fn receives a map with \`fn['value']\` and \`fn['prev']\`. First arg is the DBC *message* name, second is the *signal* name within that message.
-- \`can_signal_get(message_name, signal_name)\` — read current value (returns map or nil if DBC not loaded / signal not found)
-
-### Raw CAN frames
-- \`can_send_raw(bus, id, b)\` — send raw frame; \`bus\` = 0 or 1, \`id\` = integer, \`b\` = bytes object
-- \`can_recv_raw(bus)\` — dequeue next received frame (returns bytes or nil)
-
-### Encoded messages (requires DBC)
-- \`can_msg_get(message_id)\` — get an encodable message object by numeric ID
-- \`can_msg_set(msg, signal_name, value)\` — set a signal's value in the message
-- \`can_msg_send(msg)\` — transmit with auto Tesla checksum/counter
-
-### bytes objects
-- \`var b = bytes()\` — create empty byte buffer
-- \`b.add(v)\` — append byte value 0-255
-- \`b.set(i, v)\` — set byte at index i
-- \`b.item(i)\` — read byte at index i
-
-### Timers
-- \`timer_after(ms, fn)\` — one-shot timer
-- \`timer_every(ms, fn)\` — repeating timer
-- \`timer_cancel(fn)\` — cancel a timer
-
-### Actions (Dashboard tiles)
-- \`action_register(name, fn)\` — register a tile on the Events page
-- \`action_invoke(name)\` — invoke an action from script code
-- \`action_list()\` — returns list of registered action names
-
-### LED
-- \`led_set(r, g, b)\` — set onboard RGB LED (0–255 each channel)
-- \`led_off()\` — turn off LED
-
-### Persistent storage (NVS flash)
-- \`state_set(key, value)\` — persist a value across reboots
-- \`state_get(key)\` — read persisted value (nil if not set)
-- \`state_remove(key)\` — delete a persisted key
-
-### Utilities
-- \`millis()\` — milliseconds since boot
-- \`print(msg)\` — log to the web UI log panel
-- \`str(v)\`, \`format(fmt, ...)\` — string conversion / formatting
-
-Berry syntax: \`var\`, \`def\`, \`if/elif/else/end\`, \`while\`, \`for i:0..n\`, \`/-> expr\` (lambda).
+${SCRIPTING_MD}
 
 ## Device context
 ${app.connected ? '✓ Connected' : '⚠ Not connected'}
 ${Object.entries(app.loadedDbc).filter(([,v])=>v).map(([k,v])=>`Bus ${k}: ${v}`).join('\n') || 'No DBC loaded'}
-${signals ? `\n## Available DBC signals\nFormat: signal_name  (message: message_name)\nUse message_name as first arg and signal_name as second arg to on_can_signal().\n\n${signals}` : ''}
-
-## Example scripts
-${exSnippets}
+${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_name) — use message_name as first arg and signal_name as second arg to on_can_signal().\n\n${signals}` : ''}
 
 ## Instructions
 - Write complete Berry scripts in \`\`\`berry code blocks
 - Always include \`def setup()\`; add \`# @name\` and \`# @bus\` metadata
-- When using on_can_signal, use the exact message_name and signal_name from the DBC signal list above
+- Use exact message_name and signal_name from the DBC signal list above when writing on_can_signal calls
 - Keep scripts focused and well-commented
 - Propose scripts rather than claiming to fire CAN frames directly`;
   }

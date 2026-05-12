@@ -105,7 +105,9 @@ def teardown()
 end
 ```
 
-### Available functions
+For the full API reference with examples, see [SCRIPTING.md](../SCRIPTING.md).
+
+### Available functions (quick reference)
 
 | Function | Description |
 |---|---|
