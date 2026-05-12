@@ -299,7 +299,9 @@ button { font: inherit; color: inherit; }
 .pip--ver { padding: 3px 7px; gap: 6px; }
 .pip--ver-latest { border-color: rgba(140, 200, 160, 0.28); }
 .pip--ver-stale  { border-color: var(--dc-warn-tint); cursor: help; }
-.pip--ver-err   { border-color: var(--dc-err-tint); cursor: help; }
+.pip--ver-err    { border-color: var(--dc-err-tint); cursor: help; }
+.pip--ver-dev    { border-color: transparent; }
+.pip__led--dim   { background: var(--dc-text-ghost); box-shadow: none; }
 
 /* ===== Command palette ===== */
 .cp-backdrop {

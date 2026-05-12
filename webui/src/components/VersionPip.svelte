@@ -3,12 +3,15 @@
     { version?: string; latest?: boolean | string; channel?: string; progress?: number | null; onclick?: (() => void) | null } = $props();
 
   const isMismatch = $derived(latest === 'mismatch');
+  const isDev = $derived(/^[0-9a-f]{6,}(-dirty)?$/.test(version));
   const isLatest = $derived(latest === true);
-  const statusClass = $derived(isMismatch ? 'pip--ver-err' : isLatest ? 'pip--ver-latest' : 'pip--ver-stale');
-  const ledClass = $derived(isMismatch ? 'pip__led--err' : isLatest ? 'pip__led--ok' : 'pip__led--warn');
-  const statusLabel = $derived(isMismatch ? 'mismatch' : isLatest ? 'latest' : 'update');
+  const statusClass = $derived(isMismatch ? 'pip--ver-err' : isDev ? 'pip--ver-dev' : isLatest ? 'pip--ver-latest' : 'pip--ver-stale');
+  const ledClass = $derived(isMismatch ? 'pip__led--err' : isDev ? 'pip__led--dim' : isLatest ? 'pip__led--ok' : 'pip__led--warn');
+  const statusLabel = $derived(isMismatch ? 'mismatch' : isDev ? 'dev' : isLatest ? 'latest' : 'update');
   const title = $derived(isMismatch
     ? `Firmware ${version} · protocol mismatch — reconnect device`
+    : isDev
+    ? `Firmware ${version} · development build`
     : isLatest
     ? `Firmware ${version} · ${channel} · latest release`
     : `Firmware ${version} · stable update available — open Settings → Firmware`);
