@@ -1,0 +1,17 @@
+{
+  "name": "Dorky Commander",
+  "short_name": "Dorky",
+  "description": "Open-source Tesla automation tool — BLE scripts, signals, DBC.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#221a0f",
+  "theme_color": "#221a0f",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

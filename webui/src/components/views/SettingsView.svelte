@@ -144,6 +144,25 @@
     <div class="empty">Connect to view live device settings. Form values won't reach the device until you connect.</div>
   {/if}
 
+  {#if app.installPrompt && !app.isInstalled}
+    <div class="frame">
+      <div class="frame__head">Install app</div>
+      <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
+        <div class="field">
+          <span>Add to home screen</span>
+          <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
+            <button class="btn btn--info btn--sm" onclick={() => app.installApp()}>
+              <Icon name="down" size={13} />Install
+            </button>
+            <span class="muted" style="font-size: 11px">
+              Opens and connects faster than a browser tab. Works offline for the UI.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   <div class="frame">
     <div class="frame__head">Network</div>
     <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">

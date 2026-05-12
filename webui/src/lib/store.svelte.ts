@@ -10,6 +10,11 @@ import { type Car, loadCar, saveCar } from './cars';
 // Bump in lockstep with firmware proto_version when ops change.
 const UI_PROTO_VERSION = 1;
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 export type Transport = 'ble' | 'ws';
 
 export type ViewId =
@@ -100,11 +105,43 @@ class AppState {
   otaStatus = $state('');    // human-readable status line
   otaError = $state<string | null>(null);
   otaDone = $state(false);
-  rebootAfterUpdate = $state(true); // User can toggle this
+  rebootAfterUpdate = $state(true);
+
+  // ---- PWA install ----
+  /** Non-null when the browser has emitted a deferrable install prompt. Cleared on install or dismiss. */
+  installPrompt = $state<BeforeInstallPromptEvent | null>(null);
+  /** True when already running as an installed standalone app. */
+  isInstalled = $state(
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(display-mode: standalone)').matches ||
+     (navigator as any).standalone === true),
+  );
 
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        this.installPrompt = e as BeforeInstallPromptEvent;
+      });
+      window.addEventListener('appinstalled', () => {
+        this.installPrompt = null;
+        this.isInstalled = true;
+      });
+    }
+  }
+
+  async installApp(): Promise<void> {
+    const prompt = this.installPrompt;
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted') {
+      this.installPrompt = null;
+      this.isInstalled = true;
+    }
   }
 
   // ---- Actions ----
