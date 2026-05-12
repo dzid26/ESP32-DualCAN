@@ -354,7 +354,7 @@
       style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
       style:min-height={isMobile ? '300px' : '0'}
     >
-      <div class="frame__head" style="flex-wrap: wrap; gap: 6px">
+      <div class="frame__head" style="flex-wrap: wrap-reverse; gap: 6px">
         <span class="row-flex" style="gap: 6px; min-width: 0">
           <input
             class="inp"
@@ -368,7 +368,7 @@
           <button class="btn btn--sm"
             onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
             title="Send this script to the AI assistant for editing">
-            <Icon name="sparkle" size={13} />📎 AI
+            📎 AI
           </button>
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy || !dirty} title="Save without changing enable state">
             <Icon name="up" size={13} />Save
