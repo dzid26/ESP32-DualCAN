@@ -31,6 +31,10 @@ def tick_fn()
   end
 end
 
+def teardown()
+  led_set(0, 0, 0)
+end
+
 def setup()
   timer_every(50, tick_fn)
 end
