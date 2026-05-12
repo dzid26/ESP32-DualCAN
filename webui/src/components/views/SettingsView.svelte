@@ -327,7 +327,7 @@
       <div class="field">
         <span>Installed</span>
         {#if app.connected && app.fwVersion}
-          <span class="mono">{app.fwVersion}{protoVersion !== null ? ` · proto v${protoVersion}` : ''}</span>
+          <span class="mono">{app.fwVersion}{protoVersion !== null ? ` · protocol version${protoVersion}` : ''}</span>
         {:else}
           <span class="mono ghost">{infoError ?? 'not connected'}</span>
         {/if}
@@ -335,7 +335,11 @@
       {#if app.protoMismatch}
         <div class="field">
           <span></span>
-          <span class="mono" style="color: var(--dc-warn); font-size: 11px">{app.protoMismatch}</span>
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; background: var(--dc-err-bg); border: 1px solid var(--dc-err-border); border-radius: 4px">
+            <span style="font-size: 11px; font-weight: 600; color: var(--dc-err-text)">⚠ Protocol mismatch</span>
+            <span class="mono" style="font-size: 11px; color: var(--dc-err-text)">{app.protoMismatch}</span>
+            <span style="font-size: 11px; color: var(--dc-text-fade)">Some features won't work until firmware is updated. Use the <a href="#firmware-frame" style="color: var(--dc-accent); text-decoration: none">Firmware</a> section below.</span>
+          </div>
         </div>
       {/if}
 

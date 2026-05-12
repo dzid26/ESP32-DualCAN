@@ -2,14 +2,14 @@
   let { version = 'v0.3.1', latest = true, channel = 'stable', progress = null, onclick = null }:
     { version?: string; latest?: boolean | string; channel?: string; progress?: number | null; onclick?: (() => void) | null } = $props();
 
-  const isMismatch = $derived(latest === 'mismatch');
+  const isMismatch = $derived(latest === 'warning');
   const isDev = $derived(/^[0-9a-f]{6,}(-dirty)?$/.test(version));
   const isLatest = $derived(latest === true);
   const statusClass = $derived(isMismatch ? 'pip--ver-err' : isDev ? 'pip--ver-dev' : isLatest ? 'pip--ver-latest' : 'pip--ver-stale');
   const ledClass = $derived(isMismatch ? 'pip__led--err' : isDev ? 'pip__led--dim' : isLatest ? 'pip__led--ok' : 'pip__led--warn');
-  const statusLabel = $derived(isMismatch ? 'mismatch' : isDev ? 'dev' : isLatest ? 'latest' : 'update');
+  const statusLabel = $derived(isMismatch ? 'warning' : isDev ? 'dev' : isLatest ? 'latest' : 'update');
   const title = $derived(isMismatch
-    ? `Firmware ${version} · protocol mismatch — reconnect device`
+    ? `Firmware ${version} · warning protocol — update firmware`
     : isDev
     ? `Firmware ${version} · development build`
     : isLatest

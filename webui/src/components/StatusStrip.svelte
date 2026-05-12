@@ -32,7 +32,7 @@
   );
 
   const fwLatestStatus = $derived(
-    app.protoMismatch ? 'mismatch' :
+    app.protoMismatch ? 'warning' :
     !latestStableVersion || !app.fwVersion ? true :
     compareVersions(app.fwVersion, latestStableVersion) >= 0
   );
