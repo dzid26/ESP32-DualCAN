@@ -14,7 +14,6 @@
   let scripts = $state<ScriptInfo[]>([]);
   let listError = $state<string | null>(null);
   let busy = $state(false);
-  let status = $state<string>('');
 
   // Editor state — selected file, its loaded code, dirty flag.
   let selFn = $state<string | null>(null);
@@ -76,27 +75,24 @@
       const r = await app.proto.readScript(filename);
       code = r.code;
       savedCode = r.code;
-      status = `loaded ${filename}`;
     } catch (e) {
-      const m = e instanceof Error ? e.message : String(e);
-      status = `read failed: ${m}`;
+      app.pushLog(`scripts: read failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     }
   }
 
   async function save(): Promise<void> {
     const fn = (selFn ?? editorFilename).trim();
-    if (!fn) { status = 'filename required'; return; }
+    if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
     busy = true;
-    status = `uploading ${fn}…`;
     try {
       await app.proto.writeScript(fn, code);
       savedCode = code;
       selFn = fn;
       editorFilename = fn;
-      status = `saved ${fn}`;
+      app.pushLog(`scripts: saved ${fn}`, 'info', 'scripts');
       await refresh();
     } catch (e) {
-      status = `upload failed: ${e instanceof Error ? e.message : e}`;
+      app.pushLog(`scripts: upload failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally {
       busy = false;
     }
@@ -113,9 +109,9 @@
       await app.proto.enableScript(filename);
       scripts = scripts.map(s => s.filename === filename
         ? { ...s, enabled: true, errored: false } : s);
-      status = `enabled ${filename}`;
+      app.pushLog(`scripts: enabled ${filename}`, 'info', 'scripts');
     } catch (e) {
-      status = `enable failed: ${e instanceof Error ? e.message : e}`;
+      app.pushLog(`scripts: enable failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally { busy = false; }
   }
 
@@ -125,9 +121,9 @@
       await app.proto.disableScript(filename);
       scripts = scripts.map(s => s.filename === filename
         ? { ...s, enabled: false } : s);
-      status = `disabled ${filename}`;
+      app.pushLog(`scripts: disabled ${filename}`, 'info', 'scripts');
     } catch (e) {
-      status = `disable failed: ${e instanceof Error ? e.message : e}`;
+      app.pushLog(`scripts: disable failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally { busy = false; }
   }
 
@@ -141,9 +137,9 @@
         if (selFn) await loadScript(selFn);
         else { code = NEW_SCRIPT; savedCode = NEW_SCRIPT; editorFilename = 'my_script.be'; }
       }
-      status = `deleted ${filename}`;
+      app.pushLog(`scripts: deleted ${filename}`, 'info', 'scripts');
     } catch (e) {
-      status = `delete failed: ${e instanceof Error ? e.message : e}`;
+      app.pushLog(`scripts: delete failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally {
       busy = false;
       confirmRemove = null;
@@ -156,7 +152,6 @@
     editorFilename = 'my_script.be';
     code = NEW_SCRIPT;
     savedCode = '';
-    status = 'new script — set a filename and Save';
   }
 
   /** Drop a bundled `firmware/scripts_examples/*.be` into the editor. */
@@ -167,17 +162,15 @@
     if (!fn) return;
     if (dirty && !confirm('Discard unsaved changes?')) return;
     const ex = examples.find(x => x.filename === fn);
-    if (!ex) { status = `unknown example: ${fn}`; return; }
+    if (!ex) return;
     code = ex.code;
     savedCode = '';
     selFn = null;
     editorFilename = ex.filename;
-    status = `loaded example: ${ex.name}`;
   }
 
   function revert(): void {
     code = savedCode;
-    status = 'reverted';
   }
 
   function importFile(e: Event): void {
@@ -191,7 +184,7 @@
       savedCode = '';
       editorFilename = file.name;
       selFn = null;
-      status = `imported ${file.name} (not yet saved)`;
+      app.pushLog(`scripts: imported ${file.name}`, 'info', 'scripts');
     };
     reader.readAsText(file);
   }
@@ -228,19 +221,13 @@
     const fn = app.pendingExample;
     if (!fn) return;
     app.pendingExample = null;
-    if (dirty && !confirm('Discard unsaved changes and load the example?')) {
-      status = 'kept your unsaved buffer';
-      return;
-    }
+    if (dirty && !confirm('Discard unsaved changes and load the example?')) return;
     const ex = examples.find(x => x.filename === fn);
     if (ex) {
       code = ex.code;
       savedCode = '';
       selFn = null;
       editorFilename = ex.filename;
-      status = `loaded example: ${ex.name}`;
-    } else {
-      status = `unknown example: ${fn}`;
     }
   });
 </script>
@@ -377,11 +364,6 @@
         </span>
       </div>
 
-      {#if status}
-        <div style="padding: 4px 12px; font-size: 11px; color: var(--dc-text-fade); border-bottom: 1px solid var(--dc-border)" class="mono">
-          {status}
-        </div>
-      {/if}
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
         <CodeMirrorEditor bind:value={code} height="100%" onSave={save} />
