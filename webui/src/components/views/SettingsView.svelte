@@ -220,28 +220,29 @@
     <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
       <label class="field">
         <span>Anthropic API key</span>
-        <input type="password" class="inp" placeholder="sk-ant-…" />
+        <input type="password" class="inp" placeholder="sk-ant-…"
+          value={app.aiKey}
+          oninput={(e) => app.setAiKey((e.target as HTMLInputElement).value)} />
       </label>
       <div class="field">
         <span></span>
         <span class="muted" style="font-size: 11px">
-          Stored locally in your browser. Never sent to the device. Use a workspace-scoped key with a budget — calls go directly from your browser to api.anthropic.com.
+          Stored locally in your browser. Never sent to the device. Use a workspace-scoped key with a spend limit — calls go directly from your browser to api.anthropic.com.
         </span>
       </div>
       <label class="field">
         <span>Model</span>
-        <select class="sel">
-          <option value="haiku-4.5">claude-haiku-4-5 · fast, cheap</option>
-          <option value="sonnet-4.5">claude-sonnet-4-5 · stronger reasoning</option>
+        <select class="sel" value={app.aiModel} onchange={(e) => app.setAiModel((e.target as HTMLSelectElement).value)}>
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 · fast, cheap</option>
+          <option value="claude-sonnet-4-6">claude-sonnet-4-6 · stronger reasoning</option>
         </select>
       </label>
-      <label class="field">
-        <span>Inline completions</span>
-        <label class="row-flex" style="gap: 6px">
-          <input type="checkbox" checked />
-          <span style="font-size: 12px">Ghost-text suggestions in the editor (Tab to accept)</span>
-        </label>
-      </label>
+      <div class="field">
+        <span>Status</span>
+        <span class="mono" style="font-size: 11px; color: {app.aiKey ? 'var(--dc-ok)' : 'var(--dc-text-fade)'}">
+          {app.aiKey ? `key set · ${app.aiModel.split('-').slice(1,3).join('-')}` : 'no key — paste above to enable'}
+        </span>
+      </div>
       <div class="field">
         <span>Confirm vehicle writes</span>
         <label class="row-flex" style="gap: 6px">
@@ -256,10 +257,6 @@
           <span style="font-size: 12px">Refuse vehicle writes when speed signal &gt; 5 mph</span>
         </label>
       </label>
-      <div class="field">
-        <span>Status</span>
-        <span class="mono ghost">no key set — paste above to enable</span>
-      </div>
     </div>
   </div>
 

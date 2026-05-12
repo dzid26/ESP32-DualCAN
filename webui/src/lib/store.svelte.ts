@@ -113,6 +113,19 @@ class AppState {
   otaDone = $state(false);
   rebootAfterUpdate = $state(true);
 
+  // ---- AI assistant ----
+  aiKey = $state<string>((() => { try { return localStorage.getItem('dc-ai-key') ?? ''; } catch { return ''; } })());
+  aiModel = $state<string>((() => { try { return localStorage.getItem('dc-ai-model') ?? 'claude-haiku-4-5-20251001'; } catch { return 'claude-haiku-4-5-20251001'; } })());
+
+  setAiKey(k: string): void {
+    this.aiKey = k;
+    try { localStorage.setItem('dc-ai-key', k); } catch { /* ignore */ }
+  }
+  setAiModel(m: string): void {
+    this.aiModel = m;
+    try { localStorage.setItem('dc-ai-model', m); } catch { /* ignore */ }
+  }
+
   // ---- PWA install ----
   /** Non-null when the browser has emitted a deferrable install prompt. Cleared on install or dismiss. */
   installPrompt = $state<BeforeInstallPromptEvent | null>(null);
