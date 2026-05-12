@@ -227,7 +227,9 @@
       <div class="field">
         <span></span>
         <span class="muted" style="font-size: 11px">
-          Stored locally in your browser. Never sent to the device. Use a workspace-scoped key with a spend limit — calls go directly from your browser to api.anthropic.com.
+          Stored locally in your browser. Never sent to the device. Use a key with a spend limit — calls go directly from your browser to api.anthropic.com.
+          <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener"
+            style="color: var(--dc-accent); text-decoration: none; margin-left: 4px">Get API key ↗</a>
         </span>
       </div>
       <label class="field">
