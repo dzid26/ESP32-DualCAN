@@ -49,6 +49,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          fetch-tags: true
 
       - uses: actions/cache@v4
         with:
@@ -66,18 +67,9 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
-      - name: Resolve version from tag
-        run: echo "FW_VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_ENV"
-
       - name: Build production firmware
-        # PlatformIO appends PLATFORMIO_BUILD_FLAGS to the env's build_flags,
-        # overriding the -D DORKY_FIRMWARE_VERSION baked into platformio.ini.
-        # Cleaner than sed-rewriting the ini file and immune to whitespace
-        # or formatting changes there. The shell-quoting dance keeps the
-        # version string a literal C string in the compiled binary.
-        run: |
-          export PLATFORMIO_BUILD_FLAGS="-DDORKY_FIRMWARE_VERSION=\\\"${FW_VERSION}\\\""
-          pio run -d firmware -e esp32-c6
+        # Version is injected automatically by tools/version.py via git describe.
+        run: pio run -d firmware -e esp32-c6
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
