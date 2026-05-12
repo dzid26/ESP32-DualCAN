@@ -122,22 +122,22 @@ ${exSnippets}
     turns = [...turns, { role: 'user', text }];
     history = [...history, { role: 'user', content: text }];
 
-    const agentTurn: AgentTurn = { role: 'assistant', text: '', streaming: true };
-    turns = [...turns, agentTurn];
+    turns = [...turns, { role: 'assistant', text: '', streaming: true } as AgentTurn];
+    const agentIdx = turns.length - 1;
     busy = true;
     try {
       if (!app.aiKey) throw new Error('No API key — add one in Settings → AI assistant');
       await streamResponse((chunk) => {
-        agentTurn.text += chunk;
-        turns = turns; // nudge reactivity
+        // Access via reactive proxy (array index) so Svelte 5 detects the mutation.
+        (turns[agentIdx] as AgentTurn).text += chunk;
       });
-      history = [...history, { role: 'assistant', content: agentTurn.text }];
+      history = [...history, { role: 'assistant', content: (turns[agentIdx] as AgentTurn).text }];
     } catch (e) {
       errorMsg = e instanceof Error ? e.message : String(e);
-      turns = turns.filter(t => t !== agentTurn);
+      turns = turns.filter((_, i) => i !== agentIdx);
       history = history.slice(0, -1);
     } finally {
-      agentTurn.streaming = false;
+      (turns[agentIdx] as AgentTurn | undefined) && ((turns[agentIdx] as AgentTurn).streaming = false);
       busy = false;
     }
   }

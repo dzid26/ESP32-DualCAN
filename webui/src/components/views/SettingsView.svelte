@@ -230,6 +230,9 @@
           Stored locally in your browser. Never sent to the device. Use a key with a spend limit — calls go directly from your browser to api.anthropic.com.
           <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener"
             style="color: var(--dc-accent); text-decoration: none; margin-left: 4px">Get API key ↗</a>
+          ·
+          <a href="https://platform.claude.com/usage" target="_blank" rel="noopener"
+            style="color: var(--dc-accent); text-decoration: none; margin-left: 2px">Usage ↗</a>
         </span>
       </div>
       <label class="field">
