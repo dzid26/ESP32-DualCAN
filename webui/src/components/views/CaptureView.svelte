@@ -2,6 +2,8 @@
   import { app } from '../../lib/store.svelte';
   import type { TraceFrame } from '../../transport/protocol';
   import { dbcStore } from '../../dbcStore.svelte';
+  import { evalCond, computeDiff, CONDS } from '../../lib/capture';
+  import type { Cond, Snapshot } from '../../lib/capture';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
   import { onDestroy } from 'svelte';
@@ -15,8 +17,6 @@
   }
 
   // ---- Baseline diff ----
-  type Snapshot = { ts: string; values: Map<string, number | null> };
-
   let snapA = $state<Snapshot | null>(null);
   let snapB = $state<Snapshot | null>(null);
   let snapBusy = $state(false);
@@ -48,22 +48,9 @@
     }
   }
 
-  type DiffRow = { name: string; a: number | null; b: number | null; delta: number };
-  const diffRows = $derived.by<DiffRow[]>(() => {
-    if (!snapA || !snapB) return [];
-    const rows: DiffRow[] = [];
-    for (const [name, aVal] of snapA.values) {
-      const bVal = snapB.values.get(name) ?? null;
-      if (aVal === null || bVal === null) continue;
-      const delta = bVal - aVal;
-      if (Math.abs(delta) > 0.0001) rows.push({ name, a: aVal, b: bVal, delta });
-    }
-    return rows.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-  });
+  const diffRows = $derived(snapA && snapB ? computeDiff(snapA, snapB) : []);
 
   // ---- Event-triggered capture ----
-  type Cond = '>' | '<' | '>=' | '<=' | '==' | '!=';
-  const CONDS: Cond[] = ['>', '<', '>=', '<=', '==', '!='];
 
   let trigSignal = $state('');
   let trigCond = $state<Cond>('>');
@@ -79,17 +66,6 @@
   let captureTimer: ReturnType<typeof setTimeout> | null = null;
   let captureBuffer: TraceFrame[] = [];
   let pollInflight = false;
-
-  function evalCond(v: number): boolean {
-    switch (trigCond) {
-      case '>':  return v > trigValue;
-      case '<':  return v < trigValue;
-      case '>=': return v >= trigValue;
-      case '<=': return v <= trigValue;
-      case '==': return Math.abs(v - trigValue) < 0.0001;
-      case '!=': return Math.abs(v - trigValue) >= 0.0001;
-    }
-  }
 
   async function arm(): Promise<void> {
     if (!app.connected || !trigSignal) return;
@@ -110,7 +86,7 @@
           pollInflight = false;
           return;
         }
-        if (evalCond(v.value)) {
+        if (evalCond(v.value, trigCond, trigValue)) {
           capturing = true;
           captureStatus = `triggered (${trigSignal}=${v.value.toFixed(3)}) — capturing ${trigDuration} ms…`;
           clearInterval(pollTimer!); pollTimer = null;
