@@ -141,7 +141,6 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 8. **Signal graphs on the Dashboard** *(uPlot — partially scaffolded in DashboardView.svelte)*.
 9. **Tests for phase 2 features**:
    - Host: trace buffer behavior under load, event-capture trigger evaluation, replay frame ordering with fake timestamps.
-   - Web UI: Playwright E2E against an in-process mock firmware — full flow of "upload DBC → enable script → see frame in trace".
 
 ### Exit criteria
 
@@ -158,26 +157,22 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 
 ### Tasks
 
-1. **Firmware OTA**:
-   - ESP-IDF native dual-partition OTA.
-   - UI flow: pick a .bin, upload over WiFi (WS), verify, reboot, rollback on boot failure.
-   - (BLE OTA deferred; document workaround.)
-2. **Example script gallery** in the web UI, fetched from `scripts_examples/` on the GitHub repo at runtime.
-3. **Settings view**: WiFi, vehicle preset (bus assignment + default DBCs), bitrate, simulation mode, rate-limit overrides.
+1. **Firmware OTA** ✓:
+   - ESP-IDF dual-partition OTA ✓, BLE OTA ✓ (`ota.begin/write/end/abort` + `streamFirmware`).
+   - UI ✓ — upload `.bin` from disk or fetch from GitHub releases; progress bar, abort, reboot toggle.
+2. **Example script gallery** ✓ — UI + bundled scripts wired; Install loads script into editor.
+3. **Settings view** — WiFi ✓, sim mode ✓, OTA ✓; bitrate/rate-limit overrides need new protocol ops.
 4. **Tesla-BLE integration** (optional, can slip to v1.1):
    - Dedicated FreeRTOS task running a Tesla-BLE client library.
    - Pairing flow in the UI.
    - Private key in NVS with flash encryption enabled.
    - Minimal `tesla.*` script API (`wake`, `charge_start`, `charge_stop`).
-5. **Release plumbing**:
-   - GitHub Actions: build firmware, attach `.bin` + `.bin.ota` + partition table to a GitHub release.
-   - Web UI deploy workflow publishes to GH Pages on every push to main.
-6. **Documentation**:
-   - User-facing README in `firmware/` with install, flash, first-connection, first-script walkthrough.
-   - Contributor guide.
-   - Protocol reference (CBOR topics, payloads).
-   - How to script
-   - Usable examples on the website
+5. **Release plumbing** ✓:
+   - `firmware.yml` — builds + host tests on every firmware push ✓.
+   - `release.yml` — v* tag → build → GitHub release with `.bin` ✓.
+   - `webui.yml` — test + type-check + GH Pages deploy on main push ✓.
+6. **AI assistant** ✓ — BYOK Claude chat; streams responses; code blocks become installable scripts.
+7. **Documentation** — user-facing `firmware/README.md` with flash + first-use walkthrough.
 
 ### Exit criteria
 
