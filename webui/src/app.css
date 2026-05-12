@@ -380,8 +380,8 @@ button { font: inherit; color: inherit; }
 
 /* ===== Events tile grid ===== */
 .view--events { padding: 0; }
+.events-scroll { flex: 1; min-height: 0; overflow-y: auto; }
 .evgrid {
-  flex: 1; overflow-y: auto;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   /* baseline row height for tiles; allows spanning rows uniformly */
   grid-auto-rows: var(--evtile-row-h, 120px);

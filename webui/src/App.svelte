@@ -13,11 +13,11 @@
     return () => window.removeEventListener('beforeunload', guard);
   });
 
-  import EventsView from './components/views/EventsView.svelte';
+  import DashboardView from './components/views/DashboardView.svelte';
   import ScriptsView from './components/views/ScriptsView.svelte';
   import AIView from './components/views/AIView.svelte';
   import GalleryView from './components/views/GalleryView.svelte';
-  import DashboardView from './components/views/DashboardView.svelte';
+  import SignalsView from './components/views/SignalsView.svelte';
   import DbcView from './components/views/DbcView.svelte';
   import TraceView from './components/views/TraceView.svelte';
   import CaptureView from './components/views/CaptureView.svelte';
@@ -28,11 +28,11 @@
 
 <Shell>
   {#snippet children()}
-    {#if app.view === 'events'}<EventsView />
+    {#if app.view === 'events'}<DashboardView />
     {:else if app.view === 'scripts'}<ScriptsView />
     {:else if app.view === 'ai'}<AIView />
     {:else if app.view === 'gallery'}<GalleryView />
-    {:else if app.view === 'dashboard'}<DashboardView />
+    {:else if app.view === 'signals'}<SignalsView />
     {:else if app.view === 'dbc'}<DbcView />
     {:else if app.view === 'trace'}<TraceView />
     {:else if app.view === 'capture'}<CaptureView />

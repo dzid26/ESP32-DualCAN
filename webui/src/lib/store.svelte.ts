@@ -19,7 +19,7 @@ export type Transport = 'ble' | 'ws';
 
 export type ViewId =
   | 'events' | 'scripts' | 'ai' | 'gallery'
-  | 'dashboard' | 'dbc'
+  | 'signals' | 'dbc'
   | 'trace' | 'capture'
   | 'settings' | 'tesla'
   | 'engine';
