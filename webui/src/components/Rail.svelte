@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
   import { NAV_ITEMS } from '../lib/nav';
+  import { modKey, isTouch } from '../lib/platform';
   import Icon from './Icon.svelte';
 
   let { onPalette, onToggleLog }: { onPalette: () => void; onToggleLog: () => void } = $props();
@@ -35,10 +36,10 @@
   </div>
 
   <div class="rail__foot">
-    <button class="railItem" onclick={onPalette} title="Command palette (Cmd-K)">
+    <button class="railItem" onclick={onPalette} title="Command palette ({modKey}K)">
       <Icon name="search" size={18} />
       <span class="railItem__label">Search</span>
-      <span class="tt">Search / commands · ⌘K</span>
+      <span class="tt">Search / commands{isTouch ? '' : ` · ${modKey}K`}</span>
     </button>
     <button class="railItem" onclick={onToggleLog} title="Logs">
       <Icon name="log" size={18} />

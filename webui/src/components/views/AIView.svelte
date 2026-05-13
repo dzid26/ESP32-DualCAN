@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
   import { dbcStore } from '../../dbcStore.svelte';
+  import { modKey } from '../../lib/platform';
   import Icon from '../Icon.svelte';
   import SCRIPTING_MD from '../../../../SCRIPTING.md?raw';
 
@@ -370,7 +371,7 @@ ${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_nam
         <div class="ai-inputrow">
           <textarea
             class="inp ai-textarea"
-            placeholder="Describe what you want… (⌘↵ or Ctrl↵ to send)"
+            placeholder="Describe what you want… ({modKey}↵ to send)"
             bind:value={draft}
             onkeydown={onKey}
             rows="2"
@@ -383,7 +384,7 @@ ${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_nam
           <button class="btn btn--sm btn--ghost"
             onclick={() => { turns = []; history = []; errorMsg = ''; installStatus = {}; attachedScript = null; }}
             disabled={turns.length === 0}>Clear</button>
-          <span>⌘↵ to send</span>
+          <span>{modKey}enter</span>
         </div>
       </footer>
     </div>
