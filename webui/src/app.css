@@ -311,10 +311,11 @@ button { font: inherit; color: inherit; }
 /* ===== Command palette ===== */
 .cp-backdrop {
   position: fixed; inset: 0; background: rgba(10,8,4,0.55); z-index: 200;
-  display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: min(12dvh, 60px);
 }
 .cp {
-  width: min(520px, 92vw); max-height: 60vh;
+  width: min(520px, 92vw); max-height: calc(80dvh - min(12dvh, 60px));
   background: var(--dc-surface); border: 1px solid var(--dc-border-2); border-radius: 6px;
   box-shadow: 0 20px 50px #000a;
   display: flex; flex-direction: column; overflow: hidden;
