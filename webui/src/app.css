@@ -309,17 +309,20 @@ button { font: inherit; color: inherit; }
 .pip__led--dim   { background: var(--dc-text-ghost); box-shadow: none; }
 
 /* ===== Command palette ===== */
-.cp-backdrop {
+/* Dialog.Overlay and Dialog.Content are portal siblings — each needs its own position */
+.cp-overlay {
   position: fixed; inset: 0; background: rgba(10,8,4,0.55); z-index: 200;
-  display: flex; align-items: flex-start; justify-content: center;
-  padding-top: min(12dvh, 60px);
 }
 .cp {
+  position: fixed; z-index: 201;
+  top: min(12dvh, 60px); left: 50%; transform: translateX(-50%);
   width: min(520px, 92vw); max-height: calc(80dvh - min(12dvh, 60px));
   background: var(--dc-surface); border: 1px solid var(--dc-border-2); border-radius: 6px;
   box-shadow: 0 20px 50px #000a;
   display: flex; flex-direction: column; overflow: hidden;
 }
+/* Command.Root must fill the Dialog.Content panel */
+.cp-root { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .cp__input {
   width: 100%; padding: 12px 14px; background: transparent;
   border: none; border-bottom: 1px solid var(--dc-border);
@@ -331,7 +334,8 @@ button { font: inherit; color: inherit; }
   padding: 8px 14px; cursor: pointer;
   color: var(--dc-text-dim); border-left: 2px solid transparent;
 }
-.cp__item--active { background: var(--dc-surface-2); color: var(--dc-text); border-left-color: var(--dc-border-hi); }
+/* bits-ui Command sets data-selected on the focused item (Melt used data-highlighted) */
+.cp__item[data-selected] { background: var(--dc-surface-2); color: var(--dc-text); border-left-color: var(--dc-border-hi); }
 .cp__item-group { font-size: 10px; color: var(--dc-text-ghost); text-transform: uppercase; letter-spacing: .1em; margin-left: auto; }
 
 /* ===== Form inputs ===== */
