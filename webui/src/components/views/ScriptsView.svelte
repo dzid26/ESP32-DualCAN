@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Switch } from 'bits-ui';
   import { app } from '../../lib/store.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
   import { examples } from '../../examples';
@@ -302,17 +303,15 @@
             role="button"
             tabindex="0"
           >
-            <span
+            <Switch.Root
+              checked={s.enabled}
+              onCheckedChange={(checked) => checked ? enable(s.filename) : disable(s.filename)}
+              onclick={(e: MouseEvent) => e.stopPropagation()}
               class={'tog ' + (s.enabled ? 'tog--on' : '')}
-              onclick={(e) => { e.stopPropagation(); s.enabled ? disable(s.filename) : enable(s.filename); }}
-              onkeydown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); s.enabled ? disable(s.filename) : enable(s.filename); } }}
-              role="switch"
-              aria-checked={s.enabled}
-              tabindex="0"
               title={s.enabled ? 'Disable' : 'Enable'}
             >
-              <span class="tog__knob"></span>
-            </span>
+              <Switch.Thumb class="tog__knob" />
+            </Switch.Root>
             <div style="min-width: 0">
               <div style="font-size: 12px; color: var(--dc-text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
                 {s.filename}
