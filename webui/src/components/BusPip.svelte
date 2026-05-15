@@ -16,7 +16,7 @@
 <div class="pip" title={`${name} · bus ${id}${dbcName ? ' · ' + dbcName : ''}`}>
   <span class="mono" style="color: var(--dc-text-dim)">bus{id}</span>
   <span class={'pip__dot ' + (active ? 'pip__dot--ok' : '')}></span>
-  <span class="ghost mono" style="font-size: 10px">{active ? rate : 'idle'}</span>
+  <span class="ghost mono" style="font-size: 10px; min-width: 4.5ch; display: inline-block">{active ? rate : 'idle'}</span>
   {#if dbcName}
     <button
       class="dbclink mono"

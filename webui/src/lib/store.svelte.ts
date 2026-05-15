@@ -78,8 +78,9 @@ class AppState {
   /** Bus activity dots — driven by any push frame with a bus field (trace or signal). */
   bus0 = $state(false);
   bus1 = $state(false);
-  private busDecay0: ReturnType<typeof setTimeout> | null = null;
-  private busDecay1: ReturnType<typeof setTimeout> | null = null;
+  private busLastRx0 = 0;
+  private busLastRx1 = 0;
+  private busActivityTimer: ReturnType<typeof setInterval> | null = null;
 
   car = $state<Car | null>(loadCar());
   carPickerOpen = $state(false);
@@ -416,15 +417,17 @@ class AppState {
   }
 
   noteBusActivity(bus: number): void {
-    if (bus === 0) {
-      this.bus0 = true;
-      if (this.busDecay0) clearTimeout(this.busDecay0);
-      this.busDecay0 = setTimeout(() => { this.bus0 = false; }, 600);
-    } else if (bus === 1) {
-      this.bus1 = true;
-      if (this.busDecay1) clearTimeout(this.busDecay1);
-      this.busDecay1 = setTimeout(() => { this.bus1 = false; }, 600);
-    }
+    if (bus === 0) this.busLastRx0 = Date.now();
+    else if (bus === 1) this.busLastRx1 = Date.now();
+    if (this.busActivityTimer) return;
+    this.busActivityTimer = setInterval(() => {
+      const now = Date.now();
+      const a0 = now - this.busLastRx0 < 600;
+      const a1 = now - this.busLastRx1 < 600;
+      if (this.bus0 !== a0) this.bus0 = a0;
+      if (this.bus1 !== a1) this.bus1 = a1;
+      if (!a0 && !a1) { clearInterval(this.busActivityTimer!); this.busActivityTimer = null; }
+    }, 200);
   }
 }
 
