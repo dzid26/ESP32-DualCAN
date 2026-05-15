@@ -28,7 +28,6 @@
 
   function onFrame(f: TraceFrame): void {
     totalCount++;
-    app.noteBusActivity(f.bus);
     if (paused) return;
     buffer.push(f);
   }

@@ -75,8 +75,7 @@ class AppState {
   killed = $state(false);
   killBusy = $state(false);
 
-  /** Bus activity dots — derived from trace frame stream when active.
-   * When trace is off there's no signal so they stay idle. */
+  /** Bus activity dots — driven by any push frame with a bus field (trace or signal). */
   bus0 = $state(false);
   bus1 = $state(false);
   private busDecay0: ReturnType<typeof setTimeout> | null = null;
@@ -143,6 +142,7 @@ class AppState {
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));
+    this.proto.onBusActivity((bus) => this.noteBusActivity(bus));
 
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeinstallprompt', (e) => {
@@ -415,8 +415,6 @@ class AppState {
     this.pushLog('Vehicle profile cleared', 'info', 'system');
   }
 
-  /** Trace view calls this for every received frame so the status pips can
-   * show live bus activity. Not subscribed when trace is off. */
   noteBusActivity(bus: number): void {
     if (bus === 0) {
       this.bus0 = true;
