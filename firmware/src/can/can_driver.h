@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "driver/gpio.h"
@@ -28,3 +29,16 @@ esp_err_t can_bus_receive(int bus_id, twai_message_t *out,
                           uint32_t timeout_ms);
 
 esp_err_t can_bus_status(int bus_id, twai_status_info_t *out);
+
+typedef enum {
+    BUS_IDLE    = 0,  /* no electrical activity */
+    BUS_GOOD    = 1,  /* TWAI frames received or TX ACKed */
+    BUS_TX_ERR  = 2,  /* TX errors present — we're the bus source but nobody ACKs */
+    BUS_RX_ERR  = 3,  /* GPIO edges seen but no valid TWAI frames (wrong bitrate, noise, …) */
+    BUS_ERROR   = 4,  /* TWAI bus-off */
+} bus_status_t;
+
+/* Compute current bus health. Drains the RX-edge flag internally.
+ * `last_rx_ms` — timestamp of the last successfully received TWAI frame (0 = never).
+ * `now_ms`     — current time in milliseconds. */
+bus_status_t can_bus_health(int bus_id, uint32_t now_ms, uint32_t last_rx_ms);

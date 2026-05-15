@@ -1,10 +1,23 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
+  import type { BusStatus } from '../transport/protocol';
 
-  let { id, name, active, rate }:
-    { id: number; name: string; active: boolean; rate: string } = $props();
+  let { id, name, status, rate }:
+    { id: number; name: string; status: BusStatus; rate: string } = $props();
 
   const dbcName = $derived(app.loadedDbc[id]);
+
+  const dotClass = $derived(
+    status === 'good' ? 'pip__dot--ok' :
+    status !== 'idle' ? 'pip__dot--err' : ''
+  );
+
+  const label = $derived(
+    status === 'good'     ? rate      :
+    status === 'tx_error' ? 'tx err'  :
+    status === 'rx_error' ? 'rx err'  :
+    status === 'error'    ? 'bus off'  : 'idle'
+  );
 
   function gotoDbc(e: MouseEvent): void {
     e.stopPropagation();
@@ -15,8 +28,8 @@
 
 <div class="pip" title={`${name} · bus ${id}${dbcName ? ' · ' + dbcName : ''}`}>
   <span class="mono" style="color: var(--dc-text-dim)">bus{id}</span>
-  <span class={'pip__dot ' + (active ? 'pip__dot--ok' : '')}></span>
-  <span class="ghost mono" style="font-size: 10px; min-width: 4.5ch; display: inline-block">{active ? rate : 'idle'}</span>
+  <span class={'pip__dot ' + dotClass}></span>
+  <span class="ghost mono" style="font-size: 10px; min-width: 4.5ch; display: inline-block">{label}</span>
   {#if dbcName}
     <button
       class="dbclink mono"

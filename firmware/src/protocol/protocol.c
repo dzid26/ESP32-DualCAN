@@ -9,10 +9,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
+#include "esp_timer.h"
+
 #include "ble/ble_transport.h"
 #include "protocol/frame_buf.h"
 #include "scripting/berry_bindings.h"
 #include "can/can.h"
+#include "can/can_driver.h"
 #include "dbc/dbc_pack.h"
 #include "wifi/wifi.h"
 #include "ota/ota.h"
@@ -35,6 +38,12 @@ static QueueHandle_t    s_frame_queue;
 /* ---- trace state ---- */
 /* Bit 0 = bus 0 enabled, bit 1 = bus 1 enabled. 0 = trace off. */
 static uint8_t          s_trace_buses;
+
+/* ---- bus status monitor ---- */
+static const char *const BUS_STATUS_STR[] = { "idle", "good", "rx_error", "tx_error", "error" };
+static uint8_t  s_bus_status[CAN_BUS_COUNT];   /* initialised to 0xFF in protocol_init */
+static bool     s_ble_was_connected;
+static int      s_connect_pushes;   /* retry counter — push N times after reconnect */
 
 /* ---- signal subscriptions ----
  * Each entry uses can_on_change with a unique tag = SIG_SUB_TAG_BASE | slot.
@@ -154,6 +163,16 @@ static void trace_observer(int bus_id, const twai_message_t *frame, uint32_t now
     cJSON_AddNumberToObject(push, "id",  (double)frame->identifier);
     cJSON_AddNumberToObject(push, "ts",  (double)now_ms);
     cJSON_AddStringToObject(push, "data", hex);
+    send_frame(push);
+    cJSON_Delete(push);
+}
+
+static void push_bus_status(int bus, bus_status_t status)
+{
+    cJSON *push = cJSON_CreateObject();
+    cJSON_AddStringToObject(push, "type", "bus_status");
+    cJSON_AddNumberToObject(push, "bus", bus);
+    cJSON_AddStringToObject(push, "status", BUS_STATUS_STR[status]);
     send_frame(push);
     cJSON_Delete(push);
 }
@@ -752,6 +771,31 @@ void protocol_tick(void)
         }
         free(fi.data);
     }
+
+    /* Bus status monitor: evaluate every 500 ms, push on change.
+     * On BLE reconnect force re-push by resetting s_bus_status. */
+    static uint32_t s_status_ms = 0;
+    uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
+    bool ble_up = dorky_ble_connected();
+    if (ble_up && !s_ble_was_connected) {
+        memset(s_bus_status, 0xFF, sizeof(s_bus_status));
+        s_status_ms = now;   /* delay first push 200 ms — ATT channel needs time to stabilize */
+        s_connect_pushes = 5; /* retry: push status 5× after connect in case early notifs are dropped */
+    }
+    s_ble_was_connected = ble_up;
+
+    if (ble_up && (now - s_status_ms) >= 200) {
+        s_status_ms = now;
+        for (int b = 0; b < CAN_BUS_COUNT; b++) {
+            bus_status_t ns = can_bus_health(b, now, can_last_rx_ms(b));
+            if ((uint8_t)ns != s_bus_status[b] || s_connect_pushes > 0) {
+                s_bus_status[b] = (uint8_t)ns;
+                push_bus_status(b, ns);
+                ESP_LOGI(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
+            }
+        }
+        if (s_connect_pushes > 0) s_connect_pushes--;
+    }
 }
 
 void protocol_init(script_loader_t *loader)
@@ -761,4 +805,5 @@ void protocol_init(script_loader_t *loader)
     s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
     berry_set_log_handler(log_push_handler);
     can_set_raw_observer(trace_observer);
+    memset(s_bus_status, 0xFF, sizeof(s_bus_status));  /* force push on first check */
 }

@@ -49,7 +49,8 @@ bool can_rx_pop(can_t *c, twai_message_t *out);
 /* Raw frame observer — called for every frame received on any bus.
  * Used by the trace feature to forward frames to the UI. Single global slot. */
 typedef void (*can_raw_observer_t)(int bus_id, const twai_message_t *frame, uint32_t now_ms);
-void can_set_raw_observer(can_raw_observer_t cb);
+void     can_set_raw_observer(can_raw_observer_t cb);
+uint32_t can_last_rx_ms(int bus_id);  /* ms timestamp of last received frame, 0 if none */
 
 int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag);
 /* Scoped variant: only matches a signal living inside `msg_name`. Use this from

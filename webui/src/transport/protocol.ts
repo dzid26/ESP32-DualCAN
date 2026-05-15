@@ -41,6 +41,13 @@ export interface SignalUpdate {
   prev: number;
 }
 
+export type BusStatus = 'idle' | 'good' | 'tx_error' |'rx_error' |  'error';
+
+export interface BusStatusUpdate {
+  bus: number;
+  status: BusStatus;
+}
+
 type Pending = {
   resolve: (value: any) => void;
   reject: (err: Error) => void;
@@ -56,7 +63,7 @@ export class Protocol {
   private logCallback: ((msg: string) => void) | null = null;
   private traceCallback: ((f: TraceFrame) => void) | null = null;
   private signalCallback: ((s: SignalUpdate) => void) | null = null;
-  private busActivityCallback: ((bus: number) => void) | null = null;
+  private busStatusCallback: ((u: BusStatusUpdate) => void) | null = null;
 
   /** Register a callback for Berry print() log lines pushed from the device. */
   onLog(cb: (msg: string) => void) { this.logCallback = cb; }
@@ -67,9 +74,8 @@ export class Protocol {
   /** Register a callback for subscribed signal updates. Pass null to clear. */
   onSignal(cb: ((s: SignalUpdate) => void) | null) { this.signalCallback = cb; }
 
-  /** Register a persistent callback fired for every push frame that carries a bus field.
-   *  Fires for both trace and signal frames, independent of which view is active. */
-  onBusActivity(cb: ((bus: number) => void) | null) { this.busActivityCallback = cb; }
+  /** Register a callback for bus_status push frames from the device. */
+  onBusStatus(cb: ((u: BusStatusUpdate) => void) | null) { this.busStatusCallback = cb; }
 
   // Per-write chunk size for the underlying transport. The firmware
   // requests an ATT_MTU of 512 and Chrome/desktop hosts typically settle
@@ -197,18 +203,21 @@ export class Protocol {
           if (resp.type === 'log' && this.logCallback) {
             this.logCallback(resp.msg ?? '');
           } else if (resp.type === 'trace') {
-            if (this.busActivityCallback) this.busActivityCallback(resp.bus ?? 0);
             if (this.traceCallback) {
               const data = new Uint8Array(((resp.data ?? '') as string).match(/.{2}/g)?.map((h: string) => parseInt(h, 16)) ?? []);
               this.traceCallback({ bus: resp.bus ?? 0, id: resp.id ?? 0, ts: resp.ts ?? 0, data });
             }
           } else if (resp.type === 'signal') {
-            if (this.busActivityCallback) this.busActivityCallback(resp.bus ?? 0);
             if (this.signalCallback) this.signalCallback({
               name: resp.name ?? '',
               bus: resp.bus ?? 0,
               value: resp.value ?? 0,
               prev: resp.prev ?? 0,
+            });
+          } else if (resp.type === 'bus_status') {
+            if (this.busStatusCallback) this.busStatusCallback({
+              bus: resp.bus ?? 0,
+              status: (resp.status ?? 'idle') as BusStatus,
             });
           }
           continue;

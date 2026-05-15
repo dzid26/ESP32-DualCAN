@@ -2,8 +2,7 @@
  * Hardware-in-the-loop test: dual TWAI loopback on ESP32-DualCAN.
  *
  * Standalone Arduino test — does not share code with the production
- * firmware. Transmits on CAN0, receives on CAN1 (and vice-versa) at
- * 500 kbit/s.
+ * firmware. Transmits on CAN0, receives on CAN1 (and vice-versa)
  *
  * Wiring required:
  *   CAN0_H <-> CAN1_H

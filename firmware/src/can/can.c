@@ -12,8 +12,15 @@
 static const char *TAG = "can";
 
 static can_raw_observer_t s_raw_observer;
+static uint32_t           s_last_rx_ms[CAN_BUS_COUNT];
 
 void can_set_raw_observer(can_raw_observer_t cb) { s_raw_observer = cb; }
+
+uint32_t can_last_rx_ms(int bus_id)
+{
+    if (bus_id < 0 || bus_id >= CAN_BUS_COUNT) return 0;
+    return s_last_rx_ms[bus_id];
+}
 
 int can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
              tx_finalize_fn_t finalize)
@@ -88,6 +95,7 @@ int can_poll(can_t *c, uint32_t now_ms)
     twai_message_t rx;
     while (can_bus_receive(c->bus_id, &rx, 0) == ESP_OK) {
         rx_count++;
+        s_last_rx_ms[c->bus_id] = now_ms;
         rx_buf_push(c, &rx);
         if (s_raw_observer) s_raw_observer(c->bus_id, &rx, now_ms);
         if (!c->loaded) continue;

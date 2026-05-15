@@ -89,8 +89,8 @@
   <CarPip car={app.car} onOpen={() => (app.carPickerOpen = true)} />
 
   <div class="bus-group" style="display: flex; gap: 6px; align-items: center; flex-wrap: nowrap">
-    <BusPip id={0} name="VehicleCAN" active={app.bus0} rate="488 f/s" />
-    <BusPip id={1} name="ChassisCAN" active={app.bus1} rate="122 f/s" />
+    <BusPip id={0} name="VehicleCAN" status={app.bus0Status} rate="488 f/s" />
+    <BusPip id={1} name="ChassisCAN" status={app.bus1Status} rate="122 f/s" />
   </div>
 
   <span class="spacer"></span>

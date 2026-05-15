@@ -4,6 +4,7 @@
 
 import { BleTransport } from '../transport/ble';
 import { Protocol } from '../transport/protocol';
+import type { BusStatus } from '../transport/protocol';
 import type { LogLine } from './sampleData';
 import { type Car, loadCar, saveCar } from './cars';
 
@@ -75,12 +76,9 @@ class AppState {
   killed = $state(false);
   killBusy = $state(false);
 
-  /** Bus activity dots — driven by any push frame with a bus field (trace or signal). */
-  bus0 = $state(false);
-  bus1 = $state(false);
-  private busLastRx0 = 0;
-  private busLastRx1 = 0;
-  private busActivityTimer: ReturnType<typeof setInterval> | null = null;
+  /** Bus status driven by firmware bus_status push frames. */
+  bus0Status = $state<BusStatus>('idle');
+  bus1Status = $state<BusStatus>('idle');
 
   car = $state<Car | null>(loadCar());
   carPickerOpen = $state(false);
@@ -143,7 +141,7 @@ class AppState {
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));
-    this.proto.onBusActivity((bus) => this.noteBusActivity(bus));
+    this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status));
 
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeinstallprompt', (e) => {
@@ -209,8 +207,8 @@ class AppState {
       this.protoMismatch = null;
       this.simulation = false;
       this.killed = false;
-      this.bus0 = false;
-      this.bus1 = false;
+      this.bus0Status = 'idle';
+      this.bus1Status = 'idle';
       this.resetOtaState();
       this.pushLog('disconnected', 'warn', 'ble');
       return;
@@ -416,18 +414,9 @@ class AppState {
     this.pushLog('Vehicle profile cleared', 'info', 'system');
   }
 
-  noteBusActivity(bus: number): void {
-    if (bus === 0) this.busLastRx0 = Date.now();
-    else if (bus === 1) this.busLastRx1 = Date.now();
-    if (this.busActivityTimer) return;
-    this.busActivityTimer = setInterval(() => {
-      const now = Date.now();
-      const a0 = now - this.busLastRx0 < 600;
-      const a1 = now - this.busLastRx1 < 600;
-      if (this.bus0 !== a0) this.bus0 = a0;
-      if (this.bus1 !== a1) this.bus1 = a1;
-      if (!a0 && !a1) { clearInterval(this.busActivityTimer!); this.busActivityTimer = null; }
-    }, 200);
+  noteBusStatus(bus: number, status: BusStatus): void {
+    if (bus === 0) this.bus0Status = status;
+    else if (bus === 1) this.bus1Status = status;
   }
 }
 
