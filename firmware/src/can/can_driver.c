@@ -106,7 +106,8 @@ esp_err_t can_bus_install(const can_bus_config_t *cfg)
     /* RX edge monitor context — handler registered after TWAI install so
      * twai_driver_install_v2's GPIO matrix setup doesn't clear our intr type. */
     s_rx_ctx[cfg->bus_id] = (rx_ctx_t){ .bus_id = cfg->bus_id, .pin = cfg->rx_pin };
-    gpio_install_isr_service(0);  /* idempotent — ESP_ERR_INVALID_STATE if already done */
+    static bool s_isr_service_up = false;
+    if (!s_isr_service_up) { gpio_install_isr_service(0); s_isr_service_up = true; }
 
     twai_general_config_t gcfg = TWAI_GENERAL_CONFIG_DEFAULT_V2(
         cfg->bus_id, cfg->tx_pin, cfg->rx_pin, TWAI_MODE_NORMAL);
