@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Switch } from 'bits-ui';
+  import { Switch, AlertDialog } from 'bits-ui';
   import { app } from '../../lib/store.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
   import { examples } from '../../examples';
@@ -389,43 +389,42 @@
     </div>
   </div>
 
-  {#if confirmRemove}
-    <div
-      class="cp-backdrop"
-      onclick={() => (confirmRemove = null)}
-      onkeydown={(e) => e.key === 'Escape' && (confirmRemove = null)}
-      role="presentation"
-    >
-      <div
-        class="frame"
-        onclick={(e) => e.stopPropagation()}
-        style="width: min(420px, 92vw); background: var(--dc-surface)"
-        role="dialog"
-        aria-modal="true"
+  <AlertDialog.Root open={confirmRemove !== null} onOpenChange={(v) => !v && (confirmRemove = null)}>
+    <AlertDialog.Portal>
+      <AlertDialog.Overlay class="ad-overlay" />
+      <AlertDialog.Content class="frame ad-content"
+        onOpenAutoFocus={(e) => { e.preventDefault(); setTimeout(() => document.getElementById('ad-uninstall-action')?.focus(), 20); }}
       >
         <div class="frame__head" style="color: var(--dc-err-text)">
-          <span class="row-flex"><Icon name="trash" size={13} /><span>Uninstall script</span></span>
-          <button class="btn btn--sm btn--ghost btn--icon" onclick={() => (confirmRemove = null)} aria-label="Cancel">
+          <AlertDialog.Title style="margin: 0; font-size: inherit; font-weight: inherit;" class="row-flex">
+            <Icon name="trash" size={13} /><span>Uninstall script</span>
+          </AlertDialog.Title>
+          <AlertDialog.Cancel class="btn btn--sm btn--ghost btn--icon" aria-label="Cancel">
             <Icon name="x" size={13} />
-          </button>
+          </AlertDialog.Cancel>
         </div>
         <div class="frame__body" style="display: flex; flex-direction: column; gap: 10px">
-          <p style="margin: 0; font-size: 13px; color: var(--dc-text-dim); line-height: 1.5">
+          <AlertDialog.Description style="margin: 0; font-size: 13px; color: var(--dc-text-dim); line-height: 1.5">
             Remove <strong style="color: var(--dc-text); font-family: var(--dc-font-mono)">{confirmRemove}</strong> from the device?
-          </p>
+          </AlertDialog.Description>
           <p style="margin: 0; font-size: 12px; color: var(--dc-text-fade); line-height: 1.45">
             The Berry source and any persisted state will be erased. This cannot be undone unless you reinstall from a backup or the gallery.
           </p>
           <div class="row-flex" style="justify-content: flex-end; margin-top: 4px">
-            <button class="btn btn--sm btn--ghost" onclick={() => (confirmRemove = null)}>Cancel</button>
-            <button class="btn btn--sm btn--danger" onclick={() => uninstall(confirmRemove!)} disabled={busy}>
+            <AlertDialog.Cancel class="btn btn--sm btn--ghost">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action
+              id="ad-uninstall-action"
+              class="btn btn--sm btn--danger"
+              onclick={() => uninstall(confirmRemove!)}
+              disabled={busy}
+            >
               <Icon name="trash" size={13} />Uninstall
-            </button>
+            </AlertDialog.Action>
           </div>
         </div>
-      </div>
-    </div>
-  {/if}
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog.Root>
 </div>
 
 <style>
@@ -456,5 +455,14 @@
 
   .resize-corner-editor:hover {
     background: linear-gradient(135deg, transparent 50%, var(--dc-border-hi) 50%);
+  }
+
+  :global(.ad-overlay) {
+    position: fixed; inset: 0; background: rgba(10, 8, 4, 0.55); z-index: 200;
+  }
+  :global(.ad-content) {
+    position: fixed; z-index: 201;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(420px, 92vw);
   }
 </style>
