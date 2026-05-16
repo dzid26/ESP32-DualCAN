@@ -91,6 +91,7 @@ bool can_rx_pop(can_t *c, twai_message_t *out)
 
 int can_poll(can_t *c, uint32_t now_ms)
 {
+    can_bus_off_recover(c->bus_id);
     int rx_count = 0;
     twai_message_t rx;
     while (can_bus_receive(c->bus_id, &rx, 0) == ESP_OK) {

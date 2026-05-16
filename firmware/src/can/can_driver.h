@@ -41,6 +41,10 @@ typedef enum {
     BUS_ERROR   = 4,  /* TWAI bus-off */
 } bus_status_t;
 
+/* If bus is in bus-off state, initiate the 128-recessive-bit recovery sequence.
+ * Call from can_poll() every tick so recovery is not gated on BLE connectivity. */
+void can_bus_off_recover(int bus_id);
+
 /* Compute current bus health. Drains the RX-edge flag internally.
  * `last_rx_ms` — timestamp of the last successfully received TWAI frame (0 = never).
  * `now_ms`     — current time in milliseconds. */

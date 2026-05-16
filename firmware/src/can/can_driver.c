@@ -61,12 +61,15 @@ bus_status_t can_bus_health(int bus_id, uint32_t now_ms, uint32_t last_rx_ms)
     if (last_good && (now_ms - last_good) < 1000)
         return BUS_GOOD;
     if (s_last_edge_ms[bus_id] && (now_ms - s_last_edge_ms[bus_id]) < 1000) {
-        /* TX errors with no RX means we're the source of the bus activity — report
-         * as a hard error rather than rx_error (which implies a bitrate/format mismatch). */
         if (have_st && st.tx_error_counter > 0)
             return BUS_TX_ERR;
         return BUS_RX_ERR;
     }
+    /* GPIO edge window expired, but TWAI error counters are a reliable fallback:
+     * rx_error_counter rises when the controller sees signals it cannot decode
+     * (wrong bitrate, framing errors from a tied bus). Resets to 0 on reinstall. */
+    if (have_st && st.rx_error_counter > 0)
+        return st.tx_error_counter > 0 ? BUS_TX_ERR : BUS_RX_ERR;
     return BUS_IDLE;
 }
 
@@ -253,4 +256,24 @@ esp_err_t can_bus_status(int bus_id, twai_status_info_t *out)
         return ESP_ERR_INVALID_STATE;
     }
     return twai_get_status_info_v2(s_buses[bus_id], out);
+}
+
+void can_bus_off_recover(int bus_id)
+{
+    if (bus_id < 0 || bus_id >= CAN_BUS_COUNT || s_buses[bus_id] == NULL) return;
+
+    static uint32_t s_off_since_ms[CAN_BUS_COUNT];
+    uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000);
+
+    twai_status_info_t st;
+    if (twai_get_status_info_v2(s_buses[bus_id], &st) != ESP_OK) return;
+
+    if (st.state == TWAI_STATE_BUS_OFF) {
+        if (!s_off_since_ms[bus_id])
+            s_off_since_ms[bus_id] = now_ms;            /* mark when bus-off started */
+        else if ((now_ms - s_off_since_ms[bus_id]) >= 1000)
+            twai_initiate_recovery_v2(s_buses[bus_id]); /* 1 s hold-off before recovering */
+    } else if (st.state != TWAI_STATE_RECOVERING) {
+        s_off_since_ms[bus_id] = 0;                     /* clear on RUNNING or STOPPED */
+    }
 }
