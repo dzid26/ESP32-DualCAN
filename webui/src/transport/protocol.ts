@@ -308,6 +308,15 @@ export class Protocol {
     return this.call('trace.stop');
   }
 
+  getBusConfig(): Promise<{ buses: Array<{ bus: number; bitrate_kbps: number }> }> {
+    return this.call('bus.get_config');
+  }
+
+  /** Set bitrate for a single bus. Change is applied immediately (hot reconfigure). */
+  setBusBitrate(bus: number, bitrate_kbps: number): Promise<void> {
+    return this.call('bus.set_bitrate', { bus, bitrate_kbps });
+  }
+
   /** Toggle simulation mode (TX routed to log instead of bus). Optional bus filter. */
   setSimMode(enabled: boolean, bus?: number): Promise<void> {
     const params: Record<string, unknown> = { enabled };

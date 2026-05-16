@@ -54,6 +54,39 @@
     }
   }
 
+  // CAN bus bitrates
+  const BITRATE_OPTIONS = [125, 250, 500, 1000] as const;
+  let busRates = $state<number[]>([500, 500]);
+  let busRatePending = $state<number[]>([500, 500]);
+  let busRateBusy = $state<boolean[]>([false, false]);
+  let busRateError = $state<string | null>(null);
+
+  async function refreshBusConfig(): Promise<void> {
+    if (!app.connected) return;
+    try {
+      const cfg = await app.proto.getBusConfig();
+      busRates = cfg.buses.map(b => b.bitrate_kbps);
+      busRatePending = [...busRates];
+      busRateError = null;
+    } catch (e) {
+      busRateError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function applyBitrate(bus: number): Promise<void> {
+    busRateBusy = busRateBusy.map((v, i) => i === bus ? true : v);
+    busRateError = null;
+    try {
+      await app.proto.setBusBitrate(bus, busRatePending[bus]);
+      busRates = busRates.map((v, i) => i === bus ? busRatePending[bus] : v);
+      app.pushLog(`Bus ${bus} bitrate set to ${busRatePending[bus]} kbps`, 'info', 'settings');
+    } catch (e) {
+      busRateError = e instanceof Error ? e.message : String(e);
+    } finally {
+      busRateBusy = busRateBusy.map((v, i) => i === bus ? false : v);
+    }
+  }
+
   // Device-side Anthropic API key (stored in NVS)
   let deviceKeySet = $state<boolean | null>(null);
   let deviceKeyBusy = $state(false);
@@ -173,12 +206,13 @@
     }
   }
 
-  onMount(() => { refreshInfo(); refreshWifi(); refreshDeviceKey(); });
+  onMount(() => { refreshInfo(); refreshWifi(); refreshDeviceKey(); refreshBusConfig(); });
   $effect(() => {
     if (app.connected) {
       refreshInfo();
       refreshWifi();
       refreshDeviceKey();
+      refreshBusConfig();
     }
   });
 </script>
@@ -243,21 +277,34 @@
   <div class="frame">
     <div class="frame__head">Buses</div>
     <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
-      <div class="field">
-        <span>Sim mode</span>
-        <span class="mono">
-          {app.simulation ? 'ON — TX routed to log' : 'OFF — TX hits the bus'}
-          <span class="ghost" style="margin-left: 6px">(toggle in status bar)</span>
-        </span>
-      </div>
-      <div class="field">
-        <span>Bus 0 bitrate</span>
-        <span class="mono ghost">500 kbps · firmware-fixed (not yet exposed by protocol)</span>
-      </div>
-      <div class="field">
-        <span>Bus 1 bitrate</span>
-        <span class="mono ghost">500 kbps · firmware-fixed</span>
-      </div>
+{#each [0, 1] as bus}
+        <div class="field">
+          <span>Bus {bus} bitrate</span>
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+            <select class="sel"
+              value={busRatePending[bus]}
+              onchange={(e) => { busRatePending = busRatePending.map((v, i) => i === bus ? Number((e.target as HTMLSelectElement).value) : v); }}
+              disabled={!app.connected || busRateBusy[bus]}
+            >
+              {#each BITRATE_OPTIONS as kbps}
+                <option value={kbps}>{kbps} kbps</option>
+              {/each}
+            </select>
+            <button class="btn btn--sm btn--info"
+              onclick={() => applyBitrate(bus)}
+              disabled={!app.connected || busRateBusy[bus] || busRatePending[bus] === busRates[bus]}
+            >
+              {busRateBusy[bus] ? 'Applying…' : 'Apply'}
+            </button>
+            {#if busRates[bus] && busRatePending[bus] !== busRates[bus]}
+              <span class="ghost" style="font-size: 11px">active: {busRates[bus]} kbps</span>
+            {/if}
+          </div>
+        </div>
+      {/each}
+      {#if busRateError}
+        <div class="field"><span></span><span class="mono" style="color: var(--dc-err-text); font-size: 11px">{busRateError}</span></div>
+      {/if}
     </div>
   </div>
 

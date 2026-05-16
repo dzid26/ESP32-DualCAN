@@ -10,7 +10,9 @@
 
 static const char *TAG = "can";
 
-static twai_handle_t s_buses[CAN_BUS_COUNT];
+static twai_handle_t    s_buses[CAN_BUS_COUNT];
+static can_bus_config_t s_configs[CAN_BUS_COUNT];
+static uint32_t         s_bitrates[CAN_BUS_COUNT];
 
 /* RX edge monitor — detects bus activity regardless of TWAI decode success.
  * ISR fires on the first negedge (dominant bit) then disables itself to avoid
@@ -89,6 +91,8 @@ esp_err_t can_bus_install(const can_bus_config_t *cfg)
         return ESP_ERR_INVALID_STATE;
     }
 
+    s_configs[cfg->bus_id] = *cfg;
+
     // TCAN1044: STB high = standby, STB low = normal operation.
     if (cfg->stb_pin != GPIO_NUM_NC) {
         gpio_reset_pin(cfg->stb_pin);
@@ -126,9 +130,72 @@ esp_err_t can_bus_install(const can_bus_config_t *cfg)
         return err;
     }
 
+    /* Register ISR handler and arm interrupt AFTER TWAI install — the driver's
+     * GPIO matrix routing resets the pin interrupt config. */
+    gpio_isr_handler_add(cfg->rx_pin, rx_edge_isr, &s_rx_ctx[cfg->bus_id]);
+    rx_monitor_rearm(cfg->bus_id);
+
+    s_bitrates[cfg->bus_id] = cfg->bitrate_kbps;
     ESP_LOGI(TAG, "bus%d up (tx=%d rx=%d stb=%d, %" PRIu32 " kbit/s)",
              cfg->bus_id, cfg->tx_pin, cfg->rx_pin, cfg->stb_pin,
              cfg->bitrate_kbps);
+    return ESP_OK;
+}
+
+uint32_t can_bus_get_bitrate(int bus_id)
+{
+    if (bus_id < 0 || bus_id >= CAN_BUS_COUNT) return 0;
+    return s_bitrates[bus_id];
+}
+
+esp_err_t can_bus_set_bitrate(int bus_id, uint32_t kbps)
+{
+    if (bus_id < 0 || bus_id >= CAN_BUS_COUNT) return ESP_ERR_INVALID_ARG;
+    if (kbps != 125 && kbps != 250 && kbps != 500 && kbps != 1000)
+        return ESP_ERR_INVALID_ARG;
+    if (s_buses[bus_id] == NULL) return ESP_ERR_INVALID_STATE;
+
+    esp_err_t err;
+    err = twai_stop_v2(s_buses[bus_id]);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "bus%d stop failed: %s", bus_id, esp_err_to_name(err));
+        return err;
+    }
+
+    err = twai_driver_uninstall_v2(s_buses[bus_id]);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "bus%d uninstall failed: %s", bus_id, esp_err_to_name(err));
+        return err;
+    }
+    s_buses[bus_id] = NULL;
+
+    s_configs[bus_id].bitrate_kbps = kbps;
+
+    twai_general_config_t gcfg = TWAI_GENERAL_CONFIG_DEFAULT_V2(
+        bus_id, s_configs[bus_id].tx_pin, s_configs[bus_id].rx_pin, TWAI_MODE_NORMAL);
+    gcfg.tx_queue_len = s_configs[bus_id].tx_queue_len ? s_configs[bus_id].tx_queue_len : 8;
+    gcfg.rx_queue_len = s_configs[bus_id].rx_queue_len ? s_configs[bus_id].rx_queue_len : 16;
+
+    twai_timing_config_t tcfg = timing_for(kbps);
+    twai_filter_config_t fcfg = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+    err = twai_driver_install_v2(&gcfg, &tcfg, &fcfg, &s_buses[bus_id]);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "bus%d reinstall failed: %s", bus_id, esp_err_to_name(err));
+        return err;
+    }
+
+    err = twai_start_v2(s_buses[bus_id]);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "bus%d restart failed: %s", bus_id, esp_err_to_name(err));
+        twai_driver_uninstall_v2(s_buses[bus_id]);
+        s_buses[bus_id] = NULL;
+        return err;
+    }
+
+    rx_monitor_rearm(bus_id);  /* TWAI reinstall clears GPIO intr config; same fix as initial install */
+    s_bitrates[bus_id] = kbps;
+    ESP_LOGI(TAG, "bus%d bitrate changed to %" PRIu32 " kbit/s", bus_id, kbps);
     return ESP_OK;
 }
 

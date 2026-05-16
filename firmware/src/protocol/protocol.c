@@ -217,7 +217,7 @@ static void handle_system_info(int id)
     cJSON_AddStringToObject(result, "fw_version", DORKY_FIRMWARE_VERSION);
     /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
      * features that the firmware doesn't recognise yet. */
-    cJSON_AddNumberToObject(result, "proto_version", 2);
+    cJSON_AddNumberToObject(result, "proto_version", 3);
     send_ok(id, result);
 }
 
@@ -413,7 +413,8 @@ static void handle_wifi_set_creds(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
-#define SECRETS_NS  "secrets"
+#define SECRETS_NS    "secrets"
+#define BUSCONFIG_NS  "busconfig"
 
 static void handle_settings_set_secret(int id, cJSON *req)
 {
@@ -479,6 +480,46 @@ static void handle_settings_clear_secret(int id, cJSON *req)
     if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
         send_err(id, "clear failed");
         return;
+    }
+    send_ok(id, NULL);
+}
+
+static void handle_bus_get_config(int id)
+{
+    cJSON *arr = cJSON_CreateArray();
+    for (int b = 0; b < CAN_BUS_COUNT; b++) {
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddNumberToObject(o, "bus", b);
+        cJSON_AddNumberToObject(o, "bitrate_kbps", (double)can_bus_get_bitrate(b));
+        cJSON_AddItemToArray(arr, o);
+    }
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddItemToObject(result, "buses", arr);
+    send_ok(id, result);
+}
+
+static void handle_bus_set_bitrate(int id, cJSON *req)
+{
+    const cJSON *bus_j  = cJSON_GetObjectItem(req, "bus");
+    const cJSON *kbps_j = cJSON_GetObjectItem(req, "bitrate_kbps");
+    if (!cJSON_IsNumber(bus_j) || !cJSON_IsNumber(kbps_j)) {
+        send_err(id, "missing bus or bitrate_kbps"); return;
+    }
+    int bus = bus_j->valueint;
+    uint32_t kbps = (uint32_t)kbps_j->valuedouble;
+
+    /* Persist first — if the hot reconfigure fails, the saved value is still valid
+     * and the user can reboot to apply it. */
+    char key[4], val[8];
+    snprintf(key, sizeof(key), "b%d", bus);
+    snprintf(val, sizeof(val), "%" PRIu32, kbps);
+    if (state_set(BUSCONFIG_NS, key, val) != ESP_OK) {
+        send_err(id, "NVS write failed"); return;
+    }
+
+    esp_err_t err = can_bus_set_bitrate(bus, kbps);
+    if (err != ESP_OK) {
+        send_err(id, esp_err_to_name(err)); return;
     }
     send_ok(id, NULL);
 }
@@ -682,7 +723,9 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "signal.unsubscribe") == 0)  handle_signal_unsubscribe(id, req);
     else if (strcmp(op_s, "trace.start") == 0)    handle_trace_start(id, req);
     else if (strcmp(op_s, "trace.stop") == 0)     handle_trace_stop(id);
-    else if (strcmp(op_s, "sim.set") == 0)        handle_sim_set(id, req);
+    else if (strcmp(op_s, "bus.get_config") == 0)  handle_bus_get_config(id);
+    else if (strcmp(op_s, "bus.set_bitrate") == 0) handle_bus_set_bitrate(id, req);
+    else if (strcmp(op_s, "sim.set") == 0)         handle_sim_set(id, req);
     else if (strcmp(op_s, "wifi.status") == 0)    handle_wifi_status(id);
     else if (strcmp(op_s, "wifi.set_creds") == 0) handle_wifi_set_creds(id, req);
     else if (strcmp(op_s, "settings.set_secret") == 0)   handle_settings_set_secret(id, req);

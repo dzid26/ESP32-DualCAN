@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "driver/gpio.h"
 #include "driver/twai.h"
@@ -39,19 +40,33 @@ static const char *TAG = "dorky";
 
 static can_t bus0, bus1;
 
+static uint32_t load_bus_bitrate_nvs(int bus_id)
+{
+    char key[4];
+    snprintf(key, sizeof(key), "b%d", bus_id);
+    char buf[8];
+    if (state_get("busconfig", key, buf, sizeof(buf)) == ESP_OK) {
+        uint32_t kbps = (uint32_t)atoi(buf);
+        if (kbps == 125 || kbps == 250 || kbps == 500 || kbps == 1000) return kbps;
+    }
+    return BITRATE_KBPS;
+}
+
 static void hw_init(void)
 {
     gpio_reset_pin(BLUE_LED_GPIO);
     gpio_set_direction(BLUE_LED_GPIO, GPIO_MODE_OUTPUT);
     led_rgb_init();
 
+    state_nvs_init();  /* must come before reading bitrates from NVS */
+
     can_bus_config_t c0 = {
         .bus_id = 0, .tx_pin = PIN_CAN0_TX, .rx_pin = PIN_CAN0_RX,
-        .stb_pin = PIN_CAN0_STB, .bitrate_kbps = BITRATE_KBPS,
+        .stb_pin = PIN_CAN0_STB, .bitrate_kbps = load_bus_bitrate_nvs(0),
     };
     can_bus_config_t c1 = {
         .bus_id = 1, .tx_pin = PIN_CAN1_TX, .rx_pin = PIN_CAN1_RX,
-        .stb_pin = PIN_CAN1_STB, .bitrate_kbps = BITRATE_KBPS,
+        .stb_pin = PIN_CAN1_STB, .bitrate_kbps = load_bus_bitrate_nvs(1),
     };
     ESP_ERROR_CHECK(can_bus_install(&c0));
     ESP_ERROR_CHECK(can_bus_install(&c1));
@@ -59,7 +74,6 @@ static void hw_init(void)
     can_init(&bus0, 0, vehicle_dbc_bin, vehicle_dbc_bin_len, tesla_finalize_tx);
     can_init(&bus1, 1, NULL, 0, NULL);
 
-    state_nvs_init();
     fs_init();
     wifi_init();
 }

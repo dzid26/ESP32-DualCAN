@@ -30,6 +30,9 @@ esp_err_t can_bus_receive(int bus_id, twai_message_t *out,
 
 esp_err_t can_bus_status(int bus_id, twai_status_info_t *out);
 
+uint32_t  can_bus_get_bitrate(int bus_id);
+esp_err_t can_bus_set_bitrate(int bus_id, uint32_t kbps);
+
 typedef enum {
     BUS_IDLE    = 0,  /* no electrical activity */
     BUS_GOOD    = 1,  /* TWAI frames received or TX ACKed */
