@@ -2,6 +2,7 @@
   import { app } from '../../lib/store.svelte';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
+  import { Checkbox, Progress } from 'bits-ui';
   import { onMount } from 'svelte';
 
   const GITHUB_REPO = 'dzid26/ESP32-DualCAN';
@@ -217,6 +218,10 @@
   });
 </script>
 
+{#snippet cbxMark()}
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-11"/></svg>
+{/snippet}
+
 <div style="padding: 12px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px">
   <SectionHead title="Settings" />
 
@@ -353,18 +358,18 @@
 
       <div class="field">
         <span>Confirm vehicle writes</span>
-        <label class="row-flex" style="gap: 6px">
-          <input type="checkbox" checked disabled />
+        <div class="row-flex" style="gap: 6px">
+          <Checkbox.Root class="cbx" checked={true} disabled={true}>{@render cbxMark()}</Checkbox.Root>
           <span style="font-size: 12px; color: var(--dc-text-fade)">Always on — agent never auto-fires events that touch the bus</span>
-        </label>
+        </div>
       </div>
-      <label class="field">
+      <div class="field">
         <span>Block while moving</span>
-        <label class="row-flex" style="gap: 6px">
-          <input type="checkbox" checked />
+        <div class="row-flex" style="gap: 6px">
+          <Checkbox.Root class="cbx" checked={true}>{@render cbxMark()}</Checkbox.Root>
           <span style="font-size: 12px">Refuse vehicle writes when speed signal &gt; 5 mph</span>
-        </label>
-      </label>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -452,14 +457,10 @@
 
       <div class="field">
         <span>After update</span>
-        <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; color: var(--dc-text-dim)">
-          <input
-            type="checkbox"
-            bind:checked={app.rebootAfterUpdate}
-            disabled={!app.connected}
-          />
+        <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dc-text-dim)">
+          <Checkbox.Root class="cbx" bind:checked={app.rebootAfterUpdate} disabled={!app.connected}>{@render cbxMark()}</Checkbox.Root>
           Reboot automatically
-        </label>
+        </div>
       </div>
 
       <!-- OTA progress -->
@@ -467,9 +468,9 @@
         <div class="field">
           <span>Flash progress</span>
           <div style="display: flex; flex-direction: column; gap: 6px; width: 100%">
-            <div class="ota-progress-wrap">
+            <Progress.Root value={app.otaProgress} class="ota-progress-wrap">
               <div class="ota-progress-bar" style="width: {app.otaProgress}%"></div>
-            </div>
+            </Progress.Root>
             <div style="display: flex; align-items: center; gap: 8px">
               <span class="mono" style="font-size: 11px; color: {app.otaDone ? 'var(--dc-ok)' : 'var(--dc-text-dim)'}">
                 {app.otaStatus}
@@ -521,20 +522,6 @@
   .field {
     display: grid; grid-template-columns: 140px 1fr; gap: 8px;
     align-items: center; font-size: 12px; color: var(--dc-text-dim);
-  }
-
-  .ota-progress-wrap {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: var(--dc-bg-2, #222);
-    overflow: hidden;
-  }
-  .ota-progress-bar {
-    height: 100%;
-    border-radius: 3px;
-    background: var(--dc-accent, #6e8efb);
-    transition: width 0.15s ease;
   }
 
   .ota-release-card {

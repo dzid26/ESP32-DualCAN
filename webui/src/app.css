@@ -372,6 +372,28 @@ button { font: inherit; color: inherit; }
 .tog--on { background: var(--dc-ok-tint); border-color: var(--dc-ok); }
 .tog--on .tog__knob { left: 13px; background: var(--dc-ok); }
 
+/* ===== Checkbox ===== */
+.cbx {
+  width: 14px; height: 14px; border-radius: 3px;
+  border: 1.5px solid var(--dc-border-2); background: transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0; flex-shrink: 0;
+  color: transparent;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+.cbx[data-state="checked"] { background: var(--dc-accent); border-color: var(--dc-accent); color: #fff; }
+.cbx[data-disabled] { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+/* ===== OTA progress bar ===== */
+.ota-progress-wrap {
+  width: 100%; height: 6px; border-radius: 3px;
+  background: var(--dc-bg-2, #222); overflow: hidden;
+}
+.ota-progress-bar {
+  height: 100%; border-radius: 3px;
+  background: var(--dc-accent, #6e8efb); transition: width 0.15s ease;
+}
+
 /* ===== Empty state ===== */
 .empty {
   padding: 28px; text-align: center;
