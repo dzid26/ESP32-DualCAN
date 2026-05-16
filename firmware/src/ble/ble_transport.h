@@ -17,3 +17,9 @@ int dorky_ble_notify(const uint8_t *data, size_t len);
 
 /* Returns true if a client is currently connected. */
 bool dorky_ble_connected(void);
+
+/* Returns true while the pairing window is open (new, unbonded devices accepted). */
+bool dorky_ble_pairing_open(void);
+
+/* Open the pairing window for 60 s. Safe to call from any task. */
+void dorky_ble_unlock_pairing(void);

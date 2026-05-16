@@ -27,6 +27,7 @@
 static const char *TAG = "dorky";
 
 #define BLUE_LED_GPIO        GPIO_NUM_15
+#define BOOT_BTN_GPIO        GPIO_NUM_9
 
 #define PIN_CAN0_TX     GPIO_NUM_2
 #define PIN_CAN0_RX     GPIO_NUM_1
@@ -56,6 +57,11 @@ static void hw_init(void)
 {
     gpio_reset_pin(BLUE_LED_GPIO);
     gpio_set_direction(BLUE_LED_GPIO, GPIO_MODE_OUTPUT);
+
+    gpio_reset_pin(BOOT_BTN_GPIO);
+    gpio_set_direction(BOOT_BTN_GPIO, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(BOOT_BTN_GPIO, GPIO_PULLUP_ONLY);
+
     led_rgb_init();
 
     state_nvs_init();  /* must come before reading bitrates from NVS */
@@ -122,16 +128,26 @@ void app_main(void)
             }
         }
 
+        /* BOOT button (active-low) — falling edge opens pairing window. */
+        static bool btn_prev = true;
+        bool btn_now = gpio_get_level(BOOT_BTN_GPIO);
+        if (btn_prev && !btn_now) {
+            dorky_ble_unlock_pairing();
+        }
+        btn_prev = btn_now;
+
+        /* Blue LED: solid when pairing window is open, blinks on CAN activity. */
         static uint32_t led_on_until = 0;
         static uint32_t led_last_blink = 0;
         if (rx_count > 0 && (now - led_last_blink) >= 200) {
             led_on_until = now + 50;
             led_last_blink = now;
         }
-        gpio_set_level(BLUE_LED_GPIO, now < led_on_until ? 1 : 0);
+        gpio_set_level(BLUE_LED_GPIO,
+                       dorky_ble_pairing_open() || now < led_on_until ? 1 : 0);
 
         if ((tick % 1000) == 0) {
-            ESP_LOGI(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
+            ESP_LOGD(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
                      tick, (uint32_t)esp_get_free_heap_size());
             
             static char stats[1024];

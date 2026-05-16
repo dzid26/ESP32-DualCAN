@@ -6,15 +6,26 @@
  *   - TX (notify): server sends responses and event notifications.
  *
  * Uses NimBLE (the only BLE stack available on ESP32-C6).
+ *
+ * Pairing security:
+ *   - Locked by default (or open when bond store is empty).
+ *   - Non-bonded connections are silently held for 2.5 s, then sent a
+ *     rejection event and terminated. GATT writes are dropped during this
+ *     window so no commands execute.
+ *   - sm_bonding is toggled on/off with the pairing window so rogue
+ *     devices cannot bond during the rejection hold.
+ *   - dorky_ble_unlock_pairing() opens a 60 s window (BOOT button / UI).
  */
 #include "ble/ble_transport.h"
 
+#include <string.h>
 #include "esp_log.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 #include "host/ble_gatt.h"
+#include "host/ble_store.h"
 #include "host/util/util.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
@@ -38,18 +49,89 @@ static const ble_uuid128_t DORKY_TX_UUID =
     BLE_UUID128_INIT(0x9e, 0xca, 0xdc, 0x24, 0x0e, 0xe5, 0xa9, 0xe0,
                      0x93, 0xf3, 0xa3, 0xb5, 0x03, 0x00, 0x40, 0x6e);
 
-static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+static uint16_t s_conn_handle  = BLE_HS_CONN_HANDLE_NONE;
+static uint16_t s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_tx_attr_handle;
 static ble_request_cb_t s_on_request;
 static void *s_on_request_ctx;
-static struct ble_npl_callout s_adv_callout;
+static bool s_pairing_open = false;
 
-/* ---- GATT access handler ---- */
+static struct ble_npl_callout s_adv_callout;
+static struct ble_npl_callout s_reject_callout;
+static struct ble_npl_callout s_lock_callout;
+
+/* ---- Bond helpers ---- */
+
+static bool peer_is_bonded(uint16_t conn_handle)
+{
+    struct ble_gap_conn_desc desc;
+    if (ble_gap_conn_find(conn_handle, &desc) != 0) return false;
+    struct ble_store_key_sec key;
+    memset(&key, 0, sizeof key);
+    key.peer_addr = desc.peer_id_addr;
+    struct ble_store_value_sec val;
+    return ble_store_read_peer_sec(&key, &val) == 0;
+}
+
+/* ---- Rejection frame ---- */
+
+/* Sends a framed JSON rejection event on TX. The WebUI decodes this
+ * and shows a "not paired" message. Frame format mirrors protocol.c:
+ * [4-byte LE length][JSON bytes]. */
+static void send_rejection_frame(void)
+{
+    static const char json[] = "{\"type\":\"rejected\",\"reason\":\"not_paired\"}";
+    const size_t jlen = sizeof(json) - 1;
+    uint8_t frame[4 + sizeof(json)];
+    frame[0] = (uint8_t)(jlen & 0xFF);
+    frame[1] = (uint8_t)((jlen >> 8) & 0xFF);
+    frame[2] = 0;
+    frame[3] = 0;
+    memcpy(frame + 4, json, jlen);
+    dorky_ble_notify(frame, 4 + jlen);
+}
+
+/* ---- Callout callbacks ---- */
+
+static void reject_callout_fn(struct ble_npl_event *ev)
+{
+    uint16_t h = s_reject_handle;
+    s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
+    /* Guard: the non-bonded device may have already been kicked by a newer
+     * connection; in that case s_conn_handle no longer matches. */
+    if (h == BLE_HS_CONN_HANDLE_NONE || h != s_conn_handle) return;
+    ESP_LOGI(TAG, "rejecting non-bonded handle=%d", h);
+    send_rejection_frame();
+    ble_gap_terminate(h, BLE_ERR_AUTH_FAIL);
+}
+
+static void lock_callout_fn(struct ble_npl_event *ev)
+{
+    s_pairing_open = false;
+    ble_hs_cfg.sm_bonding = 0;
+    ESP_LOGI(TAG, "pairing window closed");
+}
+
+static int gap_event_cb(struct ble_gap_event *event, void *arg);
+static void start_advertising(void);
+
+static void adv_callout_fn(struct ble_npl_event *ev) { start_advertising(); }
+
+static void schedule_advertising(void)
+{
+    ble_npl_callout_reset(&s_adv_callout, ble_npl_time_ms_to_ticks32(200));
+}
+
+/* ---- Service definition ---- */
 
 static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                           struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        /* Drop writes from non-bonded devices when locked — rejection
+         * notification comes later via s_reject_callout. */
+        if (!s_pairing_open && !peer_is_bonded(conn_handle)) return 0;
+
         struct os_mbuf *om = ctxt->om;
         uint16_t len = OS_MBUF_PKTLEN(om);
         uint8_t buf[512];
@@ -63,8 +145,6 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
     }
     return BLE_ATT_ERR_UNLIKELY;
 }
-
-/* ---- Service definition ---- */
 
 static const struct ble_gatt_svc_def gatt_svcs[] = {
     {
@@ -89,16 +169,6 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
 };
 
 /* ---- GAP event handler ---- */
-
-static int gap_event_cb(struct ble_gap_event *event, void *arg);
-static void start_advertising(void);
-
-static void adv_callout_fn(struct ble_npl_event *ev) { start_advertising(); }
-
-static void schedule_advertising(void)
-{
-    ble_npl_callout_reset(&s_adv_callout, ble_npl_time_ms_to_ticks32(200));
-}
 
 static void start_advertising(void)
 {
@@ -140,8 +210,18 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
             }
             s_conn_handle = event->connect.conn_handle;
-            ESP_LOGI(TAG, "connected (handle=%d)", s_conn_handle);
             ble_att_set_preferred_mtu(512);
+
+            if (!s_pairing_open && !peer_is_bonded(s_conn_handle)) {
+                ESP_LOGI(TAG, "connected (handle=%d) — not bonded, will reject in 2.5s",
+                         s_conn_handle);
+                s_reject_handle = s_conn_handle;
+                ble_npl_callout_reset(&s_reject_callout,
+                                      ble_npl_time_ms_to_ticks32(2500));
+            } else {
+                ESP_LOGI(TAG, "connected (handle=%d)", s_conn_handle);
+            }
+
             /* Defer advertising restart — HCI buffers are busy right after connect. */
             schedule_advertising();
         } else if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
@@ -149,15 +229,19 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         }
         break;
 
-    case BLE_GAP_EVENT_DISCONNECT:
-        ESP_LOGI(TAG, "disconnected handle=%d (reason=%d)",
-                 event->disconnect.conn.conn_handle, event->disconnect.reason);
-        if (event->disconnect.conn.conn_handle == s_conn_handle) {
+    case BLE_GAP_EVENT_DISCONNECT: {
+        uint16_t h = event->disconnect.conn.conn_handle;
+        ESP_LOGI(TAG, "disconnected handle=%d (reason=%d)", h, event->disconnect.reason);
+        if (h == s_reject_handle) {
+            ble_npl_callout_stop(&s_reject_callout);
+            s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
+        }
+        if (h == s_conn_handle) {
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             start_advertising();
         }
-        /* else: kicked old connection — ignore, current handle still valid. */
         break;
+    }
 
     case BLE_GAP_EVENT_ADV_COMPLETE:
         start_advertising();
@@ -185,9 +269,16 @@ static void on_sync(void)
 {
     uint8_t own_addr_type;
     ble_hs_id_infer_auto(0, &own_addr_type);
+
+    /* Start open if no bonds exist yet (first boot / after NVS erase). */
+    int bond_count = 0;
+    ble_store_util_count(BLE_STORE_OBJ_TYPE_PEER_SEC, &bond_count);
+    s_pairing_open = (bond_count == 0);
+    ble_hs_cfg.sm_bonding = s_pairing_open ? 1 : 0;
+
     start_advertising();
-    ESP_LOGI(TAG, "BLE advertising started as \"%s\"",
-             ble_svc_gap_device_name());
+    ESP_LOGI(TAG, "BLE ready as \"%s\" — pairing %s (%d bond(s))",
+             ble_svc_gap_device_name(), s_pairing_open ? "OPEN" : "locked", bond_count);
 }
 
 static void on_reset(int reason)
@@ -218,7 +309,14 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
     esp_log_level_set("NimBLE", ESP_LOG_WARN);
 
     ble_hs_cfg.reset_cb = on_reset;
-    ble_hs_cfg.sync_cb = on_sync;
+    ble_hs_cfg.sync_cb  = on_sync;
+
+    /* Security manager: Just Works, bonding toggled by pairing window. */
+    ble_hs_cfg.sm_io_cap        = BLE_HS_IO_NO_INPUT_OUTPUT;
+    ble_hs_cfg.sm_sc            = 1;
+    ble_hs_cfg.sm_bonding       = 0;   /* set to 1 in on_sync if no bonds exist */
+    ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
+    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
 
     ble_svc_gap_init();
     ble_svc_gatt_init();
@@ -230,7 +328,9 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
 
     ble_svc_gap_device_name_set("Dorky");
 
-    ble_npl_callout_init(&s_adv_callout, nimble_port_get_dflt_eventq(), adv_callout_fn, NULL);
+    ble_npl_callout_init(&s_adv_callout,    nimble_port_get_dflt_eventq(), adv_callout_fn,    NULL);
+    ble_npl_callout_init(&s_reject_callout, nimble_port_get_dflt_eventq(), reject_callout_fn, NULL);
+    ble_npl_callout_init(&s_lock_callout,   nimble_port_get_dflt_eventq(), lock_callout_fn,   NULL);
 
     nimble_port_freertos_init(nimble_host_task);
 
@@ -255,4 +355,17 @@ int dorky_ble_notify(const uint8_t *data, size_t len)
 bool dorky_ble_connected(void)
 {
     return s_conn_handle != BLE_HS_CONN_HANDLE_NONE;
+}
+
+bool dorky_ble_pairing_open(void)
+{
+    return s_pairing_open;
+}
+
+void dorky_ble_unlock_pairing(void)
+{
+    s_pairing_open = true;
+    ble_hs_cfg.sm_bonding = 1;
+    ble_npl_callout_reset(&s_lock_callout, ble_npl_time_ms_to_ticks32(60000));
+    ESP_LOGI(TAG, "pairing window open for 60 s");
 }
