@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include "esp_log.h"
+#include "esp_system.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
@@ -62,6 +63,7 @@ static bool s_conn_authorized = false;
 static struct ble_npl_callout s_adv_callout;
 static struct ble_npl_callout s_reject_callout;
 static struct ble_npl_callout s_lock_callout;
+static struct ble_npl_callout s_adv_watchdog;
 
 /* ---- Bond helpers ---- */
 
@@ -96,6 +98,27 @@ static void lock_callout_fn(struct ble_npl_event *ev)
 
 static int gap_event_cb(struct ble_gap_event *event, void *arg);
 static void start_advertising(void);
+
+/* Periodic safety net: if no client is connected and advertising has stopped
+ * for any reason (failed start, controller stall, race condition), restart it.
+ * Critical for an in-car device where the BOOT button isn't accessible.
+ * If we can't recover for 6 consecutive ticks (60 s), reboot the device. */
+static void adv_watchdog_fn(struct ble_npl_event *ev)
+{
+    static uint8_t stuck_ticks = 0;
+    if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE && !ble_gap_adv_active()) {
+        ESP_LOGW(TAG, "watchdog: advertising stopped while idle, restarting (tick %u)",
+                 (unsigned)stuck_ticks);
+        start_advertising();
+        if (++stuck_ticks >= 6) {
+            ESP_LOGE(TAG, "watchdog: BLE unrecoverable for 60s, rebooting");
+            esp_restart();
+        }
+    } else {
+        stuck_ticks = 0;
+    }
+    ble_npl_callout_reset(&s_adv_watchdog, ble_npl_time_ms_to_ticks32(10000));
+}
 
 static void adv_callout_fn(struct ble_npl_event *ev) { start_advertising(); }
 
@@ -289,6 +312,7 @@ static void on_sync(void)
     }
 
     start_advertising();
+    ble_npl_callout_reset(&s_adv_watchdog, ble_npl_time_ms_to_ticks32(10000));
     ESP_LOGI(TAG, "BLE ready as \"%s\" — pairing %s (%d bond(s))",
              ble_svc_gap_device_name(), s_pairing_open ? "OPEN" : "locked", bond_count);
 }
@@ -343,6 +367,7 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
     ble_npl_callout_init(&s_adv_callout,    nimble_port_get_dflt_eventq(), adv_callout_fn,    NULL);
     ble_npl_callout_init(&s_reject_callout, nimble_port_get_dflt_eventq(), reject_callout_fn, NULL);
     ble_npl_callout_init(&s_lock_callout,   nimble_port_get_dflt_eventq(), lock_callout_fn,   NULL);
+    ble_npl_callout_init(&s_adv_watchdog,   nimble_port_get_dflt_eventq(), adv_watchdog_fn,   NULL);
 
     nimble_port_freertos_init(nimble_host_task);
 
