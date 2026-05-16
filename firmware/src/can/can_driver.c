@@ -54,7 +54,7 @@ bus_status_t can_bus_health(int bus_id, uint32_t now_ms, uint32_t last_rx_ms)
 
     twai_status_info_t st;
     bool have_st = (can_bus_status(bus_id, &st) == ESP_OK);
-    if (have_st && st.state == TWAI_STATE_BUS_OFF)
+    if (have_st && (st.state == TWAI_STATE_BUS_OFF || st.state == TWAI_STATE_RECOVERING))
         return BUS_ERROR;
     /* A successful TX (ACKed by the bus) is as good as a received frame. */
     uint32_t last_good = last_rx_ms > s_last_tx_ms[bus_id] ? last_rx_ms : s_last_tx_ms[bus_id];
@@ -155,7 +155,18 @@ esp_err_t can_bus_set_bitrate(int bus_id, uint32_t kbps)
         return ESP_ERR_INVALID_ARG;
     if (s_buses[bus_id] == NULL) return ESP_ERR_INVALID_STATE;
 
+    /* twai_stop_v2 requires RUNNING state. If the bus is in BUS_OFF (or already
+     * RECOVERING), initiate recovery first — the driver needs to reach RUNNING
+     * before it can be stopped. Recovery takes ≤128 bit-periods (~1 ms at 125 kbps). */
     esp_err_t err;
+    twai_status_info_t pre;
+    if (twai_get_status_info_v2(s_buses[bus_id], &pre) == ESP_OK) {
+        if (pre.state == TWAI_STATE_BUS_OFF)
+            twai_initiate_recovery_v2(s_buses[bus_id]);
+        if (pre.state == TWAI_STATE_BUS_OFF || pre.state == TWAI_STATE_RECOVERING)
+            vTaskDelay(pdMS_TO_TICKS(10));  /* wait for RUNNING */
+    }
+
     err = twai_stop_v2(s_buses[bus_id]);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "bus%d stop failed: %s", bus_id, esp_err_to_name(err));

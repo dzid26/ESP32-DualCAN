@@ -40,7 +40,8 @@ static QueueHandle_t    s_frame_queue;
 static uint8_t          s_trace_buses;
 
 /* ---- bus status monitor ---- */
-static const char *const BUS_STATUS_STR[] = { "idle", "good", "rx_error", "tx_error", "error" };
+/* Order must mirror bus_status_t in can_driver.h */
+static const char *const BUS_STATUS_STR[] = { "idle", "good", "tx_error", "rx_error", "error" };
 static uint8_t  s_bus_status[CAN_BUS_COUNT];   /* initialised to 0xFF in protocol_init */
 static bool     s_ble_was_connected;
 static int      s_connect_pushes;   /* retry counter — push N times after reconnect */
