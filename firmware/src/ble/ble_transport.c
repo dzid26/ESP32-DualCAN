@@ -8,13 +8,15 @@
  * Uses NimBLE (the only BLE stack available on ESP32-C6).
  *
  * Pairing security:
- *   - Locked by default (or open when bond store is empty).
- *   - Non-bonded connections are silently held for 2.5 s, then sent a
- *     rejection event and terminated. GATT writes are dropped during this
- *     window so no commands execute.
- *   - sm_bonding is toggled on/off with the pairing window so rogue
- *     devices cannot bond during the rejection hold.
- *   - dorky_ble_unlock_pairing() opens a 60 s window (BOOT button / UI).
+ *   - Locked by default; only `s_conn_authorized` sessions can write GATT.
+ *     A connect is authorized when the pairing window is open OR the peer
+ *     is BLE-bonded (peer_is_bonded checks the NVS bond store).
+ *   - Unauthorized connections are silently terminated after 100 ms.
+ *   - dorky_ble_unlock_pairing() opens a 60 s window (BOOT button / UI),
+ *     during which any device may connect and is offered BLE pairing via
+ *     ble_gap_security_initiate (needed for Android to prompt the user).
+ *   - sm_bonding follows the window so unauthorized devices can never bond.
+ *   - On bond establishment (ENC_CHANGE success) the window closes early.
  */
 #include "ble/ble_transport.h"
 
@@ -49,12 +51,13 @@ static const ble_uuid128_t DORKY_TX_UUID =
     BLE_UUID128_INIT(0x9e, 0xca, 0xdc, 0x24, 0x0e, 0xe5, 0xa9, 0xe0,
                      0x93, 0xf3, 0xa3, 0xb5, 0x03, 0x00, 0x40, 0x6e);
 
-static uint16_t s_conn_handle  = BLE_HS_CONN_HANDLE_NONE;
+static uint16_t s_conn_handle   = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_tx_attr_handle;
 static ble_request_cb_t s_on_request;
 static void *s_on_request_ctx;
-static bool s_pairing_open = false;
+static bool s_pairing_open    = false;
+static bool s_conn_authorized = false;
 
 static struct ble_npl_callout s_adv_callout;
 static struct ble_npl_callout s_reject_callout;
@@ -73,35 +76,14 @@ static bool peer_is_bonded(uint16_t conn_handle)
     return ble_store_read_peer_sec(&key, &val) == 0;
 }
 
-/* ---- Rejection frame ---- */
-
-/* Sends a framed JSON rejection event on TX. The WebUI decodes this
- * and shows a "not paired" message. Frame format mirrors protocol.c:
- * [4-byte LE length][JSON bytes]. */
-static void send_rejection_frame(void)
-{
-    static const char json[] = "{\"type\":\"rejected\",\"reason\":\"not_paired\"}";
-    const size_t jlen = sizeof(json) - 1;
-    uint8_t frame[4 + sizeof(json)];
-    frame[0] = (uint8_t)(jlen & 0xFF);
-    frame[1] = (uint8_t)((jlen >> 8) & 0xFF);
-    frame[2] = 0;
-    frame[3] = 0;
-    memcpy(frame + 4, json, jlen);
-    dorky_ble_notify(frame, 4 + jlen);
-}
-
 /* ---- Callout callbacks ---- */
 
 static void reject_callout_fn(struct ble_npl_event *ev)
 {
     uint16_t h = s_reject_handle;
     s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
-    /* Guard: the non-bonded device may have already been kicked by a newer
-     * connection; in that case s_conn_handle no longer matches. */
-    if (h == BLE_HS_CONN_HANDLE_NONE || h != s_conn_handle) return;
-    ESP_LOGI(TAG, "rejecting non-bonded handle=%d", h);
-    send_rejection_frame();
+    if (h == BLE_HS_CONN_HANDLE_NONE) return;
+    ESP_LOGI(TAG, "rejecting unauthorized handle=%d", h);
     ble_gap_terminate(h, BLE_ERR_AUTH_FAIL);
 }
 
@@ -128,9 +110,8 @@ static int gatt_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                           struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
-        /* Drop writes from non-bonded devices when locked — rejection
-         * notification comes later via s_reject_callout. */
-        if (!s_pairing_open && !peer_is_bonded(conn_handle)) return 0;
+        /* Drop writes from any connection that's not the active authorized session. */
+        if (conn_handle != s_conn_handle || !s_conn_authorized) return 0;
 
         struct os_mbuf *om = ctxt->om;
         uint16_t len = OS_MBUF_PKTLEN(om);
@@ -205,29 +186,59 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
-            if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
-                ESP_LOGI(TAG, "new connection, kicking handle=%d", s_conn_handle);
-                ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-            }
-            s_conn_handle = event->connect.conn_handle;
+            uint16_t new_h = event->connect.conn_handle;
             ble_att_set_preferred_mtu(512);
+            bool authorized = s_pairing_open || peer_is_bonded(new_h);
 
-            if (!s_pairing_open && !peer_is_bonded(s_conn_handle)) {
-                ESP_LOGI(TAG, "connected (handle=%d) — not bonded, will reject in 2.5s",
-                         s_conn_handle);
-                s_reject_handle = s_conn_handle;
-                ble_npl_callout_reset(&s_reject_callout,
-                                      ble_npl_time_ms_to_ticks32(2500));
+            if (!authorized && s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+                /* Unauthorized new device — reject it, keep the existing session. */
+                ESP_LOGI(TAG, "connected (handle=%d) — unauthorized, rejecting without kick",
+                         new_h);
+                s_reject_handle = new_h;
+                ble_npl_callout_reset(&s_reject_callout, ble_npl_time_ms_to_ticks32(100));
             } else {
-                ESP_LOGI(TAG, "connected (handle=%d)", s_conn_handle);
+                if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+                    ESP_LOGI(TAG, "new authorized connection, kicking handle=%d", s_conn_handle);
+                    ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+                }
+                s_conn_handle = new_h;
+                if (!authorized) {
+                    ESP_LOGI(TAG, "connected (handle=%d) — not bonded, rejecting in 2.5s", new_h);
+                    s_conn_authorized = false;
+                    s_reject_handle = new_h;
+                    ble_npl_callout_reset(&s_reject_callout, ble_npl_time_ms_to_ticks32(100));
+                } else {
+                    ESP_LOGI(TAG, "connected (handle=%d) — authorized", new_h);
+                    s_conn_authorized = true;
+                    if (s_pairing_open) {
+                        /* Trigger OS pairing dialog on the central (Android bonds properly;
+                         * BlueZ/Chrome ignores it gracefully — connection still works). */
+                        ble_gap_security_initiate(new_h);
+                        s_pairing_open = false;
+                        ble_npl_callout_stop(&s_lock_callout);
+                    }
+                }
             }
 
-            /* Defer advertising restart — HCI buffers are busy right after connect. */
             schedule_advertising();
         } else if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
             start_advertising();
         }
         break;
+
+    case BLE_GAP_EVENT_ENC_CHANGE: {
+        uint16_t h = event->enc_change.conn_handle;
+        if (h != s_conn_handle) break;
+        bool bonded = peer_is_bonded(h);
+        ESP_LOGI(TAG, "enc_change handle=%d status=%d bonded=%d",
+                 h, event->enc_change.status, bonded);
+        if (event->enc_change.status == 0 && s_pairing_open && bonded) {
+            s_pairing_open = false;
+            ble_npl_callout_stop(&s_lock_callout);
+            ESP_LOGI(TAG, "bond established, pairing window closed");
+        }
+        break;
+    }
 
     case BLE_GAP_EVENT_DISCONNECT: {
         uint16_t h = event->disconnect.conn.conn_handle;
@@ -238,6 +249,7 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         }
         if (h == s_conn_handle) {
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+            s_conn_authorized = false;
             start_advertising();
         }
         break;
@@ -270,11 +282,11 @@ static void on_sync(void)
     uint8_t own_addr_type;
     ble_hs_id_infer_auto(0, &own_addr_type);
 
-    /* Start open if no bonds exist yet (first boot / after NVS erase). */
     int bond_count = 0;
     ble_store_util_count(BLE_STORE_OBJ_TYPE_PEER_SEC, &bond_count);
-    s_pairing_open = (bond_count == 0);
-    ble_hs_cfg.sm_bonding = s_pairing_open ? 1 : 0;
+    if (bond_count == 0) {
+        dorky_ble_unlock_pairing();
+    }
 
     start_advertising();
     ESP_LOGI(TAG, "BLE ready as \"%s\" — pairing %s (%d bond(s))",
