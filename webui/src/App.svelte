@@ -2,6 +2,7 @@
   import { app } from './lib/store.svelte';
   import Shell from './components/Shell.svelte';
   import CarPicker from './components/CarPicker.svelte';
+  import Toast from './components/Toast.svelte';
 
   $effect(() => {
     if (!app.connected) return;
@@ -50,3 +51,5 @@
   onClear={() => app.clearCar()}
   onClose={() => (app.carPickerOpen = false)}
 />
+
+<Toast />

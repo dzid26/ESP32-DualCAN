@@ -7,6 +7,7 @@ import { Protocol } from '../transport/protocol';
 import type { BusStatus } from '../transport/protocol';
 import type { LogLine } from './sampleData';
 import { type Car, loadCar, saveCar } from './cars';
+import { toast } from './toast.svelte';
 
 // Bump in lockstep with firmware proto_version when ops change.
 const UI_PROTO_VERSION = 4;
@@ -142,6 +143,22 @@ class AppState {
 
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
+    this.ble.onDisconnect((kind) => {
+      if (kind === 'auth_fail') {
+        toast.show({
+          severity: 'error',
+          message: 'Dorky rejected the connection. Most often the OS has a stale bond — remove "Dorky" from your Bluetooth settings, then reconnect.',
+          link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
+          duration: 12000,
+        });
+      } else if (kind === 'unexpected') {
+        toast.show({
+          severity: 'warn',
+          message: 'Dorky disconnected unexpectedly. Out of range, powered off, or another client took over.',
+          duration: 6000,
+        });
+      }
+    });
     const IDF_LEVEL: Record<string, LogLine['level']> = {
       I: 'info', W: 'warn', E: 'error', D: 'debug', V: 'debug',
     };
@@ -205,6 +222,11 @@ class AppState {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.connectError = msg;
+      /* Skip the toast when the user just cancelled the browser's BLE picker —
+       * that's not an error worth surfacing. */
+      if (!/cancell?ed|User cancelled/i.test(msg)) {
+        toast.show({ severity: 'error', message: `Connect failed: ${msg}`, duration: 8000 });
+      }
       this.pushLog(`connect failed: ${msg}`, 'error', 'ble');
     } finally {
       this.connecting = false;
