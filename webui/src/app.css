@@ -382,7 +382,9 @@ button { font: inherit; color: inherit; }
   transition: background 0.1s, border-color 0.1s, color 0.1s;
 }
 .cbx[data-state="checked"] { background: var(--dc-accent); border-color: var(--dc-accent); color: #fff; }
-.cbx[data-disabled] { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+.cbx[data-disabled] { cursor: not-allowed; pointer-events: none; }
+.cbx[data-disabled][data-state="checked"] { background: var(--dc-surface-3); border-color: var(--dc-border-2); color: var(--dc-text-ghost); }
+.cbx[data-disabled][data-state="unchecked"] { opacity: 0.45; }
 
 /* ===== OTA progress bar ===== */
 .ota-progress-wrap {
