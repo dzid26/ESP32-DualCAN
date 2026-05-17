@@ -286,6 +286,13 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         if (h == s_conn_handle) {
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             s_conn_authorized = false;
+            /* If the connection ended without producing a bond and we still
+             * have zero bonds, the CONNECT handler's optimistic close left the
+             * pairing window shut. Re-open indefinitely so the user can retry
+             * (e.g. after wiping the stale OS bond that caused a 517). */
+            if (!s_pairing_open && dorky_ble_bond_count() == 0) {
+                open_pairing_window(false);
+            }
             /* Defer 200 ms so HCI finishes processing the disconnect — calling
              * adv_start synchronously here often returns ENOMEM. */
             schedule_advertising();
