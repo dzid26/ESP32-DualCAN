@@ -53,6 +53,12 @@ type Pending = {
   reject: (err: Error) => void;
 };
 
+/** ESP_LOG output (ANSI-stripped "L (ts) tag: message" line). */
+export interface RawLogPush   { raw: string }
+/** Berry print() output (already structured). */
+export interface BerryLogPush { level: string; src: string; msg: string }
+export type LogPush = RawLogPush | BerryLogPush;
+
 export class Protocol {
   private transport: Transport;
   private rxBuf = new Uint8Array(0);
@@ -60,13 +66,13 @@ export class Protocol {
   private nextId = 1;
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
-  private logCallback: ((msg: string) => void) | null = null;
+  private logCallback: ((entry: LogPush) => void) | null = null;
   private traceCallback: ((f: TraceFrame) => void) | null = null;
   private signalCallback: ((s: SignalUpdate) => void) | null = null;
   private busStatusCallback: ((u: BusStatusUpdate) => void) | null = null;
 
-  /** Register a callback for Berry print() log lines pushed from the device. */
-  onLog(cb: (msg: string) => void) { this.logCallback = cb; }
+  /** Register a callback for device log pushes (ESP_LOG and Berry print). */
+  onLog(cb: (entry: LogPush) => void) { this.logCallback = cb; }
 
   /** Register a callback for trace frames pushed by the device. Pass null to clear. */
   onTrace(cb: ((f: TraceFrame) => void) | null) { this.traceCallback = cb; }
@@ -201,7 +207,11 @@ export class Protocol {
         // Push frame: firmware-initiated, no id, has a type field.
         if (resp.type !== undefined) {
           if (resp.type === 'log' && this.logCallback) {
-            this.logCallback(resp.msg ?? '');
+            this.logCallback(
+              resp.raw != null
+                ? { raw: resp.raw }
+                : { level: resp.level ?? 'info', src: resp.src ?? 'berry', msg: resp.msg ?? '' }
+            );
           } else if (resp.type === 'trace') {
             if (this.traceCallback) {
               const data = new Uint8Array(((resp.data ?? '') as string).match(/.{2}/g)?.map((h: string) => parseInt(h, 16)) ?? []);

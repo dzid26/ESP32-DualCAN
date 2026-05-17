@@ -382,11 +382,7 @@ int dorky_ble_notify(const uint8_t *data, size_t len)
     struct os_mbuf *om = ble_hs_mbuf_from_flat(data, len);
     if (!om) return -1;
 
-    int rc = ble_gatts_notify_custom(s_conn_handle, s_tx_attr_handle, om);
-    if (rc != 0) {
-        ESP_LOGW(TAG, "notify failed: %d", rc);
-    }
-    return rc;
+    return ble_gatts_notify_custom(s_conn_handle, s_tx_attr_handle, om);
 }
 
 bool dorky_ble_connected(void)

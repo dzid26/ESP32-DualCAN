@@ -1,6 +1,7 @@
 #include "protocol/protocol.h"
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -134,13 +135,69 @@ static void send_err(int id, const char *msg)
 
 /* ---- unsolicited push ---- */
 
-static void log_push_handler(const char *msg)
+static void log_push(const char *level, const char *src, const char *msg)
 {
     cJSON *push = cJSON_CreateObject();
     cJSON_AddStringToObject(push, "type", "log");
+    cJSON_AddStringToObject(push, "level", level);
+    cJSON_AddStringToObject(push, "src", src);
     cJSON_AddStringToObject(push, "msg", msg);
     send_frame(push);
     cJSON_Delete(push);
+}
+
+/* Called by Berry print() via berry_set_log_handler. */
+static void berry_log_handler(const char *msg)
+{
+    log_push("info", "berry", msg);
+}
+
+/* ---- vprintf hook: mirrors ESP_LOG output to the webui log panel ---- */
+
+static vprintf_like_t s_orig_vprintf;
+
+/* Strip ANSI escape sequences (\033[...m) and trailing newline from src. */
+static size_t strip_ansi(const char *src, char *dst, size_t dst_sz)
+{
+    size_t i = 0, j = 0;
+    while (src[i] && j + 1 < dst_sz) {
+        if (src[i] == '\033') {
+            i++;                            /* skip '[' */
+            while (src[i] && src[i] != 'm') i++;
+            if (src[i]) i++;                /* skip 'm' */
+        } else {
+            dst[j++] = src[i++];
+        }
+    }
+    while (j > 0 && (dst[j - 1] == '\n' || dst[j - 1] == '\r')) j--;
+    dst[j] = '\0';
+    return j;
+}
+
+static void log_push_raw(const char *raw)
+{
+    cJSON *push = cJSON_CreateObject();
+    cJSON_AddStringToObject(push, "type", "log");
+    cJSON_AddStringToObject(push, "raw", raw);
+    send_frame(push);
+    cJSON_Delete(push);
+}
+
+static int log_vprintf_hook(const char *fmt, va_list args)
+{
+    va_list args2;
+    va_copy(args2, args);
+    int ret = s_orig_vprintf(fmt, args);
+
+    if (dorky_ble_connected()) {
+        char buf[320];
+        char raw[320];
+        vsnprintf(buf, sizeof(buf), fmt, args2);
+        if (strip_ansi(buf, raw, sizeof(raw)) > 0)
+            log_push_raw(raw);
+    }
+    va_end(args2);
+    return ret;
 }
 
 static const char HEX[] = "0123456789ABCDEF";
@@ -851,7 +908,8 @@ void protocol_init(script_loader_t *loader)
     s_loader = loader;
     frame_buf_init(&s_rx_fb, s_rx_buf, sizeof(s_rx_buf));
     s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
-    berry_set_log_handler(log_push_handler);
+    berry_set_log_handler(berry_log_handler);
     can_set_raw_observer(trace_observer);
     memset(s_bus_status, 0xFF, sizeof(s_bus_status));  /* force push on first check */
+    s_orig_vprintf = esp_log_set_vprintf(log_vprintf_hook);
 }

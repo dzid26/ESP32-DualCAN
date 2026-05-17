@@ -16,10 +16,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "esp_log.h"
-
-static const char *TAG = "berry";
-
 typedef void (*berry_log_handler_t)(const char *msg);
 static berry_log_handler_t s_log_handler;
 
@@ -35,12 +31,12 @@ void berry_log_push(const char *msg)
 
 BERRY_API void be_writebuffer(const char *buffer, size_t length)
 {
-    /* Always log to serial so output is visible during local debugging. */
-    ESP_LOGI(TAG, "%.*s", (int)length, buffer);
+    /* Serial: plain printf so Berry output isn't wrapped in the IDF log
+     * prefix, and bypasses the ESP_LOG vprintf hook (no duplication). */
+    printf("%.*s", (int)length, buffer);
 
     /* Forward to the registered handler (BLE log push) as a null-terminated
-     * string. Strip a trailing newline if Berry wrote one — print() emits
-     * 'foo\n' which would be ugly in the UI log panel. */
+     * string. Strip a trailing newline if Berry wrote one. */
     if (s_log_handler && length > 0) {
         char tmp[256];
         size_t n = length;

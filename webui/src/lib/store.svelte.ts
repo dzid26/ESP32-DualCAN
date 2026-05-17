@@ -140,7 +140,17 @@ class AppState {
 
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
-    this.proto.onLog((msg) => this.pushLog(msg, 'info', 'device'));
+    const IDF_LEVEL: Record<string, LogLine['level']> = {
+      I: 'info', W: 'warn', E: 'error', D: 'debug', V: 'debug',
+    };
+    this.proto.onLog((e) => {
+      if ('raw' in e) {
+        const m = e.raw.match(/^([IEWDV]) \(\d+\) ([^:]+): (.+)/);
+        if (m) this.pushLog(m[3], IDF_LEVEL[m[1]] ?? 'info', m[2]);
+      } else {
+        this.pushLog(e.msg, e.level as LogLine['level'], e.src);
+      }
+    });
     this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status));
 
     if (typeof window !== 'undefined') {

@@ -189,13 +189,16 @@ test('signal push fires onSignal callback with right shape', () => {
 
 test('log push fires onLog callback', () => {
   const { device, transport, proto } = makePair();
-  const lines: string[] = [];
+  const lines: Array<{ level: string; src: string; msg: string }> = [];
   proto.onLog((m) => lines.push(m));
 
-  device.push(rx(transport), { type: 'log', msg: 'hello' });
-  device.push(rx(transport), { type: 'log', msg: 'world' });
+  device.push(rx(transport), { type: 'log', level: 'info', src: 'device', msg: 'hello' });
+  device.push(rx(transport), { type: 'log', level: 'info', src: 'device', msg: 'world' });
 
-  assert.deepEqual(lines, ['hello', 'world']);
+  assert.deepEqual(lines, [
+    { level: 'info', src: 'device', msg: 'hello' },
+    { level: 'info', src: 'device', msg: 'world' },
+  ]);
 });
 
 test('trace push decodes hex data into Uint8Array', () => {
@@ -273,28 +276,28 @@ test('unsolicited response with unknown id does not crash', async () => {
 
 test('two frames in one chunk both deliver', () => {
   const { device, transport, proto } = makePair();
-  const lines: string[] = [];
-  proto.onLog((m) => lines.push(m));
+  const msgs: string[] = [];
+  proto.onLog((m) => msgs.push(m.msg));
 
-  const f1 = device.encode({ type: 'log', msg: 'a' });
-  const f2 = device.encode({ type: 'log', msg: 'b' });
+  const f1 = device.encode({ type: 'log', level: 'info', src: 'device', msg: 'a' });
+  const f2 = device.encode({ type: 'log', level: 'info', src: 'device', msg: 'b' });
   const merged = new Uint8Array(f1.length + f2.length);
   merged.set(f1);
   merged.set(f2, f1.length);
   rx(transport)(merged);
 
-  assert.deepEqual(lines, ['a', 'b']);
+  assert.deepEqual(msgs, ['a', 'b']);
 });
 
 test('frame split across rxCb deliveries reassembles', () => {
   const { device, transport, proto } = makePair();
-  const lines: string[] = [];
-  proto.onLog((m) => lines.push(m));
+  const msgs: string[] = [];
+  proto.onLog((m) => msgs.push(m.msg));
 
-  const full = device.encode({ type: 'log', msg: 'fragmented' });
+  const full = device.encode({ type: 'log', level: 'info', src: 'device', msg: 'fragmented' });
   for (const b of full) {
     rx(transport)(new Uint8Array([b]));
   }
 
-  assert.deepEqual(lines, ['fragmented']);
+  assert.deepEqual(msgs, ['fragmented']);
 });
