@@ -292,7 +292,25 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                  event->subscribe.cur_notify);
         break;
 
+    /* ---- SMP diagnostics ---- */
+    case BLE_GAP_EVENT_PASSKEY_ACTION:
+        ESP_LOGI(TAG, "passkey_action: conn=%d action=%d",
+                 event->passkey.conn_handle, event->passkey.params.action);
+        break;
+
+    case BLE_GAP_EVENT_PARING_COMPLETE:   /* typo is upstream NimBLE */
+        ESP_LOGI(TAG, "pairing_complete: conn=%d status=%d",
+                 event->pairing_complete.conn_handle,
+                 event->pairing_complete.status);
+        break;
+
+    case BLE_GAP_EVENT_REPEAT_PAIRING:
+        ESP_LOGI(TAG, "repeat_pairing: conn=%d — accepting",
+                 event->repeat_pairing.conn_handle);
+        return BLE_GAP_REPEAT_PAIRING_RETRY;
+
     default:
+        ESP_LOGD(TAG, "gap event type=%d", event->type);
         break;
     }
     return 0;
