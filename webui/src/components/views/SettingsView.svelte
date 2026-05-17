@@ -104,6 +104,7 @@
   let busRates = $state<number[]>([500, 500]);
   let busRatePending = $state<number[]>([500, 500]);
   let busRateBusy = $state<boolean[]>([false, false]);
+  let busRateJustApplied = $state<boolean[]>([false, false]);
   let busRateError = $state<string | null>(null);
 
   async function refreshBusConfig(): Promise<void> {
@@ -124,6 +125,8 @@
     try {
       await app.proto.setBusBitrate(bus, busRatePending[bus]);
       busRates = busRates.map((v, i) => i === bus ? busRatePending[bus] : v);
+      busRateJustApplied = busRateJustApplied.map((v, i) => i === bus ? true : v);
+      setTimeout(() => { busRateJustApplied = busRateJustApplied.map((v, i) => i === bus ? false : v); }, 1500);
       app.pushLog(`Bus ${bus} bitrate set to ${busRatePending[bus]} kbps`, 'info', 'settings');
     } catch (e) {
       busRateError = e instanceof Error ? e.message : String(e);
@@ -368,14 +371,16 @@
                 <option value={kbps}>{kbps} kbps</option>
               {/each}
             </select>
-            <button class="btn btn--sm btn--info"
-              onclick={() => applyBitrate(bus)}
-              disabled={!app.connected || busRateBusy[bus] || busRatePending[bus] === busRates[bus]}
-            >
-              {busRateBusy[bus] ? 'Applying…' : 'Apply'}
-            </button>
-            {#if busRates[bus] && busRatePending[bus] !== busRates[bus]}
+            {#if busRatePending[bus] !== busRates[bus]}
+              <button class="btn btn--sm btn--info"
+                onclick={() => applyBitrate(bus)}
+                disabled={!app.connected || busRateBusy[bus]}
+              >
+                {busRateBusy[bus] ? 'Applying…' : 'Apply'}
+              </button>
               <span class="ghost" style="font-size: 11px">active: {busRates[bus]} kbps</span>
+            {:else if busRateJustApplied[bus]}
+              <span style="font-size: 11px; color: var(--dc-ok)">saved on device ✓</span>
             {/if}
           </div>
         </div>
@@ -410,7 +415,7 @@
               Clear
             </button>
             <span style="font-size: 11px; color: var(--dc-text-fade)">
-              {#if deviceKeySet === true}<span style="color: var(--dc-ok)">saved on device ✓</span>{:else if deviceKeySet === false}not on device{:else if app.connected}checking…{/if}
+              {#if deviceKeySet === true}<span style="color: var(--dc-ok)">key on device ✓</span>{:else if deviceKeySet === false}not on device{:else if app.connected}checking…{/if}
             </span>
             {#if deviceKeyError}<span class="mono" style="font-size: 11px; color: var(--dc-err-text)">{deviceKeyError}</span>{/if}
           </div>
