@@ -919,10 +919,13 @@ void protocol_tick(void)
         s_status_ms = now;
         for (int b = 0; b < CAN_BUS_COUNT; b++) {
             bus_status_t ns = can_bus_health(b, now, can_last_rx_ms(b));
-            if ((uint8_t)ns != s_bus_status[b] || s_connect_pushes > 0) {
+            bool changed = (uint8_t)ns != s_bus_status[b];
+            if (changed || s_connect_pushes > 0) {
                 s_bus_status[b] = (uint8_t)ns;
                 push_bus_status(b, ns);
-                ESP_LOGI(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
+                if (changed) {
+                    ESP_LOGI(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
+                }
             }
         }
         if (s_connect_pushes > 0) s_connect_pushes--;
