@@ -177,6 +177,11 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
 
 static void start_advertising(void)
 {
+    /* Single-client firmware: no need (and the controller often refuses with
+     * ENOMEM) to advertise while a connection is active. Disconnect restarts
+     * adv. */
+    if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) return;
+
     struct ble_gap_adv_params adv_params = {0};
     struct ble_hs_adv_fields fields = {0};
 
@@ -202,6 +207,12 @@ static void start_advertising(void)
                                &adv_params, gap_event_cb, NULL);
     if (rc != 0 && rc != BLE_HS_EALREADY) {
         ESP_LOGE(TAG, "adv start failed: %d", rc);
+        /* Transient HCI busy right after a disconnect — schedule a retry.
+         * Safe from looping because the early-return above stops as soon as
+         * a new connection lands. The watchdog is the final safety net. */
+        if (rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY) {
+            schedule_advertising();
+        }
     }
 }
 
@@ -244,9 +255,10 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 }
             }
 
-            schedule_advertising();
+            /* No schedule_advertising() here: single-client firmware. The
+             * disconnect handler restarts adv when this connection ends. */
         } else if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
-            start_advertising();
+            schedule_advertising();
         }
         break;
 
@@ -274,7 +286,9 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
         if (h == s_conn_handle) {
             s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
             s_conn_authorized = false;
-            start_advertising();
+            /* Defer 200 ms so HCI finishes processing the disconnect — calling
+             * adv_start synchronously here often returns ENOMEM. */
+            schedule_advertising();
         }
         break;
     }
