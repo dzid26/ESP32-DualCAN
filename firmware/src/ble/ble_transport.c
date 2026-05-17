@@ -177,11 +177,6 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
 
 static void start_advertising(void)
 {
-    /* Single-client firmware: no need (and the controller often refuses with
-     * ENOMEM) to advertise while a connection is active. Disconnect restarts
-     * adv. */
-    if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) return;
-
     struct ble_gap_adv_params adv_params = {0};
     struct ble_hs_adv_fields fields = {0};
 
@@ -207,10 +202,12 @@ static void start_advertising(void)
                                &adv_params, gap_event_cb, NULL);
     if (rc != 0 && rc != BLE_HS_EALREADY) {
         ESP_LOGE(TAG, "adv start failed: %d", rc);
-        /* Transient HCI busy right after a disconnect — schedule a retry.
-         * Safe from looping because the early-return above stops as soon as
-         * a new connection lands. The watchdog is the final safety net. */
-        if (rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY) {
+        /* Retry only when no connection is active. ENOMEM during a connection
+         * usually means the controller is refusing concurrent adv+conn — retry
+         * would loop. ENOMEM with no connection means HCI is transiently busy
+         * (e.g. just after a disconnect) and a 200 ms backoff usually succeeds. */
+        if ((rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY)
+            && s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
             schedule_advertising();
         }
     }
@@ -255,8 +252,11 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 }
             }
 
-            /* No schedule_advertising() here: single-client firmware. The
-             * disconnect handler restarts adv when this connection ends. */
+            /* Keep advertising while connected so a second device can find
+             * us and (if authorized) kick the first — needed for the "swap
+             * PC for phone" flow. Controller may refuse with ENOMEM; logged
+             * once, no retry loop (see start_advertising). */
+            schedule_advertising();
         } else if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
             schedule_advertising();
         }
