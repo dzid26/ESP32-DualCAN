@@ -65,6 +65,8 @@ class AppState {
 
   fwVersion = $state<string | null>(null);
   protoMismatch = $state<string | null>(null);
+  /** Advertised BLE name of the currently-connected device (e.g. "Dorky-A3F1"). */
+  deviceName = $state<string | null>(null);
 
   /** Mirrors the device's sim mode toggle. */
   simulation = $state(false);
@@ -212,6 +214,7 @@ class AppState {
   private async onConnChange(c: boolean): Promise<void> {
     this.connected = c;
     this.connecting = false;
+    this.deviceName = c ? this.ble.deviceName : null;
     if (!c) {
       this.fwVersion = null;
       this.protoMismatch = null;

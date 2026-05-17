@@ -24,7 +24,7 @@
   const stateLabel = $derived(
     app.connecting ? 'Connecting…' :
     app.connected
-      ? (app.transport === 'ws' ? 'WiFi · dorky.local' : 'BLE · DorkyCmdr-7F2A')
+      ? (app.transport === 'ws' ? 'WiFi · dorky.local' : `BLE · ${app.deviceName ?? 'Dorky'}`)
       : 'Not connected'
   );
   const dotClass = $derived(

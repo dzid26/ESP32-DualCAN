@@ -305,6 +305,15 @@ static void on_sync(void)
     uint8_t own_addr_type;
     ble_hs_id_infer_auto(0, &own_addr_type);
 
+    /* Suffix with the 2 device-unique MAC bytes (NimBLE returns addr
+     * little-endian, so addr[0..1] are the low end — not Espressif's OUI). */
+    uint8_t addr[6];
+    if (ble_hs_id_copy_addr(own_addr_type, addr, NULL) == 0) {
+        char name[16];
+        snprintf(name, sizeof(name), "Dorky-%02X%02X", addr[1], addr[0]);
+        ble_svc_gap_device_name_set(name);
+    }
+
     int bond_count = 0;
     ble_store_util_count(BLE_STORE_OBJ_TYPE_PEER_SEC, &bond_count);
     if (bond_count == 0) {
@@ -362,6 +371,8 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
     rc = ble_gatts_add_svcs(gatt_svcs);
     if (rc != 0) { ESP_LOGE(TAG, "gatts_add_svcs: %d", rc); return -1; }
 
+    /* Name is finalized in on_sync() once the BLE MAC is readable so it
+     * can be suffixed with the device id (e.g. "Dorky-A3F1"). */
     ble_svc_gap_device_name_set("Dorky");
 
     ble_npl_callout_init(&s_adv_callout,    nimble_port_get_dflt_eventq(), adv_callout_fn,    NULL);

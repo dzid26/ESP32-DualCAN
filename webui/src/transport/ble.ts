@@ -18,6 +18,11 @@ export class BleTransport implements Transport {
     return this._connected;
   }
 
+  /** Name of the currently-connected device (e.g. "Dorky-A3F1"), or null when disconnected. */
+  get deviceName(): string | null {
+    return this._connected ? (this.device?.name ?? null) : null;
+  }
+
   private setConnected(val: boolean) {
     this._connected = val;
     this.changeCbs.forEach(cb => cb(val));
