@@ -334,6 +334,20 @@ export class Protocol {
     return this.call('sim.set', params);
   }
 
+  bleStatus(): Promise<{ pairing_open: boolean; bond_count: number }> {
+    return this.call('ble.status');
+  }
+
+  /** Open the device's pairing window for 60 s (same effect as pressing BOOT). */
+  bleUnlockPairing(): Promise<void> {
+    return this.call('ble.unlock_pairing');
+  }
+
+  /** Wipe all stored bonds on the device. Will disconnect the current client. */
+  bleResetPairs(): Promise<void> {
+    return this.call('ble.reset_pairs');
+  }
+
   wifiStatus(): Promise<{ connected: boolean; ssid: string; ip: string }> {
     return this.call('wifi.status');
   }

@@ -9,7 +9,7 @@ import type { LogLine } from './sampleData';
 import { type Car, loadCar, saveCar } from './cars';
 
 // Bump in lockstep with firmware proto_version when ops change.
-const UI_PROTO_VERSION = 3;
+const UI_PROTO_VERSION = 4;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;

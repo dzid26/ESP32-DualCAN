@@ -279,7 +279,7 @@ static void handle_system_info(int id)
     cJSON_AddStringToObject(result, "fw_version", DORKY_FIRMWARE_VERSION);
     /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
      * features that the firmware doesn't recognise yet. */
-    cJSON_AddNumberToObject(result, "proto_version", 3);
+    cJSON_AddNumberToObject(result, "proto_version", 4);
     send_ok(id, result);
 }
 
@@ -446,6 +446,29 @@ static void handle_trace_stop(int id)
     s_trace_buses = 0;
     ESP_LOGI(TAG, "trace.stop");
     send_ok(id, NULL);
+}
+
+static void handle_ble_status(int id)
+{
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddBoolToObject(result, "pairing_open", dorky_ble_pairing_open());
+    cJSON_AddNumberToObject(result, "bond_count", dorky_ble_bond_count());
+    send_ok(id, result);
+}
+
+static void handle_ble_unlock_pairing(int id)
+{
+    dorky_ble_unlock_pairing();
+    send_ok(id, NULL);
+}
+
+static void handle_ble_reset_pairs(int id)
+{
+    /* Reply BEFORE wiping — the wipe terminates this very connection. */
+    send_ok(id, NULL);
+    /* Tiny delay to let the notify drain before the disconnect. */
+    vTaskDelay(pdMS_TO_TICKS(50));
+    dorky_ble_reset_pairings();
 }
 
 static void handle_wifi_status(int id)
@@ -788,6 +811,9 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "bus.get_config") == 0)  handle_bus_get_config(id);
     else if (strcmp(op_s, "bus.set_bitrate") == 0) handle_bus_set_bitrate(id, req);
     else if (strcmp(op_s, "sim.set") == 0)         handle_sim_set(id, req);
+    else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
+    else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);
+    else if (strcmp(op_s, "ble.reset_pairs") == 0)     handle_ble_reset_pairs(id);
     else if (strcmp(op_s, "wifi.status") == 0)    handle_wifi_status(id);
     else if (strcmp(op_s, "wifi.set_creds") == 0) handle_wifi_set_creds(id, req);
     else if (strcmp(op_s, "settings.set_secret") == 0)   handle_settings_set_secret(id, req);

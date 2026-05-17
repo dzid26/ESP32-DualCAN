@@ -23,3 +23,10 @@ bool dorky_ble_pairing_open(void);
 
 /* Open the pairing window for 60 s. Safe to call from any task. */
 void dorky_ble_unlock_pairing(void);
+
+/* Number of bonded peers currently stored in NVS. */
+int dorky_ble_bond_count(void);
+
+/* Wipe all stored bonds. Disconnects the active client (if any) so the next
+ * connection has to re-pair from scratch. Returns 0 on success. */
+int dorky_ble_reset_pairings(void);

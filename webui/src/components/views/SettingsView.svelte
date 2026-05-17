@@ -2,7 +2,7 @@
   import { app } from '../../lib/store.svelte';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
-  import { Checkbox, Progress } from 'bits-ui';
+  import { Checkbox, Progress, AlertDialog } from 'bits-ui';
   import { onMount } from 'svelte';
 
   const GITHUB_REPO = 'dzid26/ESP32-DualCAN';
@@ -52,6 +52,50 @@
       wifiError = e instanceof Error ? e.message : String(e);
     } finally {
       wifiBusy = false;
+    }
+  }
+
+  // Bluetooth pairing
+  let bleStatus = $state<{ pairing_open: boolean; bond_count: number } | null>(null);
+  let bleBusy = $state(false);
+  let bleError = $state<string | null>(null);
+  let confirmResetPairs = $state(false);
+
+  async function refreshBle(): Promise<void> {
+    if (!app.connected) return;
+    try {
+      bleStatus = await app.proto.bleStatus();
+      bleError = null;
+    } catch (e) {
+      bleError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function unlockPairing(): Promise<void> {
+    bleBusy = true;
+    bleError = null;
+    try {
+      await app.proto.bleUnlockPairing();
+      app.pushLog('Pairing window opened for 60 s', 'info', 'ble');
+      refreshBle();
+    } catch (e) {
+      bleError = e instanceof Error ? e.message : String(e);
+    } finally {
+      bleBusy = false;
+    }
+  }
+
+  async function resetPairs(): Promise<void> {
+    bleBusy = true;
+    bleError = null;
+    confirmResetPairs = false;
+    try {
+      await app.proto.bleResetPairs();
+      app.pushLog('All BLE bonds wiped — device will disconnect shortly. Remove "Dorky" from your OS Bluetooth settings before reconnecting.', 'warn', 'ble');
+    } catch (e) {
+      bleError = e instanceof Error ? e.message : String(e);
+    } finally {
+      bleBusy = false;
     }
   }
 
@@ -207,13 +251,14 @@
     }
   }
 
-  onMount(() => { refreshInfo(); refreshWifi(); refreshDeviceKey(); refreshBusConfig(); });
+  onMount(() => { refreshInfo(); refreshWifi(); refreshDeviceKey(); refreshBusConfig(); refreshBle(); });
   $effect(() => {
     if (app.connected) {
       refreshInfo();
       refreshWifi();
       refreshDeviceKey();
       refreshBusConfig();
+      refreshBle();
     }
   });
 </script>
@@ -276,6 +321,34 @@
         </button>
       </div>
       {#if wifiError}<div class="field"><span></span><span class="mono" style="color: var(--dc-err-text); font-size: 11px">{wifiError}</span></div>{/if}
+    </div>
+  </div>
+
+  <div class="frame">
+    <div class="frame__head">Bluetooth</div>
+    <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
+      {#if bleStatus}
+        <div class="field">
+          <span>Status</span>
+          <span class="mono ghost">
+            {bleStatus.bond_count} bond{bleStatus.bond_count === 1 ? '' : 's'}
+            · pairing {bleStatus.pairing_open ? 'OPEN' : 'locked'}
+          </span>
+        </div>
+      {/if}
+      <div class="field">
+        <span>Pair another device</span>
+        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
+          <button class="btn btn--sm btn--info" onclick={unlockPairing}
+            disabled={!app.connected || bleBusy}>
+            {bleBusy ? 'Working…' : 'Open pairing window (60 s)'}
+          </button>
+          <span class="muted" style="font-size: 11px">
+            Same effect as a short press on the BOOT button. Useful when the device is hidden in the car.
+          </span>
+        </div>
+      </div>
+      {#if bleError}<div class="field"><span></span><span class="mono" style="color: var(--dc-err-text); font-size: 11px">{bleError}</span></div>{/if}
     </div>
   </div>
 
@@ -509,6 +582,19 @@
     <div class="frame__head" style="color: var(--dc-err-text)">Danger zone</div>
     <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
       <div class="field">
+        <span>Reset BLE pairings</span>
+        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
+          <button class="btn btn--sm btn--danger"
+            onclick={() => (confirmResetPairs = true)}
+            disabled={!app.connected || bleBusy}>
+            Wipe bonds
+          </button>
+          <span class="muted" style="font-size: 11px">
+            Erases all stored BLE bonds and disconnects. You'll also need to remove "Dorky" from your OS Bluetooth settings before reconnecting.
+          </span>
+        </div>
+      </div>
+      <div class="field">
         <span>Factory reset</span>
         <button class="btn btn--sm btn--danger" style="justify-self: start" disabled title="Not yet wired in protocol">
           Erase NVS + scripts
@@ -516,6 +602,44 @@
       </div>
     </div>
   </div>
+
+  <AlertDialog.Root open={confirmResetPairs} onOpenChange={(v) => (confirmResetPairs = v)}>
+    <AlertDialog.Portal>
+      <AlertDialog.Overlay class="ad-overlay" />
+      <AlertDialog.Content class="frame ad-content"
+        onOpenAutoFocus={(e) => { e.preventDefault(); setTimeout(() => document.getElementById('ad-reset-pairs')?.focus(), 20); }}
+      >
+        <div class="frame__head" style="color: var(--dc-err-text)">
+          <AlertDialog.Title style="margin: 0; font-size: inherit; font-weight: inherit;">
+            Wipe all BLE bonds?
+          </AlertDialog.Title>
+          <AlertDialog.Cancel class="btn btn--sm btn--ghost btn--icon" aria-label="Cancel">
+            <Icon name="x" size={13} />
+          </AlertDialog.Cancel>
+        </div>
+        <div class="frame__body" style="display: flex; flex-direction: column; gap: 10px">
+          <AlertDialog.Description style="margin: 0; font-size: 13px; color: var(--dc-text-dim); line-height: 1.5">
+            Every bonded phone, tablet, and PC will lose access.
+          </AlertDialog.Description>
+          <p style="margin: 0; font-size: 12px; color: var(--dc-text-fade); line-height: 1.45">
+            You will be disconnected immediately. To reconnect, first <strong>remove "Dorky" from your OS Bluetooth settings</strong>
+            — otherwise the OS will retry its stale key and reject the new pairing. The pairing window will re-open automatically after the wipe.
+          </p>
+          <div class="row-flex" style="justify-content: flex-end; margin-top: 4px">
+            <AlertDialog.Cancel class="btn btn--sm btn--ghost">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action
+              id="ad-reset-pairs"
+              class="btn btn--sm btn--danger"
+              onclick={resetPairs}
+              disabled={bleBusy}
+            >
+              Wipe bonds
+            </AlertDialog.Action>
+          </div>
+        </div>
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog.Root>
 </div>
 
 <style>

@@ -350,7 +350,7 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
     /* Security manager: Just Works, bonding toggled by pairing window. */
     ble_hs_cfg.sm_io_cap        = BLE_HS_IO_NO_INPUT_OUTPUT;
     ble_hs_cfg.sm_sc            = 1;
-    ble_hs_cfg.sm_bonding       = 0;   /* set to 1 in on_sync if no bonds exist */
+    ble_hs_cfg.sm_bonding       = 0;   /* flipped to 1 by dorky_ble_unlock_pairing() */
     ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
     ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
 
@@ -401,4 +401,28 @@ void dorky_ble_unlock_pairing(void)
     ble_hs_cfg.sm_bonding = 1;
     ble_npl_callout_reset(&s_lock_callout, ble_npl_time_ms_to_ticks32(60000));
     ESP_LOGI(TAG, "pairing window open for 60 s");
+}
+
+int dorky_ble_bond_count(void)
+{
+    int n = 0;
+    ble_store_util_count(BLE_STORE_OBJ_TYPE_PEER_SEC, &n);
+    return n;
+}
+
+int dorky_ble_reset_pairings(void)
+{
+    int rc = ble_store_clear();
+    if (rc != 0) {
+        ESP_LOGE(TAG, "ble_store_clear failed: %d", rc);
+        return rc;
+    }
+    ESP_LOGI(TAG, "all bonds wiped");
+    /* Terminate the active client so it has to reconnect and re-pair. */
+    if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+        ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    }
+    /* Re-open pairing so the user isn't locked out after wiping. */
+    dorky_ble_unlock_pairing();
+    return 0;
 }
