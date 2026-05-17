@@ -98,6 +98,7 @@ static void lock_callout_fn(struct ble_npl_event *ev)
 
 static int gap_event_cb(struct ble_gap_event *event, void *arg);
 static void start_advertising(void);
+static void open_pairing_window(bool with_timeout);
 
 /* Periodic safety net: if no client is connected and advertising has stopped
  * for any reason (failed start, controller stall, race condition), restart it.
@@ -335,7 +336,9 @@ static void on_sync(void)
     int bond_count = 0;
     ble_store_util_count(BLE_STORE_OBJ_TYPE_PEER_SEC, &bond_count);
     if (bond_count == 0) {
-        dorky_ble_unlock_pairing();
+        /* No bonds: hold the window open with no timer. Otherwise an in-car
+         * device with no BOOT-button access becomes unreachable after 60 s. */
+        open_pairing_window(false);
     }
 
     start_advertising();
@@ -432,12 +435,22 @@ bool dorky_ble_pairing_open(void)
     return s_pairing_open;
 }
 
-void dorky_ble_unlock_pairing(void)
+static void open_pairing_window(bool with_timeout)
 {
     s_pairing_open = true;
     ble_hs_cfg.sm_bonding = 1;
-    ble_npl_callout_reset(&s_lock_callout, ble_npl_time_ms_to_ticks32(60000));
-    ESP_LOGI(TAG, "pairing window open for 60 s");
+    if (with_timeout) {
+        ble_npl_callout_reset(&s_lock_callout, ble_npl_time_ms_to_ticks32(60000));
+        ESP_LOGI(TAG, "pairing window open for 60 s");
+    } else {
+        ble_npl_callout_stop(&s_lock_callout);
+        ESP_LOGI(TAG, "pairing window OPEN (held until first bond)");
+    }
+}
+
+void dorky_ble_unlock_pairing(void)
+{
+    open_pairing_window(true);
 }
 
 int dorky_ble_bond_count(void)
@@ -459,7 +472,8 @@ int dorky_ble_reset_pairings(void)
     if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
         ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
     }
-    /* Re-open pairing so the user isn't locked out after wiping. */
-    dorky_ble_unlock_pairing();
+    /* Same reasoning as on_sync: with zero bonds the only way back in is the
+     * pairing window, so leave it open until something pairs. */
+    open_pairing_window(false);
     return 0;
 }
