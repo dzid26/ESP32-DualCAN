@@ -35,6 +35,14 @@ npm run build     # production build to dist/
 
 Open in Chrome (required for Web Bluetooth). The DBC upload/parse works offline. BLE connect requires the board powered and flashed.
 
+### Bluetooth pairing
+
+The device requires bonded pairing — first-time setup needs an open pairing
+window (boot defaults to OPEN until first bond, BOOT button or web UI re-opens
+later). Pairing uses **Secure Connections only**; very old centrals (BLE 4.0,
+pre-2014) won't pair. See [docs/ble.md](docs/ble.md) for the full connection
+flow and troubleshooting.
+
 ## ICs
 - ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
     - alternatively ESP32-C6-Zero 

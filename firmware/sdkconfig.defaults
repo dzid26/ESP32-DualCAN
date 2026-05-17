@@ -26,6 +26,11 @@ CONFIG_BT_NIMBLE_MAX_CONNECTIONS=2
 CONFIG_BT_NIMBLE_NVS_PERSIST=y
 CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=512
 CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=16384
+# SC-only: drop Legacy pairing support. All centrals from BLE 4.2+ (≈2014)
+# do Secure Connections; refusing Legacy avoids a downgrade attack surface
+# and trims a few KB of unused SMP code. If a very old central can't pair,
+# this is the flag to re-enable.
+# CONFIG_BT_NIMBLE_SM_LEGACY is not set
 
 # FreeRTOS runtime stats (for CPU usage reporting)
 CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
