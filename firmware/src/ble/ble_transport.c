@@ -339,6 +339,12 @@ static void nimble_host_task(void *param)
 
 /* ---- Public API ---- */
 
+/* Implemented by nimble/host/store/config — registers the config store as
+ * NimBLE's ble_hs_cfg.store_* callbacks. With CONFIG_BT_NIMBLE_NVS_PERSIST=y
+ * the config store transparently persists bonds to NVS. Without this call,
+ * NimBLE has no store at all and SMP keys live only in RAM for the session. */
+extern void ble_store_config_init(void);
+
 int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
 {
     s_on_request = on_request;
@@ -349,6 +355,8 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
         ESP_LOGE(TAG, "nimble_port_init failed: %d", rc);
         return -1;
     }
+
+    ble_store_config_init();
 
     /* NimBLE logs a line per GATT notify at DEBUG level — too noisy in normal use. */
     esp_log_level_set("NimBLE", ESP_LOG_WARN);
