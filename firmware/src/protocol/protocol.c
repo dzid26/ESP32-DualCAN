@@ -91,14 +91,18 @@ static void send_frame(cJSON *resp)
     frame[3] = (uint8_t)((jlen >> 24) & 0xFF);
     memcpy(frame + FRAME_HDR_LEN, json, jlen);
 
-    /* BLE notifications are limited to MTU-3 (~509 B). Chunk larger frames. */
+    /* BLE notifications are limited to MTU-3 (~509 B). Chunk larger frames.
+     * Bail out mid-chunk if the link drops — without this, a disconnect during
+     * a big frame floods nimble_host with failed-notify calls and overflows
+     * its stack. */
     const size_t CHUNK = 200; /* conservative; negotiated MTU may be smaller */
     size_t total = FRAME_HDR_LEN + jlen;
     size_t off = 0;
     while (off < total) {
+        if (!dorky_ble_connected()) break;
         size_t n = total - off;
         if (n > CHUNK) n = CHUNK;
-        dorky_ble_notify(frame + off, n);
+        if (dorky_ble_notify(frame + off, n) != 0) break;
         off += n;
     }
 
