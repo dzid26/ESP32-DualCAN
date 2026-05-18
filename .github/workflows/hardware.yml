@@ -1,7 +1,13 @@
 name: Hardware Release
 
-# Triggered by hw-v* tags. Exports schematic PDF + Gerbers from KiCad
-# and publishes a GitHub release.
+# Two modes depending on what triggered the run:
+#
+#   Push to hardware/** on main
+#     -> Exports artifacts and updates (or creates) the rolling "hw-next"
+#        draft release. Use this to preview exports while iterating.
+#
+#   Push a hw-v* tag
+#     -> Exports artifacts and publishes a real, versioned release.
 #
 # Tag conventions:
 #   hw-v1.0     -> stable hardware revision
@@ -13,6 +19,10 @@ name: Hardware Release
 
 on:
   push:
+    branches: [main]
+    paths:
+      - 'hardware/**'
+      - '.github/workflows/hardware.yml'
     tags:
       - 'hw-v*'
 
@@ -31,16 +41,31 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install --yes --no-install-recommends kicad
 
-      - name: Resolve version + channel from tag
+      - name: Resolve release metadata
         id: meta
         run: |
-          VERSION="${GITHUB_REF#refs/tags/hw-v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if [[ "$VERSION" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/hw-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/hw-v}"
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "name=Hardware ${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "draft=false" >> "$GITHUB_OUTPUT"
+            if [[ "$VERSION" == *-* ]]; then
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "tag=hw-next" >> "$GITHUB_OUTPUT"
+            echo "name=Hardware - next (draft)" >> "$GITHUB_OUTPUT"
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Update hw-next tag (rolling draft only)
+        if: steps.meta.outputs.tag == 'hw-next'
+        run: |
+          git tag -f hw-next
+          git push -f origin hw-next
 
       - name: Export schematic PDF
         run: |
@@ -59,21 +84,16 @@ jobs:
             --output-file-name ESP32-DualCAN-ibom.html \
             hardware/ESP32-DualCAN.kicad_pcb
 
-      - name: Create GitHub release
+      - name: Create or update release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.name }}
+          draft: ${{ steps.meta.outputs.draft }}
           prerelease: ${{ steps.meta.outputs.prerelease }}
-          generate_release_notes: true
+          generate_release_notes: ${{ steps.meta.outputs.draft == 'false' }}
           files: |
             hardware/ESP32-DualCAN-schematic.pdf
             hardware/ESP32-DualCAN-ibom.html
-          name: "Hardware ${{ github.ref_name }}"
           body: |
-            ## Hardware ${{ github.ref_name }}
-
-            Automated KiCad export from tag `${{ github.ref_name }}`.
-
-            ### Files
-            - **Schematic**: `ESP32-DualCAN-schematic.pdf`
-            - **iBOM**: `ESP32-DualCAN-ibom.html` (open in browser, dark mode)
+            Automated KiCad export. Schematic PDF + interactive iBOM (dark mode).
