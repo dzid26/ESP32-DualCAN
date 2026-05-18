@@ -4,7 +4,16 @@
 
 import { BleTransport } from '../transport/ble';
 import { Protocol } from '../transport/protocol';
-import type { BusStatus } from '../transport/protocol';
+import type { BusStatus, LogLevel } from '../transport/protocol';
+
+const LOG_LEVELS: readonly LogLevel[] = ['none', 'error', 'warn', 'info', 'debug', 'verbose'];
+function loadLogLevel(): LogLevel {
+  try {
+    const v = localStorage.getItem('dc-log-level');
+    if (v && (LOG_LEVELS as readonly string[]).includes(v)) return v as LogLevel;
+  } catch { /* ignore */ }
+  return 'info';
+}
 import type { LogLine } from './sampleData';
 import { type Car, loadCar, saveCar } from './cars';
 import { toast } from './toast.svelte';
@@ -88,6 +97,7 @@ class AppState {
   paletteOpen = $state(false);
   logOpen = $state(false);
   logs = $state<LogLine[]>([]);
+  logLevel = $state<LogLevel>(loadLogLevel());
 
   /** Cross-view hand-off: another view (Events, Gallery) drops a script
    * filename here, then setView('scripts'). ScriptsView consumes + clears. */
@@ -209,6 +219,12 @@ class AppState {
 
   clearLogs(): void { this.logs = []; }
 
+  setLogLevel(level: LogLevel): void {
+    this.logLevel = level;
+    try { localStorage.setItem('dc-log-level', level); } catch { /* ignore */ }
+    if (this.connected) this.proto.setLogLevel(level).catch(() => { /* best effort */ });
+  }
+
   async toggleConnect(): Promise<void> {
     if (this.connecting) return;
     this.connectError = null;
@@ -262,6 +278,8 @@ class AppState {
       const r = await this.proto.getSecret('anthropic');
       if (r.value) this.setAiKey(r.value);
     } catch { /* key not set or firmware too old */ }
+    /* Apply persisted log level; firmware boots at its compile-time default. */
+    this.proto.setLogLevel(this.logLevel).catch(() => { /* firmware too old or busy */ });
   }
 
   // ---- OTA Actions ----

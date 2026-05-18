@@ -609,6 +609,29 @@ static void handle_bus_set_bitrate(int id, cJSON *req)
     send_ok(id, NULL);
 }
 
+static void handle_log_set_level(int id, cJSON *req)
+{
+    const cJSON *level_j = cJSON_GetObjectItem(req, "level");
+    if (!cJSON_IsString(level_j)) { send_err(id, "missing level"); return; }
+    const char *lvl = level_j->valuestring;
+
+    esp_log_level_t level;
+    if      (strcmp(lvl, "none")    == 0) level = ESP_LOG_NONE;
+    else if (strcmp(lvl, "error")   == 0) level = ESP_LOG_ERROR;
+    else if (strcmp(lvl, "warn")    == 0) level = ESP_LOG_WARN;
+    else if (strcmp(lvl, "info")    == 0) level = ESP_LOG_INFO;
+    else if (strcmp(lvl, "debug")   == 0) level = ESP_LOG_DEBUG;
+    else if (strcmp(lvl, "verbose") == 0) level = ESP_LOG_VERBOSE;
+    else { send_err(id, "invalid level"); return; }
+
+    /* Optional tag filter; "*" applies to every tag. Levels above
+     * CONFIG_LOG_MAXIMUM_LEVEL have nothing to show (compile-time strip). */
+    const cJSON *tag_j = cJSON_GetObjectItem(req, "tag");
+    const char *tag = (cJSON_IsString(tag_j) && tag_j->valuestring[0]) ? tag_j->valuestring : "*";
+    esp_log_level_set(tag, level);
+    send_ok(id, NULL);
+}
+
 static void handle_sim_set(int id, cJSON *req)
 {
     const cJSON *enabled_j = cJSON_GetObjectItem(req, "enabled");
@@ -811,6 +834,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "bus.get_config") == 0)  handle_bus_get_config(id);
     else if (strcmp(op_s, "bus.set_bitrate") == 0) handle_bus_set_bitrate(id, req);
     else if (strcmp(op_s, "sim.set") == 0)         handle_sim_set(id, req);
+    else if (strcmp(op_s, "log.set_level") == 0)   handle_log_set_level(id, req);
     else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
     else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);
     else if (strcmp(op_s, "ble.reset_pairs") == 0)     handle_ble_reset_pairs(id);

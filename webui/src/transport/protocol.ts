@@ -53,6 +53,9 @@ type Pending = {
   reject: (err: Error) => void;
 };
 
+/** Runtime log-level keywords accepted by log.set_level. */
+export type LogLevel = 'none' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
+
 /** ESP_LOG output (ANSI-stripped "L (ts) tag: message" line). */
 export interface RawLogPush   { raw: string }
 /** Berry print() output (already structured). */
@@ -332,6 +335,13 @@ export class Protocol {
     const params: Record<string, unknown> = { enabled };
     if (bus !== undefined) params.bus = bus;
     return this.call('sim.set', params);
+  }
+
+  /** Set runtime log level. Tag "*" (default) applies to every tag.
+   * Levels above firmware's CONFIG_LOG_MAXIMUM_LEVEL are accepted but
+   * have nothing to emit (those strings are compile-time stripped). */
+  setLogLevel(level: LogLevel, tag = '*'): Promise<void> {
+    return this.call('log.set_level', { level, tag });
   }
 
   bleStatus(): Promise<{ pairing_open: boolean; bond_count: number }> {

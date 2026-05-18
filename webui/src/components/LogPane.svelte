@@ -1,6 +1,9 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
+  import type { LogLevel } from '../transport/protocol';
   import Icon from './Icon.svelte';
+
+  const LEVELS: LogLevel[] = ['none', 'error', 'warn', 'info', 'debug', 'verbose'];
 
   function levelColor(level: string): string {
     switch (level) {
@@ -22,6 +25,16 @@
       </span>
     </span>
     <span class="row-flex">
+      <select
+        class="logpane__level"
+        value={app.logLevel}
+        onchange={(e) => app.setLogLevel((e.currentTarget as HTMLSelectElement).value as LogLevel)}
+        title="Runtime log level (firmware-side filter)"
+      >
+        {#each LEVELS as lvl}
+          <option value={lvl}>{lvl}</option>
+        {/each}
+      </select>
       <button class="btn btn--sm btn--ghost" onclick={() => app.clearLogs()}>Clear</button>
       <button class="btn btn--sm btn--ghost" onclick={() => (app.logOpen = false)} aria-label="Close logs">
         <Icon name="x" size={12} />
@@ -60,5 +73,13 @@
     grid-template-columns: 96px 52px 90px 1fr;
     gap: 8px; white-space: nowrap;
     border-bottom: 1px solid var(--dc-border);
+  }
+  .logpane__level {
+    background: var(--dc-surface);
+    color: var(--dc-text-dim);
+    border: 1px solid var(--dc-border);
+    border-radius: 3px;
+    font-size: 11px;
+    padding: 1px 4px;
   }
 </style>
