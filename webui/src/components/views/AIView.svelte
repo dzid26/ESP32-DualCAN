@@ -3,7 +3,7 @@
   import { dbcStore } from '../../dbcStore.svelte';
   import { modKey } from '../../lib/platform';
   import Icon from '../Icon.svelte';
-  import SCRIPTING_MD from '../../../../SCRIPTING.md?raw';
+  import SCRIPTING_MD from '../../../../docs/scripting.md?raw';
 
   // ---- types ----
   type UserTurn  = { role: 'user'; text: string; attached?: string };

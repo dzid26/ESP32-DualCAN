@@ -5,7 +5,7 @@ Uses Molex connector compatible with Enhauto harnesses.
 
 See **[firmware/README.md](firmware/README.md)** for the user-facing install guide and first-use walkthrough.
 
-See **[SCRIPTING.md](SCRIPTING.md)** for the Berry scripting API reference.
+See **[docs/scripting.md](docs/scripting.md)** for the Berry scripting API reference.
 
 ## Development
 
