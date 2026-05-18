@@ -2,3 +2,10 @@
 	path = firmware/components/berry/berry
 	url = https://github.com/berry-lang/berry.git
 	ignore = dirty
+[submodule "firmware/components/tesla-ble/tesla-ble"]
+	path = firmware/components/tesla-ble/tesla-ble
+	url = https://github.com/yoziru/tesla-ble.git
+	branch = main
+[submodule "firmware/components/tesla-ble/nanopb"]
+	path = firmware/components/tesla-ble/nanopb
+	url = https://github.com/nanopb/nanopb.git

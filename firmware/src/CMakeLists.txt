@@ -7,5 +7,5 @@ idf_component_register(
     SRCS ${app_sources}
     INCLUDE_DIRS "."
     REQUIRES driver esp_driver_twai esp_driver_gpio berry led_strip littlefs esp_partition vfs bt json
-             esp_wifi esp_event esp_netif nvs_flash app_update mbedtls
+             esp_wifi esp_event esp_netif nvs_flash app_update mbedtls tesla-ble
 )
