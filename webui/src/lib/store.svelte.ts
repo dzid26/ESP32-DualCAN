@@ -238,11 +238,12 @@ class AppState {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.connectError = msg;
-      /* Skip the toast when the user just cancelled the browser's BLE picker —
-       * that's not an error worth surfacing. */
-      if (!/cancell?ed|User cancelled/i.test(msg)) {
-        toast.show({ severity: 'error', message: `Connect failed: ${msg}`, duration: 8000 });
-      }
+      const cancelled = /cancell?ed|User cancelled/i.test(msg);
+      toast.show({
+        severity: cancelled ? 'info' : 'error',
+        message: cancelled ? 'Connect cancelled — no device picked.' : `Connect failed: ${msg}`,
+        duration: cancelled ? 4000 : 8000,
+      });
       this.pushLog(`connect failed: ${msg}`, 'error', 'ble');
     } finally {
       this.connecting = false;
