@@ -519,7 +519,20 @@ static cJSON *tesla_ble_status_obj(void)
             cJSON_AddStringToObject(r, "public_key_hex", hex);
         }
     }
+    char vin[TESLA_VIN_LEN + 2];
+    if (tesla_ble_get_vin(vin, sizeof vin) == ESP_OK)
+        cJSON_AddStringToObject(r, "vin", vin);
     return r;
+}
+
+static void handle_tesla_set_vin(int id, cJSON *req)
+{
+    cJSON *vin_item = cJSON_GetObjectItem(req, "vin");
+    if (!cJSON_IsString(vin_item)) { send_err(id, "missing vin"); return; }
+    esp_err_t err = tesla_ble_set_vin(vin_item->valuestring);
+    if (err == ESP_ERR_INVALID_ARG) { send_err(id, "vin must be 17 characters"); return; }
+    if (err != ESP_OK)              { send_err(id, "failed to store vin"); return; }
+    send_ok(id, tesla_ble_status_obj());
 }
 
 static void handle_tesla_status(int id)
@@ -965,6 +978,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "tesla.status") == 0)        handle_tesla_status(id);
     else if (strcmp(op_s, "tesla.gen_key") == 0)       handle_tesla_gen_key(id);
     else if (strcmp(op_s, "tesla.reset") == 0)         handle_tesla_reset(id);
+    else if (strcmp(op_s, "tesla.set_vin") == 0)       handle_tesla_set_vin(id, req);
     else if (strcmp(op_s, "tesla.scan") == 0)          handle_tesla_scan(id, req);
     else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
     else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);

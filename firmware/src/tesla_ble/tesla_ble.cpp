@@ -3,7 +3,8 @@
  *
  * Owns a single TeslaBLE::Client instance whose private key is persisted
  * to NVS as PEM (because that's the format Client::load_private_key
- * accepts — mbedtls_pk_parse_key under the hood).
+ * accepts — mbedtls_pk_parse_key under the hood). Also persists the VIN
+ * so Client::set_vin() is always called at startup if available.
  */
 extern "C" {
 #include "tesla_ble/tesla_ble.h"
@@ -24,6 +25,7 @@ namespace {
 constexpr const char *TAG          = "tesla_ble";
 constexpr const char *NVS_NS       = "tesla";
 constexpr const char *NVS_KEY_PEM  = "pem";
+constexpr const char *NVS_KEY_VIN  = "vin";
 /* P-256 EC private key in PEM (BEGIN/END EC PRIVATE KEY) is ~227 bytes
  * including newlines. 384 leaves room for line-ending variation and NUL. */
 constexpr size_t PEM_BUF_LEN = 384;
@@ -67,6 +69,13 @@ int derive_pubkey_from_pem(const char *pem, size_t pem_len_with_nul,
 
 extern "C" esp_err_t tesla_ble_init(void)
 {
+    /* Load VIN first — set_vin() must be called before commands are built. */
+    char vin[TESLA_VIN_LEN + 2];
+    if (state_get(NVS_NS, NVS_KEY_VIN, vin, sizeof vin) == ESP_OK) {
+        client().set_vin(vin);
+        ESP_LOGI(TAG, "loaded VIN from NVS");
+    }
+
     char pem[PEM_BUF_LEN];
     if (state_get(NVS_NS, NVS_KEY_PEM, pem, sizeof pem) != ESP_OK) {
         ESP_LOGI(TAG, "no keypair in NVS (use tesla.gen_key)");
@@ -137,7 +146,31 @@ extern "C" esp_err_t tesla_ble_get_public_key(uint8_t out[TESLA_BLE_PUBKEY_LEN])
 extern "C" esp_err_t tesla_ble_reset(void)
 {
     state_remove(NVS_NS, NVS_KEY_PEM);
-    s_client.reset();   /* drop in-memory key */
-    ESP_LOGI(TAG, "keypair wiped");
+    state_remove(NVS_NS, NVS_KEY_VIN);
+    s_client.reset();   /* drop in-memory key and VIN */
+    ESP_LOGI(TAG, "keypair + VIN wiped");
     return ESP_OK;
+}
+
+extern "C" esp_err_t tesla_ble_set_vin(const char *vin)
+{
+    if (!vin || std::strlen(vin) != TESLA_VIN_LEN) return ESP_ERR_INVALID_ARG;
+    if (state_set(NVS_NS, NVS_KEY_VIN, vin) != ESP_OK) {
+        ESP_LOGE(TAG, "failed to persist VIN");
+        return ESP_FAIL;
+    }
+    client().set_vin(vin);
+    ESP_LOGI(TAG, "VIN set: %.17s", vin);
+    return ESP_OK;
+}
+
+extern "C" esp_err_t tesla_ble_get_vin(char *out, size_t out_sz)
+{
+    return state_get(NVS_NS, NVS_KEY_VIN, out, out_sz);
+}
+
+extern "C" bool tesla_ble_has_vin(void)
+{
+    char vin[TESLA_VIN_LEN + 2];
+    return state_get(NVS_NS, NVS_KEY_VIN, vin, sizeof vin) == ESP_OK;
 }
