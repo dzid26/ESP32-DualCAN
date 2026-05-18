@@ -1,5 +1,39 @@
 <script lang="ts">
   import { toast } from '../lib/toast.svelte';
+
+  let pointerStart: { x: number; y: number } | null = null;
+
+  function onPointerDown(e: PointerEvent): void {
+    pointerStart = { x: e.clientX, y: e.clientY };
+  }
+
+  function hasToastSelection(el: HTMLElement): boolean {
+    const selection = window.getSelection();
+    if (!selection?.toString()) return false;
+    for (let i = 0; i < selection.rangeCount; i++) {
+      if (selection.getRangeAt(i).intersectsNode(el)) return true;
+    }
+    return false;
+  }
+
+  function onToastClick(e: MouseEvent, id: number): void {
+    const el = e.currentTarget as HTMLElement;
+    if (e.detail !== 1) {
+      pointerStart = null;
+      return;
+    }
+    if (pointerStart) {
+      const dx = e.clientX - pointerStart.x;
+      const dy = e.clientY - pointerStart.y;
+      if (Math.hypot(dx, dy) > 4) {
+        pointerStart = null;
+        return;
+      }
+    }
+    pointerStart = null;
+    if (hasToastSelection(el)) return;
+    toast.dismiss(id);
+  }
 </script>
 
 <div class="toast-region" aria-live="polite" aria-atomic="false">
@@ -7,7 +41,8 @@
     <div
       class="toast toast--{t.severity}"
       role="status"
-      onclick={() => toast.dismiss(t.id)}
+      onpointerdown={onPointerDown}
+      onclick={(e) => onToastClick(e, t.id)}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toast.dismiss(t.id); }}
       tabindex="0"
     >
@@ -61,11 +96,12 @@
     gap: 8px;
     font-size: 13px;
     line-height: 1.4;
-    cursor: pointer;
+    cursor: default;
     text-align: left;
     color: var(--dc-text);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     animation: toast-in 160ms ease-out;
+    user-select: text;
   }
   .toast:focus-visible {
     outline: 2px solid var(--dc-accent);
@@ -97,6 +133,7 @@
   }
   .toast__close {
     color: var(--dc-text-fade);
+    cursor: pointer;
     font-size: 16px;
     line-height: 1;
     margin-top: -1px;
