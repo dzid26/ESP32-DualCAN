@@ -10007,6 +10007,28 @@
 			(justify left bottom)
 		)
 	)
+	(gr_text "G  1L  1H  0L  0H"
+		(at 122.25 83.25 270)
+		(layer "F.SilkS")
+		(uuid "244a9735-7f63-4f93-a1ef-30733d02c445")
+		(effects
+			(font
+				(size 1 1.07)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
+	(gr_text "Vin"
+		(at 125.75 83.15 180)
+		(layer "F.SilkS")
+		(uuid "7fb7b3a0-ea3d-4014-abea-026c3afca794")
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+	)
 	(gr_text "Dorky\nCommander"
 		(at 141.33 86.59 0)
 		(layer "F.SilkS")
