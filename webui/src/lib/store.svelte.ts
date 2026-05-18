@@ -107,6 +107,10 @@ class AppState {
    * URL to fetch+parse+upload. DbcView consumes + clears. */
   pendingDbc = $state<{ url: string; busId: number; name: string } | null>(null);
 
+  /** Cross-view hand-off: BusPip → Trace. Pre-filters the Trace view to
+   * this bus id. TraceView consumes + clears on mount. */
+  tracePendingBus = $state<number | null>(null);
+
   /** Cross-view hand-off: Scripts → AI. Carries the current editor content
    * so AIView can pre-attach it as context. AIView consumes + clears. */
   pendingAiScript = $state<{ filename: string; code: string } | null>(null);

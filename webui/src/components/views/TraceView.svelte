@@ -142,6 +142,13 @@
       status = 'disconnected';
     }
   });
+
+  $effect(() => {
+    if (app.tracePendingBus !== null) {
+      busFilter = app.tracePendingBus;
+      app.tracePendingBus = null;
+    }
+  });
 </script>
 
 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">

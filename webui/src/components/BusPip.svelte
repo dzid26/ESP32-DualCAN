@@ -24,9 +24,19 @@
     app.dbcViewBus = id;
     app.setView('dbc');
   }
+
+  function handleClick(): void {
+    if (!app.connected) return;
+    if (status === 'idle') {
+      app.setView('settings');
+    } else {
+      app.tracePendingBus = id;
+      app.setView('trace');
+    }
+  }
 </script>
 
-<div class="pip" title={`${name} · bus ${id}${dbcName ? ' · ' + dbcName : ''}`}>
+<div class="pip pip--clickable" title={`${name} · bus ${id}${dbcName ? ' · ' + dbcName : ''}`} onclick={handleClick} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && handleClick()}>
   <span class="mono" style="color: var(--dc-text-dim)">bus{id}</span>
   <span class={'pip__dot ' + dotClass}></span>
   <span class="ghost mono" style="font-size: 10px; min-width: 4.5ch; display: inline-block">{label}</span>
