@@ -9,10 +9,14 @@ Format (from `git describe --tags --dirty --always`):
 
 Strips a leading 'v' from the tag name so the version stored in
 DORKY_FIRMWARE_VERSION is always bare (no 'v' prefix).
+
+Writes src/version.h only when the string changes so that incremental
+builds only recompile files that include it, not every translation unit.
 """
 
 Import("env")  # noqa: F821 — PlatformIO SCons global
 
+import os
 import subprocess
 
 try:
@@ -30,7 +34,7 @@ except subprocess.CalledProcessError:
         cwd=cwd,
     ).decode().strip()
     dirty = subprocess.call(
-        ["git", "diff", "--quiet"],
+        ["git", "diff", "--quiet", "--", ":(exclude)firmware/sdkconfig.*"],
         cwd=cwd,
     ) != 0
     version = sha + ("-dirty" if dirty else "")
@@ -38,4 +42,16 @@ except Exception:
     version = "unknown"
 
 print(f"Firmware version: {version}")
-env.Append(CPPDEFINES=[("DORKY_FIRMWARE_VERSION", f'\\"{version}\\"')])
+
+version_h = os.path.join(env["PROJECT_DIR"], "src", "version.h")
+content = f'#pragma once\n#define DORKY_FIRMWARE_VERSION "{version}"\n'
+
+try:
+    with open(version_h) as f:
+        existing = f.read()
+except FileNotFoundError:
+    existing = ""
+
+if existing != content:
+    with open(version_h, "w") as f:
+        f.write(content)

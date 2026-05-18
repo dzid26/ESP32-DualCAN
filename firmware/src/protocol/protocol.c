@@ -1,3 +1,4 @@
+#include "version.h"
 #include "protocol/protocol.h"
 
 #include <inttypes.h>
@@ -194,6 +195,9 @@ static int log_vprintf_hook(const char *fmt, va_list args)
     va_copy(args2, args);
     int ret = s_orig_vprintf(fmt, args);
 
+    /* Guard against re-entrancy: send_frame → dorky_ble_notify causes NimBLE
+     * to log "GATT procedure initiated: notify" at INFO level, which re-enters
+     * this hook and recurses until the stack overflows (~17 frames × 700 B). */
     if (!s_hook_active && dorky_ble_connected()) {
         s_hook_active = true;
         char buf[320];

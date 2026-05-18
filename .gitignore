@@ -1,4 +1,5 @@
 firmware/build/
+firmware/src/version.h
 .codex
 .claude
 test-results/
