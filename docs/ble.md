@@ -1,118 +1,188 @@
-# BLE connection process
+# BLE — connecting to Dorky Commander
 
-How a Dorky Commander device gets discovered, paired, bonded, and
-re-connected over BLE — and what to do when it doesn't.
+## Can't connect?
 
-## Identity
+Start here before reading anything else.
+
+1. **Is the device powered?** Check the blue LED — it should be on or blinking.
+2. **Remove the old pairing from your OS.** Go to OS Bluetooth settings, find
+   "Dorky-XXXX", click Forget / Remove. Then try connecting again. This fixes
+   the majority of failed reconnect cases.
+3. **Open the pairing window.** If the device has at least one existing bond,
+   new devices are blocked. Press the BOOT button (short press, release within
+   15 s) — the blue LED goes solid for 60 s while the window is open. Or use
+   **Settings → Bluetooth → Open pairing window** if you still have a working
+   BLE connection from another device.
+4. **Still stuck?** See the [Troubleshooting scenarios](#troubleshooting-scenarios)
+   below for your specific symptom.
+
+---
+
+## Troubleshooting scenarios
+
+### "Connect cancelled" or nothing happens in Chrome
+
+You dismissed the browser's BLE picker, or the picker timed out.
+
+1. Click **Connect** again in the WebUI.
+2. When the picker appears, select **Dorky-XXXX** (where XXXX matches the
+   device's name — check the blue LED if you're unsure it's advertising).
+3. If Dorky-XXXX doesn't appear in the list, the pairing window may be closed
+   — press the BOOT button and try again.
+
+### Can't reconnect after a device wipe or factory reset
+
+Symptom: connected before, now the browser gets an immediate disconnect.
+The serial log says `reason=517` (HCI AUTH_FAIL).
+
+The OS is trying to re-use a saved encryption key (LTK) that no longer exists
+on the device.
+
+1. On your phone/PC, open **OS Bluetooth settings**.
+2. Find **Dorky-XXXX**, tap **Forget** / **Remove device**.
+3. Reconnect from the WebUI — a fresh pairing handshake will run.
+
+The device's pairing window re-opens automatically after any bond wipe, so
+you don't need to press BOOT.
+
+### New device can't pair — connects then drops immediately
+
+The pairing window is locked (another bond already exists on the device).
+
+1. On a device that *is* already bonded, open the WebUI → **Settings →
+   Bluetooth → Open pairing window** (60 s).
+2. Or press the **BOOT button** (short press) to open the window.
+3. Connect from the new device within 60 s.
+
+### Chrome shows the wrong name ("Dorky" instead of "Dorky-XXXX")
+
+The OS cached the name from before the device was renamed. This is cosmetic
+only — the connection still works.
+
+Fix: Forget the device from OS Bluetooth settings and re-pair.
+
+### Device not visible in the picker at all
+
+- Confirm the device is powered (blue LED).
+- Try moving closer — BLE range through metal trim is limited.
+- If a different device is already connected, the device still advertises but
+  some browsers / OS versions filter out already-connected devices. Disconnect
+  the other session first, or use a different browser profile.
+
+---
+
+## BOOT button
+
+The BOOT button (GPIO 9, active-low) is the only physical control on the board.
+
+| Hold duration | Action |
+|---|---|
+| Short press — release within 15 s | Open BLE pairing window for 60 s |
+| Hold ≥ 15 s | Factory reset (wipe NVS + scripts, reboot) |
+
+### Short press — open pairing window
+
+Equivalent to **Settings → Bluetooth → Open pairing window**.
+The blue LED goes solid while the window is open.
+Use this when the web UI is unreachable and you need to pair a new device.
+
+### Hold 15 s — factory reset
+
+Wipes the device back to first-run state:
+
+- **NVS erased** — BLE bonds, WiFi credentials, Anthropic API key, Tesla key,
+  bus bitrate settings.
+- **LittleFS formatted** — every uploaded script and the `.enabled` list.
+- Device reboots. Pairing window opens automatically (no bonds remain).
+
+**After a factory reset,** remove "Dorky-XXXX" from your OS Bluetooth settings
+before reconnecting — see [Can't reconnect after wipe](#cant-reconnect-after-a-device-wipe-or-factory-reset).
+
+### LED countdown during hold
+
+| Hold time | Blue LED |
+|---|---|
+| 0 – 3 s | Normal (pairing window solid / CAN blink) |
+| 3 – 10 s | Blinks every 300 ms — warning, release to cancel |
+| 10 – 15 s | Blinks every 100 ms — imminent, release to cancel |
+| ≥ 15 s | Solid — factory reset triggered |
+
+---
+
+## Device is hidden — no BOOT button access
+
+If the board is tucked under a trim panel but a USB-C cable is reachable,
+you can recover entirely from a laptop using `esptool` through PlatformIO.
+See **[docs/maintenance.md](maintenance.md)** for the exact commands to:
+
+- Wipe only BLE bonds (preserve scripts and Tesla key)
+- Wipe only scripts / DBC files
+- Full factory reset equivalent
+- Nuke everything and reflash from scratch
+
+---
+
+## Technical reference
+
+### Identity
 
 - **Stack:** NimBLE (the only BLE stack supported on ESP32-C6).
 - **Address:** public Bluetooth address from the eFuse MAC (fixed per board).
 - **Advertised name:** `Dorky-XXXX` where `XXXX` is the low two MAC bytes in
-  hex, so multiple boards on a bench (or in an OS Bluetooth list) are
-  distinguishable at a glance.
+  hex — multiple boards are distinguishable at a glance.
 - **GATT service:** custom UUID `6e400001-b5a3-f393-e0a9-e50e24dcca9e`
-  (Nordic UART Service convention) with two characteristics:
-  - **RX** (`…0002…`) — writable; the WebUI sends commands here.
-  - **TX** (`…0003…`) — notifiable; the device sends responses/events here.
+  (Nordic UART Service convention):
+  - **RX** (`…0002…`) — writable; WebUI sends commands here.
+  - **TX** (`…0003…`) — notifiable; device sends responses and events here.
 
-## Security model
+### Security model
 
-- **Pairing method:** Just Works (no PIN; `sm_io_cap = NO_INPUT_OUTPUT`).
-- **Secure Connections only.** Legacy SMP is compiled out (see
-  `CONFIG_BT_NIMBLE_SM_LEGACY` in `firmware/sdkconfig.defaults`). Every BLE
-  4.2+ central does SC; pre-2014 BLE 4.0 centrals cannot pair.
-- **Bonding** — LTK + IRK are exchanged on first pair and persisted to NVS
-  via NimBLE's config store. Subsequent connections from the same central
-  encrypt with the stored LTK without re-pairing.
-- **Pairing window** is gated by `sm_bonding`:
-  - **OPEN** — `sm_bonding=1`; any device may connect and complete bonding.
-  - **LOCKED** — `sm_bonding=0`; connections from unbonded peers are
-    terminated 100 ms after they land. Bonded peers connect normally and
-    encrypt with their stored LTK.
-- The window opens on boot when there are zero bonds (held until a bond
-  succeeds), via a short BOOT button press (60 s; see [button.md](button.md)),
-  via the web UI's "Open pairing window" button (60 s), or implicitly after
-  `ble.reset_pairs` (held until a bond succeeds, same as boot).
+- **Pairing:** Just Works (no PIN; `sm_io_cap = NO_INPUT_OUTPUT`).
+- **Secure Connections only.** Legacy SMP is compiled out
+  (`CONFIG_BT_NIMBLE_SM_LEGACY` disabled in `sdkconfig.defaults`).
+  BLE 4.2+ devices pair normally; pre-2014 BLE 4.0 hardware cannot pair.
+- **Bonding** — LTK + IRK exchanged on first pair, persisted to NVS.
+  Subsequent connections encrypt immediately with the stored LTK.
+- **Pairing window** (`sm_bonding` flag):
+  - **OPEN** — any device may connect and complete bonding.
+  - **LOCKED** — unbonded peers are terminated 100 ms after connecting;
+    bonded peers encrypt normally.
+  - Opens on boot when no bonds exist (held indefinitely until a bond forms),
+    for 60 s after a BOOT button short press or `ble.unlock_pairing` op,
+    and indefinitely after `ble.reset_pairs`.
 
-## Single-client kicking
+### Single-client kicking
 
-The firmware tracks only one active session (`s_conn_handle`). When a
-**second authorized** device connects:
+The firmware tracks one active session. When a second **bonded** device
+connects, the existing connection is terminated gracefully
+(`BLE_ERR_REM_USER_CONN_TERM`). An **unbonded** device with the window locked
+is silently dropped after 100 ms — the active session is untouched.
 
-1. The new connection is accepted.
-2. The old connection is terminated with `BLE_ERR_REM_USER_CONN_TERM`.
-3. The web UI on the booted-out client sees its `gattserverdisconnected`
-   event and shows a toast.
+### Advertising
 
-A **second unauthorized** device (no bond, pairing window closed) is held
-silently for 100 ms then terminated with `BLE_ERR_AUTH_FAIL`; the existing
-session is untouched.
+The device advertises while connected so a second authorized client can
+discover it ("swap PC for phone" flow). On this controller,
+`ble_gap_adv_start` occasionally returns `ENOMEM` while a connection is
+active; the advertising watchdog (runs every 10 s) retries silently. After
+60 s of unrecoverable failure the device reboots.
 
-## Advertising
+### Troubleshooting matrix (developer)
 
-Connectable undirected advertising at the controller's default interval.
-The device **keeps advertising while connected** so a second client can find
-it and (if authorized) kick the first — the "swap PC for phone" flow. On
-this controller, `ble_gap_adv_start` sometimes returns `ENOMEM` while a
-connection is active; in that case a single ERROR is logged and the
-advertising **watchdog** (every 10 s) retries. After 60 s of unrecoverable
-adv failure, the device reboots.
-
-## End-to-end flow
-
-### First-time pair
-
-1. Boot. Device advertises as `Dorky-XXXX`, pairing window OPEN (no bonds).
-2. User opens the WebUI in Chrome / Edge, clicks Connect, picks `Dorky-XXXX`
-   from the browser's BLE picker.
-3. GATT connect → `BLE_GAP_EVENT_CONNECT` fires; firmware authorizes the
-   session and calls `ble_gap_security_initiate()` (this is what triggers
-   the OS-level pairing dialog on Android).
-4. SMP exchange completes (`pairing_complete: status=0`,
-   `enc_change ... bonded=1`).
-5. Pairing window closes early on bond success; bond is written to NVS.
-
-### Subsequent reconnect (already bonded)
-
-1. Device boots, scans bond store → ≥ 1 bond → window stays LOCKED.
-2. Central reconnects, link encrypts immediately with the cached LTK.
-3. `enc_change ... bonded=1` confirms.
-
-### Failed reconnect (mismatched bond)
-
-If the device's bond store was wiped (`ble.reset_pairs` or first flash with
-clean NVS) but the OS still has the old LTK, the central will try to encrypt
-with that stale key, the firmware will have nothing matching, and the link
-drops with `reason=517` (HCI `0x05` AUTH_FAIL). **No fresh SMP is attempted**
-— BLE spec disallows silent re-bonding because it would be a MITM hole.
-
-The cure is OS-side: remove the device from the OS Bluetooth settings, then
-reconnect. The device's pairing window auto-reopens after `reset_pairs` or
-after a failed reconnect with zero bonds, so first contact then completes
-fresh SMP and writes a new bond.
-
-## Troubleshooting matrix
-
-| Symptom | Probable cause | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
-| `Disconnected (reason=517)` on reconnect | OS has stale LTK after device-side wipe | Remove "Dorky-XXXX" from OS Bluetooth, reconnect |
-| Quick connect → quick disconnect, never bonds | Pairing window closed and peer not yet bonded | Press BOOT (60 s) or use Settings → Bluetooth → Open pairing window |
-| Boot shows `0 bond(s)` after a known-good pair | `ble_store_config_init()` not called, or full chip erase wiped NVS | Verify the call is present; ensure flash is `pio run -t upload` not `erase upload` |
-| `adv start failed: 6` during a connection | Controller refuses concurrent adv+conn (ENOMEM). Watchdog retries; one log per cycle is normal | None — informational |
-| Boot bootloops or BLE goes silent | `.pio/build/<env>` shadowed an old sdkconfig | `rm -rf .pio/build/<env> sdkconfig.<env>` and rebuild |
-| Chrome shows old name "Dorky" after rename | OS cached the name at first bond time | Remove + re-pair to refresh |
-| Cannot pair from very old laptop / OBD scanner | Pre-2014 BLE 4.0 only — no Secure Connections | Re-enable `CONFIG_BT_NIMBLE_SM_LEGACY=y` (downgrade attack surface) |
+| `reason=517` on reconnect | OS has stale LTK after device-side wipe | Forget device in OS Bluetooth, reconnect |
+| Quick connect → drop, never bonds | Pairing window closed | Short-press BOOT or use Settings → Bluetooth |
+| `adv start failed: 6` during a connection | Controller ENOMEM (normal) | Informational — watchdog handles it |
+| Bootloop / BLE silent after sdkconfig change | PIO cache shadowed old sdkconfig | `rm -rf .pio/build/<env> sdkconfig.<env>` |
+| OS shows old name "Dorky" | OS cached name at bond time | Forget and re-pair |
+| Pre-2014 device can't pair | BLE 4.0, no Secure Connections | Re-enable `CONFIG_BT_NIMBLE_SM_LEGACY=y` |
 
-## Related code
+### Related code
 
 - `firmware/src/ble/ble_transport.c` — NimBLE init, GAP events, pairing
   window, kick logic, advertising watchdog.
-- `firmware/src/ble/ble_transport.h` — public API
-  (`dorky_ble_notify`, `dorky_ble_unlock_pairing`, `dorky_ble_reset_pairings`,
-  `dorky_ble_bond_count`).
 - `firmware/sdkconfig.defaults` — `BT_NIMBLE_*` flags.
 - `firmware/src/protocol/protocol.c` — `ble.status`, `ble.unlock_pairing`,
   `ble.reset_pairs` op handlers.
 - `webui/src/transport/ble.ts` — Web Bluetooth client.
-- `webui/src/components/views/SettingsView.svelte` — Bluetooth panel + the
-  Wipe Bonds AlertDialog.
+- `webui/src/components/views/SettingsView.svelte` — Bluetooth panel.

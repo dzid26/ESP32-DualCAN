@@ -50,7 +50,7 @@ flow and troubleshooting.
 | Short press | Open BLE pairing window for 60 s |
 | Hold 15 s | Factory reset — wipes bonds, credentials, and scripts |
 
-See [docs/button.md](docs/button.md) for LED feedback and full details.
+See [docs/ble.md](docs/ble.md) for LED feedback and full pairing details.
 
 ## ICs
 - ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
