@@ -30,9 +30,9 @@ re-connected over BLE — and what to do when it doesn't.
     terminated 100 ms after they land. Bonded peers connect normally and
     encrypt with their stored LTK.
 - The window opens on boot when there are zero bonds (held until a bond
-  succeeds), via the BOOT button (60 s), via the web UI's "Open pairing
-  window" button (60 s), or implicitly after `ble.reset_pairs` (held until
-  a bond succeeds, same as boot).
+  succeeds), via a short BOOT button press (60 s; see [button.md](button.md)),
+  via the web UI's "Open pairing window" button (60 s), or implicitly after
+  `ble.reset_pairs` (held until a bond succeeds, same as boot).
 
 ## Single-client kicking
 
