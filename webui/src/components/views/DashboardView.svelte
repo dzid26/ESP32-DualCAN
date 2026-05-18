@@ -352,6 +352,7 @@
       <div
         class="frame"
         onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
         style="width: min(440px, 92vw); background: var(--dc-surface)"
         role="dialog"
         aria-modal="true"

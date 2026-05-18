@@ -40,7 +40,7 @@
   {#each toast.list as t (t.id)}
     <div
       class="toast toast--{t.severity}"
-      role="status"
+      role="button"
       onpointerdown={onPointerDown}
       onclick={(e) => onToastClick(e, t.id)}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toast.dismiss(t.id); }}

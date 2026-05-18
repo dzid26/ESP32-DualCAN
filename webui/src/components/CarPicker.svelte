@@ -39,9 +39,11 @@
     <div
       class="frame car-picker"
       onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal="true"
       aria-label="Pick your vehicle"
+      tabindex="-1"
     >
       <div class="frame__head">
         <span class="row-flex">

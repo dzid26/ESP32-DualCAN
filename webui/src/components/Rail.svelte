@@ -10,15 +10,7 @@
 </script>
 
 <aside class="rail">
-  <div
-    class="rail__brand"
-    role={canInstall ? 'button' : undefined}
-    tabindex={canInstall ? 0 : undefined}
-    aria-label={canInstall ? 'Install app' : 'Dorky Commander'}
-    title={canInstall ? 'Install app' : 'Dorky Commander · CAN reverse-engineering tool'}
-    style={canInstall ? 'cursor: pointer' : ''}
-    onclick={canInstall ? () => app.installApp() : undefined}
-  >
+  {#snippet brandInner()}
     <div class="rail__brand-plate">
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="var(--dc-accent)" stroke-width="1.4" />
@@ -30,7 +22,27 @@
       <div class="rail__brand-name mono">DORKY</div>
       <div class="rail__brand-name mono">CMDR</div>
     </div>
-  </div>
+  {/snippet}
+  {#if canInstall}
+    <button
+      class="rail__brand"
+      type="button"
+      style="cursor: pointer"
+      aria-label="Install app"
+      title="Install app"
+      onclick={() => app.installApp()}
+    >
+      {@render brandInner()}
+    </button>
+  {:else}
+    <div
+      class="rail__brand"
+      aria-label="Dorky Commander"
+      title="Dorky Commander · CAN reverse-engineering tool"
+    >
+      {@render brandInner()}
+    </div>
+  {/if}
 
   <div class="rail__list">
     {#each NAV_ITEMS as item}
