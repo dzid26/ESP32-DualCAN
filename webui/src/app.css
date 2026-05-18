@@ -579,6 +579,12 @@ button { font: inherit; color: inherit; }
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
   50%      { box-shadow: 0 0 0 2px var(--dc-warn-tint); }
 }
+.cp-backdrop {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(10,8,4,0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: min(10dvh, 56px);
+}
 .car-picker { width: min(520px, 92vw); max-height: 78vh; display: flex; flex-direction: column; }
 .car-picker__list { flex: 1; overflow-y: auto; padding: 4px 0; }
 .car-picker__foot {
