@@ -25,3 +25,14 @@ esp_err_t fs_init(void)
     ESP_LOGI(TAG, "LittleFS mounted: %zu / %zu bytes used", used, total);
     return ESP_OK;
 }
+
+esp_err_t fs_format(void)
+{
+    esp_err_t err = esp_littlefs_format("littlefs");
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "LittleFS format failed: %s", esp_err_to_name(err));
+    } else {
+        ESP_LOGW(TAG, "LittleFS formatted (all scripts erased)");
+    }
+    return err;
+}

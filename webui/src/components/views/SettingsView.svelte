@@ -62,6 +62,25 @@
   let bleError = $state<string | null>(null);
   let confirmResetPairs = $state(false);
 
+  // Factory reset
+  let confirmFactoryReset = $state(false);
+  let factoryResetBusy = $state(false);
+  let factoryResetError = $state<string | null>(null);
+
+  async function factoryReset(): Promise<void> {
+    factoryResetBusy = true;
+    factoryResetError = null;
+    confirmFactoryReset = false;
+    try {
+      await app.proto.systemFactoryReset();
+      app.pushLog('Factory reset — device wiping NVS + scripts and rebooting. Remove "Dorky" from your OS Bluetooth settings before reconnecting.', 'warn', 'settings');
+    } catch (e) {
+      factoryResetError = e instanceof Error ? e.message : String(e);
+    } finally {
+      factoryResetBusy = false;
+    }
+  }
+
   async function refreshBle(): Promise<void> {
     if (!app.connected) return;
     try {
@@ -608,9 +627,19 @@
       </div>
       <div class="field">
         <span>Factory reset</span>
-        <button class="btn btn--sm btn--danger" style="justify-self: start" disabled title="Not yet wired in protocol">
-          Erase NVS + scripts
-        </button>
+        <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
+          <button class="btn btn--sm btn--danger"
+            onclick={() => (confirmFactoryReset = true)}
+            disabled={!app.connected || factoryResetBusy}>
+            Erase NVS + scripts
+          </button>
+          <span class="muted" style="font-size: 11px">
+            Wipes all bonds, WiFi credentials, secrets, Tesla keys, and uploaded scripts. Device reboots into first-run state.
+          </span>
+          {#if factoryResetError}
+            <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{factoryResetError}</span>
+          {/if}
+        </div>
       </div>
     </div>
   </div>
@@ -646,6 +675,44 @@
               disabled={bleBusy}
             >
               Wipe bonds
+            </AlertDialog.Action>
+          </div>
+        </div>
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog.Root>
+
+  <AlertDialog.Root open={confirmFactoryReset} onOpenChange={(v) => (confirmFactoryReset = v)}>
+    <AlertDialog.Portal>
+      <AlertDialog.Overlay class="ad-overlay" />
+      <AlertDialog.Content class="frame ad-content"
+        onOpenAutoFocus={(e) => { e.preventDefault(); setTimeout(() => document.getElementById('ad-factory-reset')?.focus(), 20); }}
+      >
+        <div class="frame__head" style="color: var(--dc-err-text)">
+          <AlertDialog.Title style="margin: 0; font-size: inherit; font-weight: inherit;">
+            Factory reset device?
+          </AlertDialog.Title>
+          <AlertDialog.Cancel class="btn btn--sm btn--ghost btn--icon" aria-label="Cancel">
+            <Icon name="x" size={13} />
+          </AlertDialog.Cancel>
+        </div>
+        <div class="frame__body" style="display: flex; flex-direction: column; gap: 10px">
+          <AlertDialog.Description style="margin: 0; font-size: 13px; color: var(--dc-text-dim); line-height: 1.5">
+            This erases <strong>everything</strong> on the device — bonds, WiFi credentials, API keys, Tesla keys, and every uploaded script.
+          </AlertDialog.Description>
+          <p style="margin: 0; font-size: 12px; color: var(--dc-text-fade); line-height: 1.45">
+            The device will reboot into first-run state. To reconnect, first <strong>remove "Dorky" from your OS Bluetooth settings</strong>
+            — otherwise the OS will retry its stale key and reject the new pairing.
+          </p>
+          <div class="row-flex" style="justify-content: flex-end; margin-top: 4px">
+            <AlertDialog.Cancel class="btn btn--sm btn--ghost">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action
+              id="ad-factory-reset"
+              class="btn btn--sm btn--danger"
+              onclick={factoryReset}
+              disabled={factoryResetBusy}
+            >
+              Erase everything
             </AlertDialog.Action>
           </div>
         </div>

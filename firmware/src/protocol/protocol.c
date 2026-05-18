@@ -22,6 +22,7 @@
 #include "wifi/wifi.h"
 #include "ota/ota.h"
 #include "storage/state.h"
+#include "storage/fs.h"
 #include "nvs.h"
 
 static const char *TAG = "proto";
@@ -283,8 +284,29 @@ static void handle_system_info(int id)
     cJSON_AddStringToObject(result, "fw_version", DORKY_FIRMWARE_VERSION);
     /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
      * features that the firmware doesn't recognise yet. */
-    cJSON_AddNumberToObject(result, "proto_version", 5);
+    cJSON_AddNumberToObject(result, "proto_version", 6);
     send_ok(id, result);
+}
+
+static void factory_reset_task(void *arg)
+{
+    (void)arg;
+    /* Let the ok response notify drain before we yank the storage out. */
+    vTaskDelay(pdMS_TO_TICKS(300));
+    ESP_LOGW(TAG, "Factory reset: wiping NVS + LittleFS");
+    fs_format();
+    state_nvs_erase_all();
+    vTaskDelay(pdMS_TO_TICKS(50));
+    esp_restart();
+}
+
+static void handle_system_factory_reset(int id)
+{
+    if (ota_in_progress()) {
+        ota_abort();
+    }
+    send_ok(id, NULL);
+    xTaskCreate(factory_reset_task, "factory_rst", 4096, NULL, 5, NULL);
 }
 
 static void handle_system_reboot(int id)
@@ -871,6 +893,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     if (strcmp(op_s, "ping") == 0)                handle_ping(id);
     else if (strcmp(op_s, "system.info") == 0)    handle_system_info(id);
     else if (strcmp(op_s, "system.reboot") == 0)  handle_system_reboot(id);
+    else if (strcmp(op_s, "system.factory_reset") == 0) handle_system_factory_reset(id);
     else if (strcmp(op_s, "script.list") == 0)    handle_script_list(id);
     else if (strcmp(op_s, "script.write") == 0)   handle_script_write(id, req);
     else if (strcmp(op_s, "script.read") == 0)    handle_script_read(id, req);

@@ -263,6 +263,10 @@ export class Protocol {
     return this.call('system.reboot');
   }
 
+  systemFactoryReset(): Promise<void> {
+    return this.call('system.factory_reset');
+  }
+
   listScripts(): Promise<{ scripts: ScriptInfo[] }> {
     return this.call('script.list');
   }

@@ -48,3 +48,11 @@ esp_err_t state_remove(const char *ns, const char *key)
     nvs_close(h);
     return err;
 }
+
+esp_err_t state_nvs_erase_all(void)
+{
+    ESP_LOGW(TAG, "Erasing entire NVS partition");
+    esp_err_t err = nvs_flash_erase();
+    if (err != ESP_OK) return err;
+    return nvs_flash_init();
+}

@@ -19,7 +19,7 @@ import { type Car, loadCar, saveCar } from './cars';
 import { toast } from './toast.svelte';
 
 // Bump in lockstep with firmware proto_version when ops change.
-const UI_PROTO_VERSION = 5;
+const UI_PROTO_VERSION = 6;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
