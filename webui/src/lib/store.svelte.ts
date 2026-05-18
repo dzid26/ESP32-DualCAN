@@ -237,27 +237,31 @@ class AppState {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.connectError = msg;
       /* Match both the explicit cancel string and DOMException name="NotFoundError"
        * which Chrome throws when the user dismisses the BLE picker without picking. */
       const isNotFound =
         (typeof DOMException !== 'undefined' && e instanceof DOMException && e.name === 'NotFoundError') ||
         /cancell?ed|dismiss|NotFoundError|User cancelled/i.test(msg);
       if (isNotFound) {
+        this.connectError = 'Connect cancelled';
         toast.show({
           severity: 'info',
           message: 'Connect cancelled. Click Connect again and pick a "Dorky-XXXX" device from the browser\'s Bluetooth picker.',
           duration: 7000,
         });
       } else {
+        const message = msg.includes('Web Bluetooth not available')
+          ? msg
+          : 'Connect failed. Check the board is powered, in range, and or un-pair in your OS Bluetooth settings.';
+        this.connectError = message;
         toast.show({
           severity: 'error',
-          message: `Connect failed: ${msg}. Check the board is powered, in range, and not already bonded with a stale key in your OS Bluetooth list.`,
+          message,
           link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
           duration: 90000,
         });
       }
-      this.pushLog(`connect failed: ${msg}`, 'error', 'ble');
+      this.pushLog(this.connectError, isNotFound ? 'warn' : 'error', 'ble');
     } finally {
       this.connecting = false;
     }
