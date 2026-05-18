@@ -18,6 +18,7 @@
 #include "can/can.h"
 #include "can/can_driver.h"
 #include "dbc/dbc_pack.h"
+#include "tesla_ble/tesla_ble.h"
 #include "wifi/wifi.h"
 #include "ota/ota.h"
 #include "storage/state.h"
@@ -279,7 +280,7 @@ static void handle_system_info(int id)
     cJSON_AddStringToObject(result, "fw_version", DORKY_FIRMWARE_VERSION);
     /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
      * features that the firmware doesn't recognise yet. */
-    cJSON_AddNumberToObject(result, "proto_version", 4);
+    cJSON_AddNumberToObject(result, "proto_version", 5);
     send_ok(id, result);
 }
 
@@ -469,6 +470,50 @@ static void handle_ble_reset_pairs(int id)
     /* Tiny delay to let the notify drain before the disconnect. */
     vTaskDelay(pdMS_TO_TICKS(50));
     dorky_ble_reset_pairings();
+}
+
+/* ---- Tesla BLE ops ----
+ * Phase 1: keypair lifecycle only. The actual VCSEC pairing handshake is
+ * not yet implemented; see docs/tesla-ble.md for the staged plan. */
+
+static cJSON *tesla_ble_status_obj(void)
+{
+    cJSON *r = cJSON_CreateObject();
+    cJSON_AddBoolToObject(r, "has_key", tesla_ble_has_key());
+    if (tesla_ble_has_key()) {
+        uint8_t pub[TESLA_BLE_PUBKEY_LEN];
+        if (tesla_ble_get_public_key(pub) == ESP_OK) {
+            char hex[TESLA_BLE_PUBKEY_LEN * 2 + 1];
+            static const char H[] = "0123456789abcdef";
+            for (int i = 0; i < TESLA_BLE_PUBKEY_LEN; i++) {
+                hex[i * 2]     = H[pub[i] >> 4];
+                hex[i * 2 + 1] = H[pub[i] & 0xF];
+            }
+            hex[sizeof(hex) - 1] = '\0';
+            cJSON_AddStringToObject(r, "public_key_hex", hex);
+        }
+    }
+    return r;
+}
+
+static void handle_tesla_status(int id)
+{
+    send_ok(id, tesla_ble_status_obj());
+}
+
+static void handle_tesla_gen_key(int id)
+{
+    if (tesla_ble_generate_key() != ESP_OK) {
+        send_err(id, "gen_key failed");
+        return;
+    }
+    send_ok(id, tesla_ble_status_obj());
+}
+
+static void handle_tesla_reset(int id)
+{
+    tesla_ble_reset();
+    send_ok(id, NULL);
 }
 
 static void handle_wifi_status(int id)
@@ -835,6 +880,9 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "bus.set_bitrate") == 0) handle_bus_set_bitrate(id, req);
     else if (strcmp(op_s, "sim.set") == 0)         handle_sim_set(id, req);
     else if (strcmp(op_s, "log.set_level") == 0)   handle_log_set_level(id, req);
+    else if (strcmp(op_s, "tesla.status") == 0)        handle_tesla_status(id);
+    else if (strcmp(op_s, "tesla.gen_key") == 0)       handle_tesla_gen_key(id);
+    else if (strcmp(op_s, "tesla.reset") == 0)         handle_tesla_reset(id);
     else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
     else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);
     else if (strcmp(op_s, "ble.reset_pairs") == 0)     handle_ble_reset_pairs(id);

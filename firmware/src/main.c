@@ -21,6 +21,7 @@
 #include "storage/state.h"
 #include "scripting/script_loader.h"
 #include "protocol/protocol.h"
+#include "tesla_ble/tesla_ble.h"
 #include "wifi/wifi.h"
 #include "ota/ota.h"
 
@@ -82,6 +83,7 @@ static void hw_init(void)
 
     fs_init();
     wifi_init();
+    tesla_ble_init();
 }
 
 void app_main(void)

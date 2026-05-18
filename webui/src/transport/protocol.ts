@@ -358,6 +358,21 @@ export class Protocol {
     return this.call('ble.reset_pairs');
   }
 
+  /** Tesla BLE keypair status. public_key_hex is SEC1 uncompressed P-256 (65 bytes hex). */
+  teslaStatus(): Promise<{ has_key: boolean; public_key_hex?: string }> {
+    return this.call('tesla.status');
+  }
+
+  /** Generate a fresh P-256 keypair and persist it. Returns the new status. */
+  teslaGenKey(): Promise<{ has_key: boolean; public_key_hex?: string }> {
+    return this.call('tesla.gen_key');
+  }
+
+  /** Wipe the Tesla keypair from NVS. */
+  teslaReset(): Promise<void> {
+    return this.call('tesla.reset');
+  }
+
   wifiStatus(): Promise<{ connected: boolean; ssid: string; ip: string }> {
     return this.call('wifi.status');
   }
