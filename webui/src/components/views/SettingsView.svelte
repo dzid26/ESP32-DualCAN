@@ -4,6 +4,7 @@
   import Icon from '../Icon.svelte';
   import { Checkbox, Progress, AlertDialog } from 'bits-ui';
   import { onMount } from 'svelte';
+  import { isIOS } from '../../lib/platform';
 
   const GITHUB_REPO = 'dzid26/ESP32-DualCAN';
 
@@ -277,16 +278,22 @@
     <div class="empty">Connect to view live device settings. Form values won't reach the device until you connect.</div>
   {/if}
 
-  {#if app.installPrompt && !app.isInstalled}
+  {#if !app.isInstalled && (app.installPrompt || isIOS)}
     <div class="frame">
       <div class="frame__head">Install app</div>
       <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
         <div class="field">
           <span>Add to home screen</span>
           <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start">
-            <button class="btn btn--info btn--sm" onclick={() => app.installApp()}>
-              <Icon name="down" size={13} />Install
-            </button>
+            {#if app.installPrompt}
+              <button class="btn btn--info btn--sm" onclick={() => app.installApp()}>
+                <Icon name="down" size={13} />Install
+              </button>
+            {:else}
+              <span style="font-size: 12px; color: var(--dc-text-dim)">
+                Tap <strong>Share ↑</strong> → <strong>Add to Home Screen</strong>
+              </span>
+            {/if}
             <span class="muted" style="font-size: 11px">
               Opens and connects faster than a browser tab. Works offline for the UI.
             </span>

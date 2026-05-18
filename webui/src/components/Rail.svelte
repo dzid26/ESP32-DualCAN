@@ -5,10 +5,20 @@
   import Icon from './Icon.svelte';
 
   let { onPalette, onToggleLog }: { onPalette: () => void; onToggleLog: () => void } = $props();
+
+  const canInstall = $derived(!isTouch && !!app.installPrompt && !app.isInstalled);
 </script>
 
 <aside class="rail">
-  <div class="rail__brand" aria-label="Dorky Commander" title="Dorky Commander · CAN reverse-engineering tool">
+  <div
+    class="rail__brand"
+    role={canInstall ? 'button' : undefined}
+    tabindex={canInstall ? 0 : undefined}
+    aria-label={canInstall ? 'Install app' : 'Dorky Commander'}
+    title={canInstall ? 'Install app' : 'Dorky Commander · CAN reverse-engineering tool'}
+    style={canInstall ? 'cursor: pointer' : ''}
+    onclick={canInstall ? () => app.installApp() : undefined}
+  >
     <div class="rail__brand-plate">
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="var(--dc-accent)" stroke-width="1.4" />
