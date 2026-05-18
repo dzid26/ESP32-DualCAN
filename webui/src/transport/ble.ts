@@ -27,6 +27,27 @@ export class BleTransport implements Transport {
   private _connected = false;
   private connectedAt = 0;
   private userInitiatedDisconnect = false;
+  private readonly handleGattServerDisconnected = () => {
+    const sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
+    let kind: DisconnectKind;
+    if (this.userInitiatedDisconnect) kind = 'user';
+    else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) kind = 'auth_fail';
+    else kind = 'unexpected';
+    this.userInitiatedDisconnect = false;
+    this.connectedAt = 0;
+    this.server = null;
+    this.rxChar = null;
+    this.txChar = null;
+    this.setConnected(false);
+    console.log(`BLE disconnected (${kind}, after ${sinceConnect}ms)`);
+    this.disconnectCbs.forEach(cb => cb(kind));
+  };
+  private readonly handleCharacteristicValueChanged = (event: Event) => {
+    const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
+    if (value && this.receiveCb) {
+      this.receiveCb(new Uint8Array(value.buffer));
+    }
+  };
 
   get connected(): boolean {
     return this._connected;
@@ -38,6 +59,7 @@ export class BleTransport implements Transport {
   }
 
   private setConnected(val: boolean) {
+    if (this._connected === val) return;
     this._connected = val;
     this.changeCbs.forEach(cb => cb(val));
   }
@@ -53,18 +75,8 @@ export class BleTransport implements Transport {
   }
 
   private async setupDevice(device: BluetoothDevice): Promise<void> {
-    device.addEventListener('gattserverdisconnected', () => {
-      const sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
-      let kind: DisconnectKind;
-      if (this.userInitiatedDisconnect) kind = 'user';
-      else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) kind = 'auth_fail';
-      else kind = 'unexpected';
-      this.userInitiatedDisconnect = false;
-      this.connectedAt = 0;
-      this.setConnected(false);
-      console.log(`BLE disconnected (${kind}, after ${sinceConnect}ms)`);
-      this.disconnectCbs.forEach(cb => cb(kind));
-    });
+    device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+    device.addEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
 
     this.server = await device.gatt!.connect();
     const service = await this.server.getPrimaryService(SERVICE_UUID);
@@ -73,12 +85,8 @@ export class BleTransport implements Transport {
     this.txChar = await service.getCharacteristic(TX_CHAR_UUID);
 
     await this.txChar.startNotifications();
-    this.txChar.addEventListener('characteristicvaluechanged', (event) => {
-      const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
-      if (value && this.receiveCb) {
-        this.receiveCb(new Uint8Array(value.buffer));
-      }
-    });
+    this.txChar.removeEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
+    this.txChar.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
 
     this.device = device;
     this.connectedAt = Date.now();
