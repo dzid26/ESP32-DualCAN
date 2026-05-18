@@ -111,6 +111,48 @@
     <div class="empty">Connect to manage Tesla pairing.</div>
   {/if}
 
+  <!-- Scan + Pair -->
+  <div class="frame">
+    <div class="frame__head">Pair with vehicle</div>
+    <div class="frame__body" style="display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 12px; color: var(--dc-text-dim); line-height: 1.5">
+        Scan nearby Tesla VCSEC advertisements. After pairing you must physically
+        approve the new key inside the car using a keycard or existing phone key.
+      </div>
+
+      <div class="row-flex" style="gap: 6px">
+        <button class="btn btn--sm btn--info" onclick={scan}
+          disabled={!app.connected || scanning || pairing}>
+          {scanning ? 'Scanning…' : 'Scan (6 s)'}
+        </button>
+      </div>
+
+      {#if devices.length > 0}
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          {#each devices as d}
+            <div class="device-row">
+              <div style="min-width: 0; flex: 1">
+                <div class="mono" style="font-size: 12px">{d.name || '(no name)'}</div>
+                <div class="mono ghost" style="font-size: 10px">{d.addr} · {d.rssi} dBm</div>
+              </div>
+              <button class="btn btn--sm btn--info"
+                onclick={() => pair(d)}
+                disabled={pairing || scanning || !status?.has_key}
+                title={!status?.has_key ? 'Generate a keypair first' : undefined}>
+                {pairing ? 'Pairing…' : 'Pair'}
+              </button>
+            </div>
+          {/each}
+        </div>
+        {#if !status?.has_key}
+          <div style="font-size: 11px; color: var(--dc-text-dim)">
+            Generate a keypair below to enable pairing.
+          </div>
+        {/if}
+      {/if}
+    </div>
+  </div>
+
   <!-- VIN -->
   <div class="frame">
     <div class="frame__head">Vehicle (VIN)</div>
@@ -185,48 +227,6 @@
         <div class="field"><span></span>
           <span class="mono" style="color: var(--dc-err-text); font-size: 11px">{err}</span>
         </div>
-      {/if}
-    </div>
-  </div>
-
-  <!-- Scan + Pair -->
-  <div class="frame">
-    <div class="frame__head">Pair with vehicle</div>
-    <div class="frame__body" style="display: flex; flex-direction: column; gap: 10px">
-      <div style="font-size: 12px; color: var(--dc-text-dim); line-height: 1.5">
-        Scan nearby Tesla VCSEC advertisements. After pairing you must physically
-        approve the new key inside the car using a keycard or existing phone key.
-      </div>
-
-      <div class="row-flex" style="gap: 6px">
-        <button class="btn btn--sm btn--info" onclick={scan}
-          disabled={!app.connected || scanning || pairing}>
-          {scanning ? 'Scanning…' : 'Scan (6 s)'}
-        </button>
-      </div>
-
-      {#if devices.length > 0}
-        <div style="display: flex; flex-direction: column; gap: 6px">
-          {#each devices as d}
-            <div class="device-row">
-              <div style="min-width: 0; flex: 1">
-                <div class="mono" style="font-size: 12px">{d.name || '(no name)'}</div>
-                <div class="mono ghost" style="font-size: 10px">{d.addr} · {d.rssi} dBm</div>
-              </div>
-              <button class="btn btn--sm btn--info"
-                onclick={() => pair(d)}
-                disabled={pairing || scanning || !status?.has_key}
-                title={!status?.has_key ? 'Generate a keypair first' : undefined}>
-                {pairing ? 'Pairing…' : 'Pair'}
-              </button>
-            </div>
-          {/each}
-        </div>
-        {#if !status?.has_key}
-          <div style="font-size: 11px; color: var(--dc-text-dim)">
-            Generate a keypair above to enable pairing.
-          </div>
-        {/if}
       {/if}
     </div>
   </div>
