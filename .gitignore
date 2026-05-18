@@ -5,3 +5,4 @@ firmware/src/version.h
 test-results/
 webui/node_modules/
 webui-mock/
+**/.history/
