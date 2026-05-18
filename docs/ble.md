@@ -109,16 +109,23 @@ before reconnecting — see [Can't reconnect after wipe](#cant-reconnect-after-a
 
 ---
 
-## Device is hidden — no BOOT button access
+## Device is hidden — USB cable recovery
 
-If the board is tucked under a trim panel but a USB-C cable is reachable,
-you can recover entirely from a laptop using `esptool` through PlatformIO.
-See **[docs/maintenance.md](maintenance.md)** for the exact commands to:
+If the board is behind a trim panel and the BOOT button is out of reach,
+a USB-C cable is enough. The ESP32-C6 enters download mode automatically
+over its USB-JTAG port — no BOOT+RESET pin dance required.
 
-- Wipe only BLE bonds (preserve scripts and Tesla key)
-- Wipe only scripts / DBC files
-- Full factory reset equivalent
-- Nuke everything and reflash from scratch
+All commands run from the `firmware/` directory. Replace `AUTO` with a
+specific port (e.g. `/dev/ttyACM0`, `COM3`) if you have multiple devices.
+
+### Simplest - nuke everything and reflash
+
+```bash
+cd firmware
+pio run -e esp32-c6-debug -t erase   # wipes all 4 MB
+pio run -e esp32-c6-debug -t upload  # reflash current firmware
+```
+
 
 ---
 
