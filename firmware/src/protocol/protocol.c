@@ -20,6 +20,7 @@
 #include "dbc/dbc_pack.h"
 #include "tesla_ble/tesla_ble.h"
 #include "tesla_ble/tesla_central.h"
+#include "tesla_ble/tesla_vehicle.h"
 #include "wifi/wifi.h"
 #include "ota/ota.h"
 #include "storage/state.h"
@@ -605,6 +606,59 @@ static void handle_tesla_scan(int id, cJSON *req)
     /* On ESP_OK the callback owns sc and will reply + free it. */
 }
 
+/* Parse "AA:BB:CC:DD:EE:FF" → 6-byte LE array.  Returns true on success. */
+static bool parse_mac(const char *s, uint8_t out[6])
+{
+    unsigned v[6];
+    if (sscanf(s, "%02X:%02X:%02X:%02X:%02X:%02X",
+               &v[5], &v[4], &v[3], &v[2], &v[1], &v[0]) != 6) return false;
+    for (int i = 0; i < 6; i++) out[i] = (uint8_t)v[i];
+    return true;
+}
+
+typedef struct { int id; } tesla_pair_ctx_t;
+
+static void tesla_pair_done_cb(bool success, const char *error, void *vctx)
+{
+    tesla_pair_ctx_t *ctx = (tesla_pair_ctx_t *)vctx;
+    if (success)
+        send_ok(ctx->id, NULL);
+    else
+        send_err(ctx->id, error ? error : "pair failed");
+    free(ctx);
+}
+
+static void handle_tesla_pair(int id, cJSON *req)
+{
+    cJSON *addr_item = cJSON_GetObjectItem(req, "addr");
+    cJSON *type_item = cJSON_GetObjectItem(req, "addr_type");
+    if (!cJSON_IsString(addr_item)) { send_err(id, "missing addr"); return; }
+
+    uint8_t addr[6];
+    if (!parse_mac(addr_item->valuestring, addr)) {
+        send_err(id, "addr must be AA:BB:CC:DD:EE:FF"); return;
+    }
+    uint8_t addr_type = cJSON_IsNumber(type_item)
+                        ? (uint8_t)type_item->valueint : 0;
+
+    tesla_pair_ctx_t *ctx = malloc(sizeof(*ctx));
+    if (!ctx) { send_err(id, "oom"); return; }
+    ctx->id = id;
+
+    esp_err_t err = tesla_vehicle_pair(addr, addr_type,
+                                        tesla_pair_done_cb, ctx);
+    if (err == ESP_ERR_NOT_FOUND) {
+        free(ctx); send_err(id, "no keypair — run tesla.gen_key first"); return;
+    }
+    if (err == ESP_ERR_INVALID_STATE) {
+        free(ctx); send_err(id, "already connected"); return;
+    }
+    if (err != ESP_OK) {
+        free(ctx); send_err(id, "connect failed"); return;
+    }
+    /* Callback owns ctx and will reply when done. */
+}
+
 static void handle_wifi_status(int id)
 {
     char ssid[33], ip[16];
@@ -980,6 +1034,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "tesla.reset") == 0)         handle_tesla_reset(id);
     else if (strcmp(op_s, "tesla.set_vin") == 0)       handle_tesla_set_vin(id, req);
     else if (strcmp(op_s, "tesla.scan") == 0)          handle_tesla_scan(id, req);
+    else if (strcmp(op_s, "tesla.pair") == 0)          handle_tesla_pair(id, req);
     else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
     else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);
     else if (strcmp(op_s, "ble.reset_pairs") == 0)     handle_ble_reset_pairs(id);
