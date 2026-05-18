@@ -66,9 +66,15 @@ bus_status_t can_bus_health(int bus_id, uint32_t now_ms, uint32_t last_rx_ms)
     }
     if (have_st && (st.state == TWAI_STATE_BUS_OFF || st.state == TWAI_STATE_RECOVERING))
         return BUS_ERROR;
-    /* A successful TX (ACKed by the bus) is as good as a received frame. */
+    /* A successful TX (ACKed by the bus) is as good as a received frame.
+     * But twai_transmit_v2 returns OK on *queueing* — not actual ACK — so trust
+     * s_last_tx_ms only when error counters aren't actively growing. Otherwise
+     * a failing Berry loopback keeps refreshing s_last_tx_ms and we'd mask the
+     * real TX errors as BUS_GOOD. */
+    bool errs_recent = have_st && s_last_err_grow_ms[bus_id] &&
+                       (now_ms - s_last_err_grow_ms[bus_id]) < 2000;
     uint32_t last_good = last_rx_ms > s_last_tx_ms[bus_id] ? last_rx_ms : s_last_tx_ms[bus_id];
-    if (last_good && (now_ms - last_good) < 1000)
+    if (last_good && (now_ms - last_good) < 1000 && !errs_recent)
         return BUS_GOOD;
     if (s_last_edge_ms[bus_id] && (now_ms - s_last_edge_ms[bus_id]) < 1000) {
         if (have_st && st.tx_error_counter > 0)
