@@ -63,13 +63,31 @@ production by [esphome-tesla-ble](https://github.com/yoziru/esphome-tesla-ble).
 
 ### Integration sketch
 
-```yaml
-# firmware/src/idf_component.yml (new file)
-dependencies:
-  tesla-ble:
-    git: "https://github.com/yoziru/tesla-ble.git"
-    version: "v5.0.3"
+**Distribution: git submodule**, matching the existing Berry pattern
+(`firmware/components/berry/berry`). Submodule preferred over the
+IDF Component Manager because:
+
+- Matches the existing convention in this repo (Berry).
+- Version is pinned visibly in `.gitmodules`.
+- No build-time network call (initial clone only).
+- The IDF Component Manager path was attempted and failed in our PIO env
+  with a `uv pip install` timeout for `tool-esptoolpy` — likely a
+  NixOS-specific tooling flake. Submodule sidesteps that pipeline.
+
+Steps for Phase 2:
+
+```bash
+git submodule add -b main https://github.com/yoziru/tesla-ble.git \
+    firmware/components/tesla-ble/upstream
+git submodule add -b master https://github.com/nanopb/nanopb.git \
+    firmware/components/nanopb/upstream
 ```
+
+Then write a thin `firmware/components/tesla-ble/CMakeLists.txt`
+mirroring the Berry wrapper — registers the submodule's `src/*.cpp`
+and `generated/src/*.pb.c` as an IDF component, exposes its `include/`,
+REQUIRES `nanopb mbedtls`. Add `tesla-ble` to `firmware/src/CMakeLists.txt`
+REQUIRES so our app can include `<client.h>`.
 
 The library brings its own keypair management via
 `TeslaBLE::Client::create_private_key()` / `load_private_key()`. We have
