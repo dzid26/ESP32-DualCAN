@@ -81,4 +81,4 @@ See [docs/button.md](docs/button.md) for LED feedback and full details.
 
 ## Schematic
 
-<img width="1111"  alt="image" src="https://github.com/user-attachments/assets/97085c71-ebe7-4a6d-bf68-577d57fa121a" />
+<img width="1111" alt="image" src="https://github.com/user-attachments/assets/b76eb95f-d02d-41a8-978b-3b63b6831206" />

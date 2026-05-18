@@ -60,7 +60,24 @@
           "width": 0.0
         }
       ],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "copper_edge_clearance|122025000|81050000|45167453-dc7f-4c4f-aebc-d1a44a302469|0ad9725f-8af9-425b-b0d5-a1f467ca6ccf",
+          ""
+        ],
+        [
+          "copper_edge_clearance|125425000|81050000|45167453-dc7f-4c4f-aebc-d1a44a302469|2e55fa52-c286-4396-aa29-8dba64710ef2",
+          ""
+        ],
+        [
+          "copper_edge_clearance|127325000|81050000|45167453-dc7f-4c4f-aebc-d1a44a302469|e0d2f0cc-aa82-497f-aa8e-cedf4635e0ea",
+          ""
+        ],
+        [
+          "copper_edge_clearance|130825000|81050000|45167453-dc7f-4c4f-aebc-d1a44a302469|eb4b6c42-0e9c-47b7-a9c9-c3c2e70e6102",
+          ""
+        ]
+      ],
       "meta": {
         "version": 2
       },
@@ -110,7 +127,7 @@
         "skew_out_of_range": "error",
         "solder_mask_bridge": "error",
         "starved_thermal": "warning",
-        "text_height": "warning",
+        "text_height": "ignore",
         "text_on_edge_cuts": "error",
         "text_thickness": "warning",
         "through_hole_pad_without_hole": "error",
