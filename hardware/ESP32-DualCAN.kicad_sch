@@ -4133,7 +4133,7 @@
 		)
 		(uuid "1ff8204d-62d5-4660-8501-4d05518f2dc3")
 	)
-	(text "Vbat\nGnd\nChassisCAN L\nChassisCAN H\nVehicleCAN L\nVehicleCAN H"
+	(text "Vbat\nGnd\nChassisCAN L\nChassisCAN H\nVehicleCAN H\nVehicleCAN L"
 		(exclude_from_sim no)
 		(at 92.964 185.674 0)
 		(effects
@@ -10154,7 +10154,7 @@
 			)
 		)
 	)
-	(global_label "CAN0_L"
+	(global_label "CAN0_H"
 		(shape bidirectional)
 		(at 49.53 189.23 180)
 		(fields_autoplaced yes)
@@ -10166,7 +10166,7 @@
 		)
 		(uuid "45fa25d1-d2c3-4e33-9836-e7623444444c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 38.5392 189.23 0)
+			(at 38.2368 189.23 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10298,7 +10298,7 @@
 			)
 		)
 	)
-	(global_label "CAN0_H"
+	(global_label "CAN0_L"
 		(shape bidirectional)
 		(at 49.53 191.77 180)
 		(fields_autoplaced yes)
@@ -10310,7 +10310,7 @@
 		)
 		(uuid "65d792ee-73dd-4365-9846-9214d60333eb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 38.2368 191.77 0)
+			(at 38.5392 191.77 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10762,7 +10762,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(uuid "015e59cf-7f84-406b-9906-2a1adc832169")
 		(property "Reference" "J5"
@@ -10855,7 +10855,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(uuid "151dd384-5c62-41cb-bc51-74d6a115a4c1")
 		(property "Reference" "J6"
@@ -13862,7 +13862,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(uuid "a47fbc81-102c-403c-9b28-04ceaf992dfa")
 		(property "Reference" "J7"
@@ -14214,7 +14214,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(uuid "b2a1c0dd-cfcb-4c0c-b49a-5c778e6fcf39")
 		(property "Reference" "J4"
