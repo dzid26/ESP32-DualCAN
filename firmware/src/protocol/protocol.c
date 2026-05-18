@@ -156,6 +156,7 @@ static void berry_log_handler(const char *msg)
 /* ---- vprintf hook: mirrors ESP_LOG output to the webui log panel ---- */
 
 static vprintf_like_t s_orig_vprintf;
+static bool           s_hook_active;  /* recursion guard: NimBLE logs from within notify path */
 
 /* Strip ANSI escape sequences (\033[...m) and trailing newline from src. */
 static size_t strip_ansi(const char *src, char *dst, size_t dst_sz)
@@ -190,12 +191,14 @@ static int log_vprintf_hook(const char *fmt, va_list args)
     va_copy(args2, args);
     int ret = s_orig_vprintf(fmt, args);
 
-    if (dorky_ble_connected()) {
+    if (!s_hook_active && dorky_ble_connected()) {
+        s_hook_active = true;
         char buf[320];
         char raw[320];
         vsnprintf(buf, sizeof(buf), fmt, args2);
         if (strip_ansi(buf, raw, sizeof(raw)) > 0)
             log_push_raw(raw);
+        s_hook_active = false;
     }
     va_end(args2);
     return ret;
@@ -674,6 +677,11 @@ static void handle_log_set_level(int id, cJSON *req)
     const cJSON *tag_j = cJSON_GetObjectItem(req, "tag");
     const char *tag = (cJSON_IsString(tag_j) && tag_j->valuestring[0]) ? tag_j->valuestring : "*";
     esp_log_level_set(tag, level);
+    /* esp_log_level_set("*", …) clears all per-tag overrides in ESP-IDF v5.
+     * Re-apply suppressions for components that log from within their own
+     * send/notify path; without this they flood the hook and overflow the stack. */
+    if (strcmp(tag, "*") == 0)
+        esp_log_level_set("NimBLE", ESP_LOG_WARN);
     send_ok(id, NULL);
 }
 
