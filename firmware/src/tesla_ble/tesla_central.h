@@ -44,6 +44,40 @@ esp_err_t tesla_central_scan_start(uint32_t duration_ms,
                                    tesla_scan_done_cb_t cb,
                                    void *ctx);
 
+/* ---- Connect / discover / communicate ---- */
+
+/* Fires once when the connect+discover+subscribe flow finishes.
+ * success=true means READY; success=false means something failed. */
+typedef void (*tesla_central_connected_cb_t)(bool success, void *ctx);
+
+/* Fires when the connection drops (reason is a NimBLE BLE_ERR_* code). */
+typedef void (*tesla_central_disconnected_cb_t)(int reason, void *ctx);
+
+/* Fires for each indication received from the car's TX characteristic. */
+typedef void (*tesla_central_rx_cb_t)(const uint8_t *data, size_t len, void *ctx);
+
+/* Connect to a car at addr/addr_type (from a scan result).
+ * Automatically discovers VCSEC service + RX/TX chars + CCCD and
+ * subscribes to TX indications before firing on_connected(true,...).
+ * Returns ESP_OK if the procedure was initiated; on_connected fires
+ * asynchronously. Returns non-OK if already connecting or host not ready
+ * (on_connected NOT called in that case). */
+esp_err_t tesla_central_connect(const uint8_t addr[6], uint8_t addr_type,
+                                 tesla_central_connected_cb_t on_connected,
+                                 tesla_central_disconnected_cb_t on_disconnected,
+                                 tesla_central_rx_cb_t on_rx,
+                                 void *ctx);
+
+/* Write-without-response to the car's RX characteristic.
+ * Only valid when is_connected() == true. */
+esp_err_t tesla_central_write(const uint8_t *data, size_t len);
+
+/* Terminate the connection (on_disconnected will fire). */
+void tesla_central_disconnect(void);
+
+/* True when fully connected and ready (subscribe complete). */
+bool tesla_central_is_connected(void);
+
 #ifdef __cplusplus
 }
 #endif
