@@ -19,6 +19,7 @@
 #include "can/can_driver.h"
 #include "dbc/dbc_pack.h"
 #include "tesla_ble/tesla_ble.h"
+#include "tesla_ble/tesla_central.h"
 #include "wifi/wifi.h"
 #include "ota/ota.h"
 #include "storage/state.h"
@@ -541,6 +542,56 @@ static void handle_tesla_reset(int id)
     send_ok(id, NULL);
 }
 
+typedef struct { int id; } tesla_scan_ctx_t;
+
+static void tesla_scan_done_cb(const tesla_scan_result_t *results,
+                               size_t count, void *ctx)
+{
+    tesla_scan_ctx_t *sc = (tesla_scan_ctx_t *)ctx;
+    cJSON *arr = cJSON_CreateArray();
+    for (size_t i = 0; i < count; i++) {
+        const tesla_scan_result_t *r = &results[i];
+        char addr_str[18];
+        snprintf(addr_str, sizeof(addr_str),
+                 "%02X:%02X:%02X:%02X:%02X:%02X",
+                 r->addr[5], r->addr[4], r->addr[3],
+                 r->addr[2], r->addr[1], r->addr[0]);
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddStringToObject(o, "addr", addr_str);
+        cJSON_AddStringToObject(o, "name", r->name);
+        cJSON_AddNumberToObject(o, "rssi", r->rssi);
+        cJSON_AddItemToArray(arr, o);
+    }
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddItemToObject(result, "devices", arr);
+    send_ok(sc->id, result);
+    free(sc);
+}
+
+static void handle_tesla_scan(int id, cJSON *req)
+{
+    cJSON *dur_item = cJSON_GetObjectItem(req, "duration_ms");
+    uint32_t duration_ms = cJSON_IsNumber(dur_item)
+                           ? (uint32_t)dur_item->valueint : 5000;
+    if (duration_ms < 500)   duration_ms = 500;
+    if (duration_ms > 30000) duration_ms = 30000;
+
+    tesla_scan_ctx_t *sc = malloc(sizeof(*sc));
+    if (!sc) { send_err(id, "oom"); return; }
+    sc->id = id;
+
+    esp_err_t err = tesla_central_scan_start(duration_ms,
+                                              tesla_scan_done_cb, sc);
+    if (err == ESP_ERR_INVALID_STATE) {
+        free(sc);
+        send_err(id, "scan already in progress");
+    } else if (err != ESP_OK) {
+        free(sc);
+        send_err(id, "scan failed to start — BLE host not ready?");
+    }
+    /* On ESP_OK the callback owns sc and will reply + free it. */
+}
+
 static void handle_wifi_status(int id)
 {
     char ssid[33], ip[16];
@@ -914,6 +965,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "tesla.status") == 0)        handle_tesla_status(id);
     else if (strcmp(op_s, "tesla.gen_key") == 0)       handle_tesla_gen_key(id);
     else if (strcmp(op_s, "tesla.reset") == 0)         handle_tesla_reset(id);
+    else if (strcmp(op_s, "tesla.scan") == 0)          handle_tesla_scan(id, req);
     else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
     else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);
     else if (strcmp(op_s, "ble.reset_pairs") == 0)     handle_ble_reset_pairs(id);
