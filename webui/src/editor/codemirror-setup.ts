@@ -243,11 +243,18 @@ const warmTheme = EditorView.theme({
   '.cm-cursor, .cm-dropCursor': {
     borderLeftColor: '#e07b1f',
   },
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': {
-    backgroundColor: '#e07b1f52',
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
+    backgroundColor: '#e07c1f64',
+    outline: '1px solid #ffffff2b',
+  },
+  '.cm-content ::selection': {
+    backgroundColor: '#e07c1f64',
+  },
+  '.cm-selectionMatch': {
+    backgroundColor: '#e4dad222',
   },
   '.cm-activeLine': {
-    backgroundColor: '#2a1f10',
+    backgroundColor: '#6d4c2829',
   },
   '.cm-gutters': {
     backgroundColor: '#18110a',
@@ -270,9 +277,9 @@ const warmTheme = EditorView.theme({
     borderRadius: '4px',
     boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
   },
-  '.cm-tooltip-autocomplete ul li[aria-selected]': {
-    backgroundColor: '#4a351b',
-    color: '#f4d9a1',
+  '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+    background: '#d3b49890',
+    color: '#18110a',
   },
   '.cm-completionDetail': {
     color: '#a08555',
