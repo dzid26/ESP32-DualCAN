@@ -70,6 +70,10 @@ can_msg_set(msg, "UI_trackModeRequest", 1)
 can_msg_send(msg)
 ```
 
+### AI authoring guidance
+
+When writing scripts that inject a vehicle command frame, send only the intended command frame unless the user explicitly asks for a release/reset frame. No need to set up periodic reset - the vehicle will take care of resetting the state back to idle or similar.
+
 ---
 
 ## Timers
