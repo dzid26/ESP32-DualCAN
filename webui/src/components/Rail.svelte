@@ -34,14 +34,16 @@
 
   <div class="rail__list">
     {#each NAV_ITEMS as item}
-      <button
-        class={'railItem' + (app.view === item.id ? ' railItem--active' : '')}
-        onclick={() => app.setView(item.id)}
-      >
-        <Icon name={item.icon} size={20} />
-        <span class="railItem__label">{item.label}</span>
-        <span class="tt">{item.label}</span>
-      </button>
+      {#if item.id !== 'tesla' || app.car?.brand === 'Tesla'}
+        <button
+          class={'railItem' + (app.view === item.id ? ' railItem--active' : '')}
+          onclick={() => app.setView(item.id)}
+        >
+          <Icon name={item.icon} size={20} />
+          <span class="railItem__label">{item.label}</span>
+          <span class="tt">{item.label}</span>
+        </button>
+      {/if}
     {/each}
   </div>
 

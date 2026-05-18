@@ -601,8 +601,15 @@ button { font: inherit; color: inherit; }
   padding: 7px 12px; background: transparent; border: none; cursor: pointer;
   text-align: left; color: var(--dc-text); font-size: 12.5px;
 }
-.car-row:hover { background: var(--dc-surface-deep); }
+.car-row:hover:not(:disabled) { background: var(--dc-surface-deep); }
 .car-row--active { background: var(--dc-info-bg); }
+.car-row--disabled { opacity: 0.35; cursor: not-allowed; }
+.car-group__soon {
+  display: inline-block; margin-left: 8px;
+  font-size: 9px; padding: 1px 5px; border-radius: 2px;
+  background: var(--dc-border); color: var(--dc-text-ghost);
+  text-transform: uppercase; letter-spacing: 0.06em; vertical-align: middle;
+}
 .car-row__model { color: var(--dc-text); }
 .car-row__years { color: var(--dc-text-fade); font-size: 11px; }
 .car-row__pop {

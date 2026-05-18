@@ -80,11 +80,18 @@
         {/if}
         {#each Object.entries(groups) as [brand, cars]}
           <div class="car-group">
-            <div class="car-group__head mono">{brand}</div>
+            <div class="car-group__head mono">
+              {brand}
+              {#if brand !== 'Tesla'}
+                <span class="car-group__soon">coming soon</span>
+              {/if}
+            </div>
             {#each cars as c}
               <button
-                class={'car-row' + (c.id === current?.id ? ' car-row--active' : '')}
-                onclick={() => onPick(c)}
+                class={'car-row' + (c.id === current?.id ? ' car-row--active' : '') + (c.brand !== 'Tesla' ? ' car-row--disabled' : '')}
+                onclick={() => c.brand === 'Tesla' && onPick(c)}
+                disabled={c.brand !== 'Tesla'}
+                title={c.brand !== 'Tesla' ? 'Only Tesla is supported for now' : undefined}
               >
                 <span class="car-row__model">{c.model}</span>
                 <span class="car-row__years mono">{c.years}</span>

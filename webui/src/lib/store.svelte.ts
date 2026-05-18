@@ -476,6 +476,7 @@ class AppState {
     saveCar(c.id);
     this.carPickerOpen = false;
     this.pushLog(`Vehicle profile set: ${c.brand} ${c.model} (${c.dbc})`, 'info', 'system');
+    if (this.view === 'tesla' && c.brand !== 'Tesla') this.setView('events');
   }
 
   clearCar(): void {
@@ -483,6 +484,7 @@ class AppState {
     saveCar(null);
     this.carPickerOpen = false;
     this.pushLog('Vehicle profile cleared', 'info', 'system');
+    if (this.view === 'tesla') this.setView('events');
   }
 
   noteBusStatus(bus: number, status: BusStatus): void {
