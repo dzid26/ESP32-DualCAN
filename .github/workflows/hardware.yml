@@ -1,0 +1,78 @@
+name: Hardware Release
+
+# Triggered by hw-v* tags. Exports schematic PDF + Gerbers from KiCad
+# and publishes a GitHub release.
+#
+# Tag conventions:
+#   hw-v1.0     -> stable hardware revision
+#   hw-v1.1-rc1 -> pre-release (any hyphen after the version)
+#
+# Usage:
+#   git tag hw-v1.1
+#   git push origin hw-v1.1
+
+on:
+  push:
+    tags:
+      - 'hw-v*'
+
+jobs:
+  export:
+    name: Export hardware artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install KiCad
+        run: |
+          sudo add-apt-repository --yes ppa:kicad/kicad-8.0-releases
+          sudo apt-get update -qq
+          sudo apt-get install --yes --no-install-recommends kicad
+
+      - name: Resolve version + channel from tag
+        id: meta
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/hw-v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Export schematic PDF
+        run: |
+          kicad-cli sch export pdf \
+            --output hardware/ESP32-DualCAN-schematic.pdf \
+            hardware/ESP32-DualCAN.kicad_sch
+
+      - name: Generate iBOM (dark)
+        run: |
+          # KiCad installation provides pcbnew; skip wxpython GUI dep
+          pip install interactivehtmlbom --no-deps
+          python -m interactivehtmlbom.generate_interactive_bom \
+            --dark-mode \
+            --no-browser \
+            --dest-dir hardware/ \
+            --output-file-name ESP32-DualCAN-ibom.html \
+            hardware/ESP32-DualCAN.kicad_pcb
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            hardware/ESP32-DualCAN-schematic.pdf
+            hardware/ESP32-DualCAN-ibom.html
+          name: "Hardware ${{ github.ref_name }}"
+          body: |
+            ## Hardware ${{ github.ref_name }}
+
+            Automated KiCad export from tag `${{ github.ref_name }}`.
+
+            ### Files
+            - **Schematic**: `ESP32-DualCAN-schematic.pdf`
+            - **iBOM**: `ESP32-DualCAN-ibom.html` (open in browser, dark mode)
