@@ -362,19 +362,34 @@ export class Protocol {
     return this.call('ble.reset_pairs');
   }
 
-  /** Tesla BLE keypair status. public_key_hex is SEC1 uncompressed P-256 (65 bytes hex). */
-  teslaStatus(): Promise<{ has_key: boolean; public_key_hex?: string }> {
+  /** Tesla BLE keypair + VIN status. */
+  teslaStatus(): Promise<{ has_key: boolean; public_key_hex?: string; vin?: string }> {
     return this.call('tesla.status');
   }
 
   /** Generate a fresh P-256 keypair and persist it. Returns the new status. */
-  teslaGenKey(): Promise<{ has_key: boolean; public_key_hex?: string }> {
+  teslaGenKey(): Promise<{ has_key: boolean; public_key_hex?: string; vin?: string }> {
     return this.call('tesla.gen_key');
   }
 
-  /** Wipe the Tesla keypair from NVS. */
+  /** Wipe the Tesla keypair + VIN from NVS. */
   teslaReset(): Promise<void> {
     return this.call('tesla.reset');
+  }
+
+  /** Store the VIN (17 chars). Returns the new status. */
+  teslaSetVin(vin: string): Promise<{ has_key: boolean; public_key_hex?: string; vin?: string }> {
+    return this.call('tesla.set_vin', { vin });
+  }
+
+  /** Scan for nearby Tesla VCSEC advertisements. */
+  teslaScan(duration_ms?: number): Promise<{ devices: Array<{ addr: string; name: string; rssi: number }> }> {
+    return this.call('tesla.scan', duration_ms !== undefined ? { duration_ms } : undefined);
+  }
+
+  /** Connect to a Tesla and send the whitelist add-key message. */
+  teslaPair(addr: string, addr_type?: number): Promise<void> {
+    return this.call('tesla.pair', { addr, addr_type: addr_type ?? 0 });
   }
 
   wifiStatus(): Promise<{ connected: boolean; ssid: string; ip: string }> {
