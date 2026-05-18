@@ -130,23 +130,53 @@ void app_main(void)
             }
         }
 
-        /* BOOT button (active-low) — falling edge opens pairing window. */
-        static bool btn_prev = true;
+        /* BOOT button (active-low).
+         * Short press (<15 s): unlock pairing window.
+         * Hold 15 s: factory reset (wipe NVS + LittleFS, reboot). */
+#define FACTORY_RESET_HOLD_MS 15000U
+        static bool btn_prev      = true;
+        static bool btn_held      = false;
+        static uint32_t btn_press_ms = 0;
+
         bool btn_now = gpio_get_level(BOOT_BTN_GPIO);
         if (btn_prev && !btn_now) {
-            dorky_ble_unlock_pairing();
+            /* falling edge */
+            btn_held     = true;
+            btn_press_ms = now;
+        } else if (!btn_prev && btn_now && btn_held) {
+            /* rising edge — short press */
+            btn_held = false;
+            if ((now - btn_press_ms) < FACTORY_RESET_HOLD_MS)
+                dorky_ble_unlock_pairing();
+        } else if (btn_held && !btn_now && (now - btn_press_ms) >= FACTORY_RESET_HOLD_MS) {
+            /* held 15 s — factory reset */
+            btn_held = false;
+            ESP_LOGW(TAG, "BOOT held 15 s — factory reset");
+            gpio_set_level(BLUE_LED_GPIO, 1);
+            vTaskDelay(pdMS_TO_TICKS(200));
+            fs_format();
+            state_nvs_erase_all();
+            esp_restart();
         }
         btn_prev = btn_now;
 
-        /* Blue LED: solid when pairing window is open, blinks on CAN activity. */
-        static uint32_t led_on_until = 0;
-        static uint32_t led_last_blink = 0;
-        if (rx_count > 0 && (now - led_last_blink) >= 200) {
-            led_on_until = now + 50;
-            led_last_blink = now;
+        /* Blue LED: fast-blink as countdown warning while BOOT held > 3 s;
+         * solid when pairing window open; brief blink on CAN activity. */
+        bool led_override = btn_held && (now - btn_press_ms) >= 3000;
+        if (led_override) {
+            uint32_t held = now - btn_press_ms;
+            uint32_t period = held >= 10000 ? 100 : 300;
+            gpio_set_level(BLUE_LED_GPIO, (now / period) % 2);
+        } else {
+            static uint32_t led_on_until = 0;
+            static uint32_t led_last_blink = 0;
+            if (rx_count > 0 && (now - led_last_blink) >= 200) {
+                led_on_until = now + 50;
+                led_last_blink = now;
+            }
+            gpio_set_level(BLUE_LED_GPIO,
+                           dorky_ble_pairing_open() || now < led_on_until ? 1 : 0);
         }
-        gpio_set_level(BLUE_LED_GPIO,
-                       dorky_ble_pairing_open() || now < led_on_until ? 1 : 0);
 
         if ((tick % 1000) == 0) {
             ESP_LOGD(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
