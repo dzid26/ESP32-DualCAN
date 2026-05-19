@@ -7,6 +7,19 @@ See **[firmware/README.md](firmware/README.md)** for the user-facing install gui
 
 See **[docs/scripting.md](docs/scripting.md)** for the Berry scripting API reference.
 
+## Getting Started
+
+Clone with submodules (required — the BLE and Berry components are git submodules):
+
+```bash
+git clone https://github.com/dzid26/ESP32-DualCAN.git --recurse-submodules
+```
+
+Or update submodules later:
+```bash
+git submodule update --init --recursive
+```
+
 ## Development
 
 ### Firmware
