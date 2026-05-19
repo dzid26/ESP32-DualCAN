@@ -51,6 +51,7 @@ bool can_rx_pop(can_t *c, twai_message_t *out);
 typedef void (*can_raw_observer_t)(int bus_id, const twai_message_t *frame, uint32_t now_ms);
 void     can_set_raw_observer(can_raw_observer_t cb);
 uint32_t can_last_rx_ms(int bus_id);  /* ms timestamp of last received frame, 0 if none */
+uint16_t can_bus_rx_rate(int bus_id); /* RX frames/sec over last ~1 s, 0 when idle */
 
 int  can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag);
 /* Scoped variant: only matches a signal living inside `msg_name`. Use this from

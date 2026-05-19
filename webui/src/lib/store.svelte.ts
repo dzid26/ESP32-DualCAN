@@ -91,6 +91,9 @@ class AppState {
   /** Bus status driven by firmware bus_status push frames. */
   bus0Status = $state<BusStatus>('idle');
   bus1Status = $state<BusStatus>('idle');
+  /** RX frames-per-second per bus, pushed alongside bus_status. */
+  bus0Rate = $state(0);
+  bus1Rate = $state(0);
 
   car = $state<Car | null>(loadCar());
   carPickerOpen = $state(false);
@@ -184,7 +187,7 @@ class AppState {
         this.pushLog(e.msg, e.level as LogLine['level'], e.src);
       }
     });
-    this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status));
+    this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status, u.rate));
 
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeinstallprompt', (e) => {
@@ -282,6 +285,8 @@ class AppState {
       this.killed = false;
       this.bus0Status = 'idle';
       this.bus1Status = 'idle';
+      this.bus0Rate = 0;
+      this.bus1Rate = 0;
       this.resetOtaState();
       this.pushLog('disconnected', 'warn', 'ble');
       return;
@@ -491,9 +496,9 @@ class AppState {
     if (this.view === 'tesla') this.setView('events');
   }
 
-  noteBusStatus(bus: number, status: BusStatus): void {
-    if (bus === 0) this.bus0Status = status;
-    else if (bus === 1) this.bus1Status = status;
+  noteBusStatus(bus: number, status: BusStatus, rate: number): void {
+    if (bus === 0) { this.bus0Status = status; this.bus0Rate = rate; }
+    else if (bus === 1) { this.bus1Status = status; this.bus1Rate = rate; }
   }
 }
 

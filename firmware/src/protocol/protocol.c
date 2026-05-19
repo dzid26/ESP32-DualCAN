@@ -240,12 +240,13 @@ static void trace_observer(int bus_id, const twai_message_t *frame, uint32_t now
     cJSON_Delete(push);
 }
 
-static void push_bus_status(int bus, bus_status_t status)
+static void push_bus_status(int bus, bus_status_t status, uint16_t rate)
 {
     cJSON *push = cJSON_CreateObject();
     cJSON_AddStringToObject(push, "type", "bus_status");
     cJSON_AddNumberToObject(push, "bus", bus);
     cJSON_AddStringToObject(push, "status", BUS_STATUS_STR[status]);
+    cJSON_AddNumberToObject(push, "rate", rate);
     send_frame(push);
     cJSON_Delete(push);
 }
@@ -1131,26 +1132,32 @@ void protocol_tick(void)
         free(fi.data);
     }
 
-    /* Bus status monitor: evaluate every 500 ms, push on change.
-     * On BLE reconnect force re-push by resetting s_bus_status. */
+    /* Bus status monitor: evaluate every 200 ms. Push on state change for
+     * responsiveness, plus a 1 s heartbeat so the UI sees fresh frame-rate
+     * readings even when the state itself is steady. On BLE reconnect force
+     * re-push by resetting s_bus_status. */
     static uint32_t s_status_ms = 0;
+    static uint32_t s_heartbeat_ms = 0;
     uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
     bool ble_up = dorky_ble_connected();
     if (ble_up && !s_ble_was_connected) {
         memset(s_bus_status, 0xFF, sizeof(s_bus_status));
         s_status_ms = now;   /* delay first push 200 ms — ATT channel needs time to stabilize */
+        s_heartbeat_ms = now;
         s_connect_pushes = 5; /* retry: push status 5× after connect in case early notifs are dropped */
     }
     s_ble_was_connected = ble_up;
 
     if (ble_up && (now - s_status_ms) >= 200) {
         s_status_ms = now;
+        bool heartbeat = (now - s_heartbeat_ms) >= 1000;
+        if (heartbeat) s_heartbeat_ms = now;
         for (int b = 0; b < CAN_BUS_COUNT; b++) {
             bus_status_t ns = can_bus_health(b, now, can_last_rx_ms(b));
             bool changed = (uint8_t)ns != s_bus_status[b];
-            if (changed || s_connect_pushes > 0) {
+            if (changed || heartbeat || s_connect_pushes > 0) {
                 s_bus_status[b] = (uint8_t)ns;
-                push_bus_status(b, ns);
+                push_bus_status(b, ns, can_bus_rx_rate(b));
                 if (changed) {
                     ESP_LOGI(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
                 }

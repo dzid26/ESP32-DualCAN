@@ -3,7 +3,7 @@
   import type { BusStatus } from '../transport/protocol';
 
   let { id, name, status, rate }:
-    { id: number; name: string; status: BusStatus; rate: string } = $props();
+    { id: number; name: string; status: BusStatus; rate: number } = $props();
 
   const dbcName = $derived(app.loadedDbc[id]);
 
@@ -13,10 +13,10 @@
   );
 
   const label = $derived(
-    status === 'good'     ? rate      :
-    status === 'tx_error' ? 'tx err'  :
-    status === 'rx_error' ? 'rx err'  :
-    status === 'error'    ? 'bus off'  : 'idle'
+    status === 'good'     ? `${rate} f/s` :
+    status === 'tx_error' ? 'tx err'      :
+    status === 'rx_error' ? 'rx err'      :
+    status === 'error'    ? 'bus off'     : 'idle'
   );
 
   function gotoDbc(e: MouseEvent): void {

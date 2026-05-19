@@ -14,12 +14,24 @@ static const char *TAG = "can";
 static can_raw_observer_t s_raw_observer;
 static uint32_t           s_last_rx_ms[CAN_BUS_COUNT];
 
+/* Rolling RX rate, recomputed on each can_poll() once the window elapses. */
+#define RATE_WINDOW_MS 1000U
+static uint32_t s_rate_window_start[CAN_BUS_COUNT];
+static uint32_t s_rate_count[CAN_BUS_COUNT];
+static uint16_t s_rx_rate[CAN_BUS_COUNT];
+
 void can_set_raw_observer(can_raw_observer_t cb) { s_raw_observer = cb; }
 
 uint32_t can_last_rx_ms(int bus_id)
 {
     if (bus_id < 0 || bus_id >= CAN_BUS_COUNT) return 0;
     return s_last_rx_ms[bus_id];
+}
+
+uint16_t can_bus_rx_rate(int bus_id)
+{
+    if (bus_id < 0 || bus_id >= CAN_BUS_COUNT) return 0;
+    return s_rx_rate[bus_id];
 }
 
 int can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
@@ -96,6 +108,7 @@ int can_poll(can_t *c, uint32_t now_ms)
     twai_message_t rx;
     while (can_bus_receive(c->bus_id, &rx, 0) == ESP_OK) {
         rx_count++;
+        s_rate_count[c->bus_id]++;
         s_last_rx_ms[c->bus_id] = now_ms;
         rx_buf_push(c, &rx);
         if (s_raw_observer) s_raw_observer(c->bus_id, &rx, now_ms);
@@ -125,6 +138,21 @@ int can_poll(can_t *c, uint32_t now_ms)
                     }
                 }
             }
+        }
+    }
+
+    /* Roll the rate window: lazy-init on first call so we don't divide by tiny
+     * elapsed times right after boot. Once a full window elapses, snapshot the
+     * frames/sec and reset. An idle bus naturally rolls to 0. */
+    if (s_rate_window_start[c->bus_id] == 0) {
+        s_rate_window_start[c->bus_id] = now_ms;
+    } else {
+        uint32_t elapsed = now_ms - s_rate_window_start[c->bus_id];
+        if (elapsed >= RATE_WINDOW_MS) {
+            uint32_t rate = (s_rate_count[c->bus_id] * 1000U) / elapsed;
+            s_rx_rate[c->bus_id] = rate > UINT16_MAX ? UINT16_MAX : (uint16_t)rate;
+            s_rate_count[c->bus_id] = 0;
+            s_rate_window_start[c->bus_id] = now_ms;
         }
     }
     return rx_count;

@@ -46,6 +46,8 @@ export type BusStatus = 'idle' | 'good' | 'tx_error' |'rx_error' |  'error';
 export interface BusStatusUpdate {
   bus: number;
   status: BusStatus;
+  /** RX frames-per-second over the firmware's last ~1 s window. */
+  rate: number;
 }
 
 type Pending = {
@@ -231,6 +233,7 @@ export class Protocol {
             if (this.busStatusCallback) this.busStatusCallback({
               bus: resp.bus ?? 0,
               status: (resp.status ?? 'idle') as BusStatus,
+              rate: resp.rate ?? 0,
             });
           }
           continue;
