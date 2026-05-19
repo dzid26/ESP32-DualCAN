@@ -139,10 +139,17 @@ static void can_on_trampoline(int sig_idx, float value, float prev, void *ctx)
     if (!s_vm) return;
     int ref = (int)(intptr_t)ctx;
 
-    if (!refs_push(s_vm, ref)) return;            /* stack: [.refs, fn] */
+    /* Save base depth so we can restore the stack exactly, regardless of
+     * whether be_pcall succeeds or fails (on failure vm_state_restore puts
+     * exception values on top of where the args were, so a fixed pop count
+     * is wrong and causes a stack-growth leak that eventually corrupts .refs). */
+    int base = be_top(s_vm);
 
-    /* Build the signal map argument */
-    be_newobject(s_vm, "map");
+    if (!refs_push(s_vm, ref)) return;     /* +2: [.refs, fn] */
+
+    /* Build the signal map argument — mirrors the map returned by can_signal_get
+     * so callers can use either API with the same field names. */
+    be_newobject(s_vm, "map");             /* +3: [.refs, fn, map] */
     be_pushstring(s_vm, "value");
     be_pushreal(s_vm, (breal)value);
     be_data_insert(s_vm, -3);
@@ -151,15 +158,20 @@ static void can_on_trampoline(int sig_idx, float value, float prev, void *ctx)
     be_pushreal(s_vm, (breal)prev);
     be_data_insert(s_vm, -3);
     be_pop(s_vm, 2);
-    be_pushstring(s_vm, "sig_idx");
-    be_pushint(s_vm, sig_idx);
+    be_pushstring(s_vm, "changed");
+    be_pushbool(s_vm, btrue);              /* always true — only fires on change */
     be_data_insert(s_vm, -3);
     be_pop(s_vm, 2);
 
     if (be_pcall(s_vm, 1) != 0) {
         ESP_LOGE(TAG_BB, "on_can_signal callback error: %s", be_tostring(s_vm, -1));
     }
-    be_pop(s_vm, 2);   /* pop result + .refs */
+    /* Restore to base: be_pcall with argc=1 leaves the map arg on the stack
+     * after the call (Berry restores vm->top to cf->top which was saved before
+     * the call, including the map), so a fixed pop of 2 under-pops by 1.
+     * On exception vm_state_restore adds extra values, so over/under-pop varies.
+     * Restoring to base handles both cases cleanly. */
+    be_pop(s_vm, be_top(s_vm) - base);
 }
 
 /* on_can_signal(msg:str, sig:str, fn:function [, bus:int]) -> nil
