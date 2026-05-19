@@ -22,8 +22,6 @@ static rx_ctx_t      s_rx_ctx[CAN_BUS_COUNT];
 static volatile bool s_rx_edge[CAN_BUS_COUNT];
 static uint32_t      s_last_edge_ms[CAN_BUS_COUNT];
 static uint32_t      s_last_tx_ms[CAN_BUS_COUNT];
-static uint16_t      s_prev_err_sum[CAN_BUS_COUNT];   /* tx+rx error counters last sample */
-static uint32_t      s_last_err_grow_ms[CAN_BUS_COUNT]; /* when err counters last grew */
 
 static void IRAM_ATTR rx_edge_isr(void *arg)
 {
@@ -40,8 +38,6 @@ static void rx_monitor_rearm(int bus_id)
     s_rx_edge[bus_id]         = false;
     s_last_edge_ms[bus_id]    = 0;
     s_last_tx_ms[bus_id]      = 0;
-    s_prev_err_sum[bus_id]    = 0;
-    s_last_err_grow_ms[bus_id] = 0;
     gpio_set_intr_type(s_rx_ctx[bus_id].pin, GPIO_INTR_NEGEDGE);
 }
 
@@ -58,37 +54,30 @@ bus_status_t can_bus_health(int bus_id, uint32_t now_ms, uint32_t last_rx_ms)
 
     twai_status_info_t st;
     bool have_st = (can_bus_status(bus_id, &st) == ESP_OK);
-    if (have_st) {
-        uint16_t err_sum = (uint16_t)st.rx_error_counter + st.tx_error_counter;
-        if (err_sum > s_prev_err_sum[bus_id])
-            s_last_err_grow_ms[bus_id] = now_ms;   /* only timestamp growth */
-        s_prev_err_sum[bus_id] = err_sum;
-    }
     if (have_st && (st.state == TWAI_STATE_BUS_OFF || st.state == TWAI_STATE_RECOVERING))
         return BUS_ERROR;
-    /* A successful TX (ACKed by the bus) is as good as a received frame.
-     * But twai_transmit_v2 returns OK on *queueing* — not actual ACK — so trust
-     * s_last_tx_ms only when error counters aren't actively growing. Otherwise
-     * a failing Berry loopback keeps refreshing s_last_tx_ms and we'd mask the
-     * real TX errors as BUS_GOOD. */
-    bool errs_recent = have_st && s_last_err_grow_ms[bus_id] &&
-                       (now_ms - s_last_err_grow_ms[bus_id]) < 2000;
+
+    /* CAN spec error-passive threshold. Below this the controller is in
+     * ERROR_ACTIVE: single bit errors are absorbed by retries and frames
+     * keep flowing, so we treat the bus as GOOD as long as TX or RX is
+     * happening. A stale boot-time TEC of a few units no longer flaps
+     * the pip, and a flaky loopback that drifts up and down stays GOOD
+     * until the controller actually enters error-passive. */
+    const uint8_t ERR_PASSIVE = 128;
+    bool tx_failing = have_st && st.tx_error_counter >= ERR_PASSIVE;
+    bool rx_failing = have_st && st.rx_error_counter >= ERR_PASSIVE;
+
     uint32_t last_good = last_rx_ms > s_last_tx_ms[bus_id] ? last_rx_ms : s_last_tx_ms[bus_id];
-    if (last_good && (now_ms - last_good) < 1000 && !errs_recent)
+    if (last_good && (now_ms - last_good) < 1000 && !tx_failing && !rx_failing)
         return BUS_GOOD;
-    if (s_last_edge_ms[bus_id] && (now_ms - s_last_edge_ms[bus_id]) < 1000) {
-        if (have_st && st.tx_error_counter > 0)
-            return BUS_TX_ERR;
+
+    if (tx_failing) return BUS_TX_ERR;
+    if (rx_failing) return BUS_RX_ERR;
+
+    /* GPIO edges but no successful TWAI decode — usually wrong bitrate or noise. */
+    if (s_last_edge_ms[bus_id] && (now_ms - s_last_edge_ms[bus_id]) < 1000)
         return BUS_RX_ERR;
-    }
-    /* GPIO edge window expired, but TWAI error counters are a reliable fallback:
-     * rx_error_counter rises when the controller sees signals it cannot decode.
-     * Counters only decrement on *successful* RX/TX, so they latch forever once
-     * the bus goes quiet. Only honour them if errors grew in the last 2 s. */
-    if (have_st && st.rx_error_counter > 0 &&
-            s_last_err_grow_ms[bus_id] &&
-            (now_ms - s_last_err_grow_ms[bus_id]) < 2000)
-        return st.tx_error_counter > 0 ? BUS_TX_ERR : BUS_RX_ERR;
+
     return BUS_IDLE;
 }
 
