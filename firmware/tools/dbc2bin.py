@@ -2,7 +2,10 @@
 """Convert a DBC text file to the Dorky Commander binary DBC format.
 
 Usage:
-    python3 dbc2bin.py input.dbc output.bin [--bus 0]
+    python3 dbc2bin.py input.dbc output.bin [--bus 0] [--header]
+
+    --header   Write a C header instead of a raw binary (for embedding in firmware).
+               Output variable names: vehicle_dbc_bin / vehicle_dbc_bin_len.
 
 The binary format matches dbc_types.h and can be loaded directly by the
 firmware's dbc_load(). It can also serve as a reference implementation
@@ -199,6 +202,7 @@ def main():
     bus_id = 0
     if "--bus" in sys.argv:
         bus_id = int(sys.argv[sys.argv.index("--bus") + 1])
+    as_header = "--header" in sys.argv
 
     text = Path(dbc_path).read_text(encoding="utf-8", errors="replace")
     messages = parse_dbc(text)
@@ -207,8 +211,19 @@ def main():
     print(f"Parsed {len(messages)} messages, {total_sigs} signals")
 
     blob = compile_binary(messages, bus_id)
-    Path(out_path).write_bytes(blob)
-    print(f"Wrote {len(blob)} bytes to {out_path}")
+
+    if as_header:
+        lines = ["static const uint8_t vehicle_dbc_bin[] = {"]
+        for i in range(0, len(blob), 16):
+            chunk = blob[i:i+16]
+            lines.append("    " + ", ".join(f"0x{b:02x}" for b in chunk) + ",")
+        lines.append("};")
+        lines.append(f"static const size_t vehicle_dbc_bin_len = {len(blob)};")
+        Path(out_path).write_text("\n".join(lines) + "\n")
+        print(f"Wrote C header ({len(blob)} bytes) to {out_path}")
+    else:
+        Path(out_path).write_bytes(blob)
+        print(f"Wrote {len(blob)} bytes to {out_path}")
 
 
 if __name__ == "__main__":
