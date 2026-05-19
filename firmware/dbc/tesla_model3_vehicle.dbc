@@ -160,6 +160,26 @@ BO_ 258 VCLEFT_doorStatus: 8 VEH
  SG_ VCLEFT_mirrorFoldState : 52|3@1+ (1,0) [0|4] "" gtw
 
 
+BO_ 599 DI_speed: 8 VEH
+ SG_ DI_speedChecksum : 0|8@1+ (1,0) [0|255] "" X
+ SG_ DI_speedCounter : 8|4@1+ (1,0) [0|15] "" X
+ SG_ DI_vehicleSpeed : 12|12@1+ (0.08,-40) [0|0] "kph" gtw
+ SG_ DI_uiSpeed : 24|8@1+ (1,0) [0|510] "" gtw
+ SG_ DI_uiSpeedUnits : 32|1@1+ (1,0) [0|1] "" gtw
+
+BO_ 627 UI_vehicleControl: 8 VEH
+ SG_ UI_honkHorn : 61|1@1+ (1,0) [0|1] "" vcfront
+ SG_ UI_lightSwitch : 1|2@1+ (1,0) [0|3] "" vcfront
+ SG_ UI_lockRequest : 17|3@1+ (1,0) [0|7] "" vcleft
+ SG_ UI_mirrorFoldRequest : 24|2@1+ (1,0) [0|3] "" vcleft
+ SG_ UI_mirrorHeatRequest : 26|1@1+ (1,0) [0|1] "" vcleft
+ SG_ UI_frunkRequest : 5|1@1+ (1,0) [0|1] "" vcfront
+
+BO_ 787 UI_powertrainControl: 8 VEH
+ SG_ UI_trackModeRequest : 42|2@1+ (1,0) [0|3] "" di
+ SG_ UI_powertrainControlCounter : 52|4@1+ (1,0) [0|15] "" X
+ SG_ UI_powertrainControlChecksum : 56|8@1+ (1,0) [0|255] "" X
+
 BO_ 568 STW_ACTN_RQ: 8 STW
  SG_ SpdCtrlLvr_Stat : 0|6@1+ (1,0) [0|0] "" NEO
  SG_ VSL_Enbl_Rq : 6|1@1+ (1,0) [0|0] "" NEO
@@ -236,6 +256,11 @@ BO_ 1013 ID3F5VCFRONT_lighting: 8 VEH
  SG_ VCFRONT_indicatorRightRequest : 2|2@1+ (1,0) [0|2] ""  Receiver
  SG_ VCFRONT_indicatorLeftRequest : 0|2@1+ (1,0) [0|2] ""  Receiver
 
+VAL_ 599 DI_vehicleSpeed 4095 "SNA" ;
+VAL_ 599 DI_uiSpeedUnits 0 "mph" 1 "kph" ;
+VAL_ 627 UI_mirrorFoldRequest 0 "IDLE" 1 "RETRACT" 2 "PRESENT" 3 "SNA" ;
+VAL_ 627 UI_lockRequest 0 "IDLE" 1 "LOCK" 2 "UNLOCK" 3 "UNLOCK_DRIVER" 7 "SNA" ;
+VAL_ 787 UI_trackModeRequest 0 "IDLE" 1 "ON" 2 "OFF" 3 "SNA" ;
 VAL_ 568 SpdCtrlLvr_Stat 32 "DN_1ST" 16 "UP_1ST" 8 "DN_2ND" 4 "UP_2ND" 2 "RWD" 1 "FWD" 0 "IDLE" ;
 VAL_ 568 DTR_Dist_Rq 255 "SNA" 200 "ACC_DIST_7" 166 "ACC_DIST_6" 133 "ACC_DIST_5" 100 "ACC_DIST_4" 66 "ACC_DIST_3" 33 "ACC_DIST_2" 0 "ACC_DIST_1" ;
 VAL_ 568 TurnIndLvr_Stat 3 "SNA" 2 "RIGHT" 1 "LEFT" 0 "IDLE" ;
