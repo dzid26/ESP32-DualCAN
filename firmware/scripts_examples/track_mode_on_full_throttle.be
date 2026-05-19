@@ -3,20 +3,19 @@
 #              Release pedal to cancel the request.
 # @bus 0
 #
-# Requires: Tesla Model 3/Y dedup DBC loaded on bus 0.
+# Requires: Tesla Model 3/Y DBC loaded on bus 0.
 #
 # Signals used:
-#   DI_accelPedalPos (ID 0x118, DI_torque): accelerator pedal 0-100%
-#   UI_trackModeRequest (ID 0x313): 0=IDLE, 1=ON, 2=OFF
+#   DI_accelPedalPos (DI_systemStatus, ID 0x118 / 280): accelerator pedal 0-100%
+#   UI_trackModeRequest (UI_powertrainControl, ID 0x313 / 787): 0=IDLE, 1=ON, 2=OFF
 #
-# This is a template — exact signal names and IDs should be verified
-# against your vehicle's DBC and CAN traffic.
+# Note: UI_powertrainControl must be present in the loaded DBC for TX to work.
 
 var full_throttle_start = 0
 var track_requested = false
 
 def setup()
-  on_can_signal("DI_torque", "DI_accelPedalPos", def(sig)
+  on_can_signal("DI_systemStatus", "DI_accelPedalPos", def(sig)
     var pedal = sig['value']
     if pedal >= 99.0
       if !track_requested
