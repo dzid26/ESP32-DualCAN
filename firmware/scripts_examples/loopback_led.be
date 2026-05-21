@@ -22,13 +22,6 @@ def tick_fn()
   else
     led_set(32, 0, 0)   # red
   end
-
-  # Bridge: forward any CAN0 rx to CAN1
-  rx = can_recv_raw(0)
-  while rx != nil
-    can_send_raw(1, rx.item(0), rx.item(1))
-    rx = can_recv_raw(0)
-  end
 end
 
 def teardown()
