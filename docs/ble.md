@@ -20,16 +20,6 @@ Start here before reading anything else.
 
 ## Troubleshooting scenarios
 
-### "Connect cancelled" or nothing happens in Chrome
-
-You dismissed the browser's BLE picker, or the picker timed out.
-
-1. Click **Connect** again in the WebUI.
-2. When the picker appears, select **Dorky-XXXX** (where XXXX matches the
-   device's name — check the blue LED if you're unsure it's advertising).
-3. If Dorky-XXXX doesn't appear in the list, the pairing window may be closed
-   — press the BOOT button and try again.
-
 ### Can't reconnect after a device wipe or factory reset
 
 Symptom: connected before, now the browser gets an immediate disconnect.

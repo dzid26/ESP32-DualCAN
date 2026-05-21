@@ -251,11 +251,11 @@ class AppState {
         /cancell?ed|dismiss|NotFoundError|User cancelled/i.test(msg);
       if (isNotFound) {
         this.connectError = 'Connect cancelled';
-        toast.show({
-          severity: 'info',
-          message: 'Connect cancelled. Click Connect again and pick a "Dorky-XXXX" device from the browser\'s Bluetooth picker.',
-          duration: 7000,
-        });
+        // toast.show({
+        //   severity: 'info',
+        //   message: 'Connect cancelled. Click Connect again and pick a "Dorky-XXXX" device from the browser\'s Bluetooth picker.',
+        //   duration: 7000,
+        // });
       } else {
         const message = msg.includes('Web Bluetooth not available')
           ? msg
