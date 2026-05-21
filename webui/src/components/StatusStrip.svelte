@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
-  import { isMac, isTouch, modKey } from '../lib/platform';
+  import { isTouch, modKey } from '../lib/platform';
   import Icon from './Icon.svelte';
   import VersionPip from './VersionPip.svelte';
   import BusPip from './BusPip.svelte';
@@ -95,11 +95,9 @@
 
   <span class="spacer"></span>
 
-  {#if !isTouch}
-    <button class="btn btn--sm btn--ghost" onclick={onPalette} title="{modKey}K">
-      <Icon name="search" size={14} /><span>{modKey}K</span>
-    </button>
-  {/if}
+  <button class="btn btn--sm btn--ghost" onclick={onPalette} title="{modKey}K">
+    <Icon name="search" size={14} /><span>{modKey}K</span>
+  </button>
 
   {#if app.connected}
     <VersionPip
