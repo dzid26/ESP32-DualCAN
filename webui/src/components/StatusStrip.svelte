@@ -110,26 +110,18 @@
       onclick={() => { app.setView('settings'); setTimeout(() => document.getElementById('firmware-frame')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
     />
     <button
-      class={'btn btn--sm sim-kill-btn' + (app.simulation ? ' btn--info' : '')}
+      class={'btn btn--sm' + (app.simulation ? ' btn--info' : '')}
       onclick={() => app.toggleSim()}
       title="Simulation mode — all sends routed to the log instead of CAN bus"
     >
-      <Icon name="sim" size={14} /><span class="sim-kill-label">Sim</span>
+      <Icon name="sim" size={14} /><span>Sim</span>
     </button>
     <button
-      class={'btn btn--sm sim-kill-btn' + (app.killed ? ' btn--danger' : '')}
+      class={'btn btn--sm' + (app.killed ? ' btn--danger' : '')}
       onclick={() => app.toggleKill()}
       title="Disable ALL scripts — fail-safe"
     >
-      <Icon name="power" size={14} /><span class="sim-kill-label">{app.killed ? 'Release' : 'Kill'}</span>
+      <Icon name="power" size={14} /><span>{app.killed ? 'Release' : 'Kill'}</span>
     </button>
   {/if}
 </div>
-
-<style>
-  .sim-kill-btn { flex-shrink: 0; }
-
-  @media (max-width: 720px) {
-    .sim-kill-label { display: none; }
-  }
-</style>
