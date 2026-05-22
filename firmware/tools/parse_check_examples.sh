@@ -11,8 +11,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."         # firmware/
 ROOT=$(pwd)
 
-BERRY_SRC=$ROOT/components/berry/berry/src
-BERRY_DEFAULT=$ROOT/components/berry/berry/default
+BERRY_SRC=$ROOT/components/berry/src
+BERRY_DEFAULT=$ROOT/components/berry/port
 BUILD=$ROOT/.cache/parse_check
 mkdir -p "$BUILD"
 
