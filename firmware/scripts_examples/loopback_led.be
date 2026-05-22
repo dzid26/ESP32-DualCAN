@@ -17,7 +17,7 @@ def tick_fn()
 
   # Check CAN1 for loopback
   var rx = can_recv_raw(1)
-  if rx != nil
+  if rx && rx[0] == 0x123
     led_set(0, 32, 0)   # green
   else
     led_set(32, 0, 0)   # red
@@ -29,5 +29,5 @@ def teardown()
 end
 
 def setup()
-  timer_every(50, tick_fn)
+  timer_every(200, tick_fn)
 end

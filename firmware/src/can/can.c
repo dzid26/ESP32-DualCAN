@@ -94,7 +94,7 @@ static void rx_buf_push(can_t *c, const twai_message_t *frame)
 
 bool can_rx_pop(can_t *c, twai_message_t *out)
 {
-    if (c->rx_count == 0) return false;
+    if (c->rx_count == 0) return false; // not thread safe
     *out = c->rx_buf[c->rx_head];
     c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
     c->rx_count--;

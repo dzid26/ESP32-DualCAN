@@ -499,6 +499,8 @@ static int l_can_recv_raw(bvm *vm)
         if (!c) be_return_nil(vm);
         twai_message_t rx;
         if (can_rx_pop(c, &rx)) {
+            // https://berry.readthedocs.io/en/latest/source/en/FFI-Example.html#instantiate-a-list-object-in-a-native-function
+            be_getglobal(vm, "list");
             be_newlist(vm);
             be_pushint(vm, (bint)rx.identifier);
             be_data_push(vm, -2);
@@ -506,6 +508,8 @@ static int l_can_recv_raw(bvm *vm)
             be_pushbytes(vm, rx.data, rx.data_length_code);
             be_data_push(vm, -2);
             be_pop(vm, 1);
+            be_call(vm, 1);
+            be_pop(vm, 1); /* pop the arguments */
             be_return(vm);
         }
     }
