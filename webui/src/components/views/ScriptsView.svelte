@@ -360,11 +360,6 @@
             <Icon name="up" size={13} />Save & enable
           </button>
           <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
-          {#if selFn}
-            <button class="btn btn--sm btn--danger" onclick={() => (confirmRemove = selFn)} title="Remove this script from the device">
-              <Icon name="trash" size={13} />Uninstall
-            </button>
-          {/if}
         </span>
       </div>
 
