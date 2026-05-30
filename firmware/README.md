@@ -115,7 +115,7 @@ For the full API reference with examples, see [scripting.md](../docs/scripting.m
 | `can_signal_get(msg, sig)` | Read current value (returns map or nil) |
 | `can_send_raw(bus, id, bytes)` | Send raw CAN frame |
 | `can_recv_raw(bus)` | Receive next queued frame (bytes or nil) |
-| `can_msg_get(id)` | Get encodable message (requires DBC) |
+| `can_msg_get(id | name [, bus])` | Get encodable message draft (requires DBC) |
 | `can_msg_set(msg, sig, val)` | Set signal in message |
 | `can_msg_send(msg)` | Transmit with auto checksum/counter |
 | `action_register(name, fn)` | Register a Dashboard tile |

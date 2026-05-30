@@ -21,7 +21,7 @@ def setup()
       if !track_requested
         full_throttle_start = millis()
         print("Full throttle detected — would request track mode")
-        # var msg = can_msg_get(0x313)
+        # var msg = can_msg_get("UI_powertrainControl")
         # can_msg_set(msg, "UI_trackModeRequest", 1)  # ON
         # can_msg_send(msg)
         track_requested = true

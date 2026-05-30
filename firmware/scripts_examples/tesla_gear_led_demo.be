@@ -49,7 +49,7 @@ def hazards_on()
   led_set(255, 200, 0)
   timer_after(150, /-> led_off())
 
-  var msg = can_msg_get(1001, 0)
+  var msg = can_msg_get("DAS_bodyControls", 0)
   if msg == nil
     print("Hazards: DAS_bodyControls not found in DBC")
     return
@@ -59,7 +59,7 @@ def hazards_on()
   print("Hazards ON")
 
   timer_after(3000, def()
-    var m2 = can_msg_get(1001, 0)
+    var m2 = can_msg_get("DAS_bodyControls", 0)
     if m2 != nil
       can_msg_set(m2, "DAS_hazardLightRequest", 0)
       can_msg_send(m2)

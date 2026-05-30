@@ -15,7 +15,7 @@ def flash_yellow(dur_ms)
 end
 
 def hazards_off()
-  var msg = can_msg_get(1001, 0)
+  var msg = can_msg_get("DAS_bodyControls", 0)
   if msg == nil
     print("Hazards skipped: DAS_bodyControls not available")
     return
@@ -29,7 +29,7 @@ end
 def hazards_on()
   flash_yellow(150)
 
-  var msg = can_msg_get(1001, 0)
+  var msg = can_msg_get("DAS_bodyControls", 0)
   if msg == nil
     print("Hazards skipped: DAS_bodyControls not available")
     return

@@ -548,15 +548,34 @@ static int l_can_signal_get(bvm *vm)
     be_return_nil(vm);
 }
 
-/* can_msg_get(id:int [, bus:int]) -> draft
+/* can_msg_get(id:int | name:string [, bus:int]) -> draft
  * Returns the latest received frame as a draft you can edit and send. */
 static int l_can_msg_get(bvm *vm)
 {
-    if (be_top(vm) >= 1 && be_isint(vm, 1)) {
-        uint32_t msg_id = (uint32_t)be_toint(vm, 1);
-        int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
-        can_t *eng = get_bus(bus);
-        if (!eng) be_return_nil(vm);
+    if (be_top(vm) >= 1) {
+        uint32_t msg_id = 0;
+        int bus = 0;
+        can_t *eng = NULL;
+
+        if (be_isint(vm, 1)) {
+            msg_id = (uint32_t)be_toint(vm, 1);
+            bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
+        } else if (be_isstring(vm, 1)) {
+            const char *msg_name = be_tostring(vm, 1);
+            bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
+            eng = get_bus(bus);
+            if (!eng) be_return_nil(vm);
+            const dbc_msg_t *m = dbc_find_msg_by_name(&eng->dbc, msg_name);
+            if (!m) be_return_nil(vm);
+            msg_id = m->id;
+        } else {
+            be_return_nil(vm);
+        }
+
+        if (!eng) {
+            eng = get_bus(bus);
+            if (!eng) be_return_nil(vm);
+        }
 
         uint8_t data[8], dlc;
         int idx = can_draft(eng, msg_id, data, &dlc);

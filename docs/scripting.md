@@ -65,7 +65,8 @@ end
 ## Encoded messages  *(requires DBC — applies Tesla checksum/counter automatically)*
 
 ```berry
-var msg = can_msg_get(0x313)           # get by numeric message ID
+var msg = can_msg_get("UI_powertrainControl")   # get by DBC message name
+# or by numeric CAN ID: can_msg_get(0x313)
 can_msg_set(msg, "UI_trackModeRequest", 1)
 can_msg_send(msg)
 ```

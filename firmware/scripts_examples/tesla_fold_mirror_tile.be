@@ -17,7 +17,7 @@ end
 def mirror_request(value, label)
   flash_blue(150)
 
-  var msg = can_msg_get(627, 0)
+  var msg = can_msg_get("UI_vehicleControl", 0)
   if msg == nil
     print("Mirror " .. label .. " skipped: UI_vehicleControl not available")
     return
