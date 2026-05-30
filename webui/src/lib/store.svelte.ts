@@ -183,6 +183,12 @@ class AppState {
           link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
           duration: 12000,
         });
+      } else if (kind === 'replaced') {
+        toast.show({
+          severity: 'warn',
+          message: 'Dorky taken over by another client.',
+          duration: 6000,
+        });
       } else if (kind === 'unexpected') {
         if (this.suppressUnexpectedDisconnect) {
           this.suppressUnexpectedDisconnect = false;
@@ -190,7 +196,7 @@ class AppState {
         }
         toast.show({
           severity: 'warn',
-          message: 'Dorky disconnected unexpectedly. Out of range, powered off, or another client took over.',
+          message: 'Dorky disconnected unexpectedly. Out of range or powered off.',
           duration: 6000,
         });
       }

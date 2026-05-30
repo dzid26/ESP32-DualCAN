@@ -54,6 +54,8 @@ static const ble_uuid128_t DORKY_TX_UUID =
 
 static uint16_t s_conn_handle   = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
+/* Reason code used by the reject callout; default is auth fail. */
+static int s_reject_reason = BLE_ERR_AUTH_FAIL;
 static uint16_t s_tx_attr_handle;
 static ble_request_cb_t s_on_request;
 static void *s_on_request_ctx;
@@ -85,8 +87,10 @@ static void reject_callout_fn(struct ble_npl_event *ev)
     uint16_t h = s_reject_handle;
     s_reject_handle = BLE_HS_CONN_HANDLE_NONE;
     if (h == BLE_HS_CONN_HANDLE_NONE) return;
-    ESP_LOGI(TAG, "rejecting unauthorized handle=%d", h);
-    ble_gap_terminate(h, BLE_ERR_AUTH_FAIL);
+    ESP_LOGI(TAG, "rejecting unauthorized handle=%d reason=%d", h, s_reject_reason);
+    ble_gap_terminate(h, s_reject_reason);
+    /* Reset to default after use */
+    s_reject_reason = BLE_ERR_AUTH_FAIL;
 }
 
 static void lock_callout_fn(struct ble_npl_event *ev)
@@ -201,13 +205,8 @@ static void start_advertising(void)
     int rc = ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER,
                                &adv_params, gap_event_cb, NULL);
     if (rc != 0 && rc != BLE_HS_EALREADY) {
-        ESP_LOGE(TAG, "adv start failed: %d", rc);
-        /* Retry only when no connection is active. ENOMEM during a connection
-         * usually means the controller is refusing concurrent adv+conn — retry
-         * would loop. ENOMEM with no connection means HCI is transiently busy
-         * (e.g. just after a disconnect) and a 200 ms backoff usually succeeds. */
-        if ((rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY)
-            && s_conn_handle == BLE_HS_CONN_HANDLE_NONE) {
+        ESP_LOGI(TAG, "adv start failed: %d — retrying", rc);
+        if (rc == BLE_HS_ENOMEM || rc == BLE_HS_EBUSY) {
             schedule_advertising();
         }
     }
@@ -231,7 +230,12 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             } else {
                 if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
                     ESP_LOGI(TAG, "new authorized connection, kicking handle=%d", s_conn_handle);
-                    ble_gap_terminate(s_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+                    uint8_t msg[] = {0xFD, 0x01};
+                    dorky_ble_notify(msg, sizeof(msg));
+                    /* Schedule a short delayed terminate so notify can flush. */
+                    s_reject_handle = s_conn_handle;
+                    s_reject_reason = BLE_ERR_REM_USER_CONN_TERM;
+                    ble_npl_callout_reset(&s_reject_callout, ble_npl_time_ms_to_ticks32(100));
                 }
                 s_conn_handle = new_h;
                 if (!authorized) {

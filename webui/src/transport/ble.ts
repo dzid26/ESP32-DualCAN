@@ -10,6 +10,7 @@ const TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify from devi
 export type DisconnectKind =
   | 'user'           // disconnect() was called explicitly
   | 'auth_fail'      // came down within AUTH_FAIL_THRESHOLD_MS — almost always stale OS bond / 517
+  | 'replaced'       // another authorized client took over (firmware notified us)
   | 'unexpected';    // anything else (out of range, peer powered off, kicked)
 
 /** Disconnects faster than this are treated as authentication failures —
@@ -29,15 +30,24 @@ export class BleTransport implements Transport {
   private userInitiatedDisconnect = false;
   /** Guards against Windows firing gattserverdisconnected twice for one event. */
   private disconnectHandled = false;
+  /** Set by handleCharacteristicValueChanged when the firmware signals the
+   * reason for the upcoming disconnect via a [0xFD, reason] notification. */
+  private pendingDisconnectReason: DisconnectKind | null = null;
   private readonly handleGattServerDisconnected = () => {
     if (this.disconnectHandled) return;
     this.disconnectHandled = true;
 
-    const sinceConnect = Date.now() - this.connectedAt;
     let kind: DisconnectKind;
-    if (this.userInitiatedDisconnect) kind = 'user';
-    else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) kind = 'auth_fail';
-    else kind = 'unexpected';
+    let sinceConnect = 0;
+    if (this.pendingDisconnectReason) {
+      kind = this.pendingDisconnectReason;
+      this.pendingDisconnectReason = null;
+    } else {
+      sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
+      if (this.userInitiatedDisconnect) kind = 'user';
+      else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) kind = 'auth_fail';
+      else kind = 'unexpected';
+    }
     this.userInitiatedDisconnect = false;
     this.connectedAt = 0;
     this.server = null;
@@ -49,9 +59,16 @@ export class BleTransport implements Transport {
     this.disconnectCbs.forEach(cb => cb(kind));
   };
   private readonly handleCharacteristicValueChanged = (event: Event) => {
-    const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
-    if (value && this.receiveCb) {
-      this.receiveCb(new Uint8Array(value.buffer));
+    const dv = (event.target as BluetoothRemoteGATTCharacteristic).value;
+    if (!dv) return;
+    const data = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+    // Firmware disconnect-reason notification: [0xFD, reason]
+    if (data.length >= 2 && data[0] === 0xFD) {
+      if (data[1] === 0x01) this.pendingDisconnectReason = 'replaced';
+      return;
+    }
+    if (this.receiveCb) {
+      this.receiveCb(data);
     }
   };
 
