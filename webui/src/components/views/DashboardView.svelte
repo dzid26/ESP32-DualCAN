@@ -22,6 +22,7 @@
   let listError = $state<string | null>(null);
   let pending = $state<EventTile | null>(null);
   let busyId = $state<string | null>(null);
+  let tileErrors = $state(new Map<string, string>());
   let filter = $state('');
 
   // When disconnected, preview SAMPLE_EVENTS so the page isn't blank.
@@ -54,12 +55,14 @@
   async function runNow(ev: EventTile): Promise<void> {
     pending = null;
     busyId = ev.id;
+    tileErrors = new Map(tileErrors).delete(ev.id) as Map<string, string>;
     try {
       await app.proto.invokeAction(ev.id);
       app.pushLog(`▶ fired "${ev.name}"`, 'info', 'events');
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
       app.pushLog(`fire ${ev.name} failed: ${m}`, 'error', 'events');
+      tileErrors = new Map(tileErrors).set(ev.id, m);
     } finally {
       busyId = null;
     }
@@ -218,11 +221,12 @@
 
     <div class="evgrid">
       {#each visible as ev (ev.id)}
+        {@const err = tileErrors.get(ev.id)}
         <button
-          class={'evtile' + (ev.danger ? ' evtile--danger' : '') + (busyId === ev.id ? ' evtile--busy' : '')}
+          class={'evtile' + (ev.danger ? ' evtile--danger' : '') + (busyId === ev.id ? ' evtile--busy' : '') + (err ? ' evtile--error' : '')}
           disabled={!app.connected || app.killed || busyId === ev.id}
           onclick={() => fire(ev)}
-          title={ev.danger ? 'Vehicle write — confirm before firing' : 'Fire event'}
+          title={err ?? (ev.danger ? 'Vehicle write — confirm before firing' : 'Fire event')}
         >
           <div class="evtile__icon" aria-hidden="true">{ev.icon}</div>
           {#if ev.led}
@@ -237,6 +241,9 @@
               <span class="evtile__pill">safe</span>
             {/if}
             <span class="evtile__last mono">{ev.lastRun ? `· ${ev.lastRun}` : '· never'}</span>
+            {#if err}
+              <span class="evtile__err mono">error</span>
+            {/if}
           </div>
           {#if busyId === ev.id}
             <div class="evtile__spin" aria-hidden="true"></div>
