@@ -22,7 +22,7 @@
   let listError = $state<string | null>(null);
   let pending = $state<EventTile | null>(null);
   let busyId = $state<string | null>(null);
-  let tileErrors = $state(new Map<string, string>());
+  let tileErrors: Record<string, string> = $state({});
   let filter = $state('');
 
   // When disconnected, preview SAMPLE_EVENTS so the page isn't blank.
@@ -55,14 +55,16 @@
   async function runNow(ev: EventTile): Promise<void> {
     pending = null;
     busyId = ev.id;
-    tileErrors = new Map(tileErrors).delete(ev.id) as Map<string, string>;
+    const next = { ...tileErrors };
+    delete next[ev.id];
+    tileErrors = next;
     try {
       await app.proto.invokeAction(ev.id);
       app.pushLog(`▶ fired "${ev.name}"`, 'info', 'events');
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
       app.pushLog(`fire ${ev.name} failed: ${m}`, 'error', 'events');
-      tileErrors = new Map(tileErrors).set(ev.id, m);
+      tileErrors = { ...tileErrors, [ev.id]: m };
     } finally {
       busyId = null;
     }
@@ -190,7 +192,7 @@
   });
 
   $effect(() => { void app.connected; if (app.connected) refresh(); else actions = []; });
-  $effect(() => { if (app.view === 'events') refresh(); });
+  $effect(() => { if (app.view === 'events') { refresh(); tileErrors = {}; } });
   $effect(() => {
     if (app.connected) {
       untrack(() => void subscribeAll());
@@ -221,7 +223,7 @@
 
     <div class="evgrid">
       {#each visible as ev (ev.id)}
-        {@const err = tileErrors.get(ev.id)}
+        {@const err = tileErrors[ev.id]}
         <button
           class={'evtile' + (ev.danger ? ' evtile--danger' : '') + (busyId === ev.id ? ' evtile--busy' : '') + (err ? ' evtile--error' : '')}
           disabled={!app.connected || app.killed || busyId === ev.id}
