@@ -27,16 +27,13 @@ export class BleTransport implements Transport {
   private _connected = false;
   private connectedAt = 0;
   private userInitiatedDisconnect = false;
-  /** Guards against Windows firing gattserverdisconnected twice. */
+  /** Guards against Windows firing gattserverdisconnected twice for one event. */
   private disconnectHandled = false;
   private readonly handleGattServerDisconnected = () => {
-    // Windows Web Bluetooth can fire gattserverdisconnected twice for one
-    // disconnect event. Skip the second call so we don't misclassify it
-    // as 'unexpected' (which shows a misleading toast).
     if (this.disconnectHandled) return;
     this.disconnectHandled = true;
 
-    const sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
+    const sinceConnect = Date.now() - this.connectedAt;
     let kind: DisconnectKind;
     if (this.userInitiatedDisconnect) kind = 'user';
     else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) kind = 'auth_fail';
@@ -46,6 +43,7 @@ export class BleTransport implements Transport {
     this.server = null;
     this.rxChar = null;
     this.txChar = null;
+    this.device = null;
     this.setConnected(false);
     console.log(`BLE disconnected (${kind}, after ${sinceConnect}ms)`);
     this.disconnectCbs.forEach(cb => cb(kind));
@@ -83,20 +81,34 @@ export class BleTransport implements Transport {
   }
 
   private async setupDevice(device: BluetoothDevice): Promise<void> {
-    device.addEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-
+    // Do all I/O first — any pending gattserverdisconnected from the previous
+    // disconnect fires during these awaits with no listener attached → dropped.
     this.server = await device.gatt!.connect();
     const service = await this.server.getPrimaryService(SERVICE_UUID);
 
     this.rxChar = await service.getCharacteristic(RX_CHAR_UUID);
     this.txChar = await service.getCharacteristic(TX_CHAR_UUID);
 
-    await this.txChar.startNotifications();
-    this.txChar.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
-
     this.device = device;
     this.connectedAt = Date.now();
     this.disconnectHandled = false;
+
+    // Attach the disconnect listener now — any stale events from the previous
+    // disconnect have already fired during the I/O awaits above.
+    device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+    device.addEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+
+    // Subscribe to incoming data. startNotifications can hang on Windows,
+    // so race it against a short timeout — setupDevice always completes,
+    // and if it resolves later, notifications kick in automatically.
+    // Don't setConnected(true) until after this — on Android, concurrent
+    // GATT ops (protocol writes from onConnChange) race with notifications.
+    this.txChar.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
+    await Promise.race([
+      this.txChar.startNotifications().then(() => console.log('BLE notifications started')),
+      new Promise(r => setTimeout(r, 5000)).then(() => console.warn('BLE startNotifications timed out')),
+    ]).catch(() => console.warn('BLE startNotifications failed — reconnect may help'));
+
     this.setConnected(true);
     console.log('BLE connected to', device.name);
   }
@@ -113,7 +125,6 @@ export class BleTransport implements Transport {
       optionalServices: [SERVICE_UUID],
     });
 
-    this.disconnectHandled = false;
     await this.setupDevice(device);
   }
 
@@ -122,6 +133,16 @@ export class BleTransport implements Transport {
     if (this.server?.connected) {
       this.server.disconnect();
     }
+    // On Windows, gattserverdisconnected can fire async. Remove the listener
+    // so a stale event doesn't corrupt a subsequent connection.
+    if (this.device) {
+      this.device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+    }
+    this.server = null;
+    this.rxChar = null;
+    this.txChar = null;
+    this.device = null;
+    this.connectedAt = 0;
     this.setConnected(false);
   }
 
