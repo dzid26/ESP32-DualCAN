@@ -124,6 +124,7 @@ const IDENT = /[A-Za-z_][\w]*/;
 
 const berryParser: StreamParser<unknown> = {
   name: 'berry',
+  languageData: { commentTokens: { line: '#' } },
   token(stream) {
     if (stream.eatSpace()) return null;
     if (stream.match(/#.*$/)) return 'comment';
