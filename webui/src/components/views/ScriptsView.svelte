@@ -162,7 +162,7 @@
     selFn = null;
     editorFilename = 'my_script.be';
     code = NEW_SCRIPT;
-    savedCode = '';
+    savedCode = NEW_SCRIPT;
   }
 
   function loadExample(e: Event): void {
@@ -174,7 +174,7 @@
     const ex = examples.find(x => x.filename === fn);
     if (!ex) return;
     code = ex.code;
-    savedCode = '';
+    savedCode = ex.code;
     selFn = null;
     editorFilename = ex.filename;
   }
@@ -191,7 +191,7 @@
     const reader = new FileReader();
     reader.onload = () => {
       code = reader.result as string;
-      savedCode = '';
+      savedCode = code;
       editorFilename = file.name;
       selFn = null;
       app.pushLog(`scripts: imported ${file.name}`, 'info', 'scripts');
