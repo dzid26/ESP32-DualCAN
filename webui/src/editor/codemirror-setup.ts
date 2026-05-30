@@ -303,6 +303,80 @@ const warmTheme = EditorView.theme({
     margin: '0',
     color: '#e6c07a',
   },
+
+  /* Search / replace panel — flat selectors only (no nested &). */
+  '.cm-panel.cm-search': {
+    backgroundColor: '#2a1f10',
+    color: '#e6c07a',
+    borderBottom: '1px solid #332514',
+    padding: '6px 8px',
+    fontFamily: 'var(--dc-font-ui)',
+    fontSize: '12px',
+  },
+  '.cm-panel.cm-search input, .cm-panel.cm-search button, .cm-panel.cm-search label': {
+    margin: '.15em .4em .15em 0',
+    verticalAlign: 'middle',
+  },
+  '.cm-panel.cm-search input': {
+    backgroundColor: '#18110a',
+    color: '#f4d9a1',
+    border: '1px solid #5a411f',
+    borderRadius: '3px',
+    padding: '2px 6px',
+    fontFamily: 'var(--dc-font-mono)',
+    fontSize: '12px',
+  },
+  '.cm-panel.cm-search input:focus': {
+    outline: 'none',
+    borderColor: '#e07b1f',
+  },
+  '.cm-panel.cm-search button': {
+    background: '#2a1f10',
+    color: '#e6c07a',
+    border: '1px solid #5a411f',
+    borderRadius: '3px',
+    padding: '2px 8px',
+    cursor: 'pointer',
+    fontSize: '11px',
+    fontFamily: 'var(--dc-font-ui)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    appearance: 'none',
+  },
+  '.cm-panel.cm-search button:hover': {
+    backgroundColor: '#362712',
+    borderColor: '#a08555',
+  },
+  '.cm-panel.cm-search label': {
+    color: '#a08555',
+    fontSize: '11px',
+    whiteSpace: 'pre',
+    display: 'inline-flex',
+    alignItems: 'center',
+    lineHeight: '1',
+  },
+  '.cm-panel.cm-search [name=close]': {
+    position: 'absolute',
+    top: '4px',
+    right: '6px',
+    border: 'none',
+    fontSize: '14px',
+    padding: '0 4px',
+    lineHeight: '1',
+    color: '#a08555',
+  },
+  '.cm-panel.cm-search [name=close]:hover': {
+    color: '#e6c07a',
+    backgroundColor: 'transparent',
+  },
+  '.cm-dark .cm-searchMatch': {
+    backgroundColor: '#e07c1f40',
+    outline: '1px solid #e07c1f80',
+  },
+  '.cm-dark .cm-searchMatch-selected': {
+    backgroundColor: '#e07b1f80',
+    outline: '1px solid #e07b1f',
+  },
 }, { dark: true });
 
 export function createCodeMirrorExtensions(onSave?: () => void, language = 'berry'): Extension[] {
