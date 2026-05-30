@@ -99,6 +99,7 @@ class AppState {
   carPickerOpen = $state(false);
   paletteOpen = $state(false);
   logOpen = $state(false);
+  logAttention = $state(false);
   logs = $state<LogLine[]>([]);
   logLevel = $state<LogLevel>(loadLogLevel());
 
@@ -222,6 +223,8 @@ class AppState {
   pushLog(msg: string, level: LogLine['level'] = 'info', src = 'system'): void {
     this.logs = [...this.logs, { ts: nowTs(), level, src, msg }];
     if (this.logs.length > 500) this.logs = this.logs.slice(-500);
+    if (level === 'error' && !this.logOpen) this.logOpen = true;
+    if (level === 'warn' && !this.logOpen) this.logAttention = true;
   }
 
   clearLogs(): void { this.logs = []; }

@@ -197,6 +197,11 @@ button { font: inherit; color: inherit; }
 }
 .railItem:hover { background: var(--dc-surface); color: var(--dc-text-dim); }
 .railItem--active { color: var(--dc-text); }
+.railItem--attention { color: var(--dc-warn); animation: rail-attention 1.2s ease-in-out infinite; }
+@keyframes rail-attention {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 .railItem--active::before {
   content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px;
   background: var(--dc-border-hi); border-radius: 0 2px 2px 0;

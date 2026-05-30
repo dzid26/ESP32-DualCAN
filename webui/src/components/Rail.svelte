@@ -7,6 +7,10 @@
   let { onPalette, onToggleLog }: { onPalette: () => void; onToggleLog: () => void } = $props();
 
   const canInstall = $derived(!isTouch && !!app.installPrompt && !app.isInstalled);
+
+  $effect(() => {
+    if (app.logOpen) app.logAttention = false;
+  });
 </script>
 
 <aside class="rail">
@@ -65,7 +69,7 @@
       <span class="railItem__label">Search</span>
       <span class="tt">Search / commands{isTouch ? '' : ` · ${modKey}K`}</span>
     </button>
-    <button class="railItem" onclick={onToggleLog} title="Logs">
+    <button class="railItem" class:railItem--attention={app.logAttention} onclick={onToggleLog} title="Logs">
       <Icon name="log" size={18} />
       <span class="railItem__label">Logs</span>
       <span class="tt">Device logs</span>
