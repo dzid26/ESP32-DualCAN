@@ -40,6 +40,7 @@
   {#each toast.list as t (t.id)}
     <div
       class="toast toast--{t.severity}"
+      class:toast--flash={t.flash}
       role="button"
       onpointerdown={onPointerDown}
       onclick={(e) => onToastClick(e, t.id)}
@@ -116,6 +117,11 @@
   .toast--error {
     border-left: 3px solid var(--dc-err-text, #e25c5c);
   }
+  .toast--flash {
+    animation: toast-flash 260ms ease-out;
+    border-color: var(--dc-accent, #5b8dff);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
   .toast__msg {
     flex: 1;
     min-width: 0;
@@ -142,5 +148,19 @@
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(-6px); }
     to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes toast-flash {
+    0% {
+      transform: scale(1);
+      background: var(--dc-surface-2, #1a1a2e);
+    }
+    50% {
+      transform: scale(1.02);
+      background: rgba(91, 141, 255, 0.16);
+    }
+    100% {
+      transform: scale(1);
+      background: var(--dc-surface-2, #1a1a2e);
+    }
   }
 </style>
