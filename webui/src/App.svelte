@@ -29,18 +29,17 @@
 
 <Shell>
   {#snippet children()}
-    {#if app.view === 'events'}<DashboardView />
-    {:else if app.view === 'scripts'}<ScriptsView />
-    {:else if app.view === 'ai'}<AIView />
-    {:else if app.view === 'gallery'}<GalleryView />
-    {:else if app.view === 'signals'}<SignalsView />
-    {:else if app.view === 'dbc'}<DbcView />
-    {:else if app.view === 'trace'}<TraceView />
-    {:else if app.view === 'capture'}<CaptureView />
-    {:else if app.view === 'settings'}<SettingsView />
-    {:else if app.view === 'tesla'}<TeslaView />
-    {:else if app.view === 'engine'}<EngineView />
-    {/if}
+    <div style:display={app.view === 'events' ? '' : 'none'}><DashboardView /></div>
+    <div style:display={app.view === 'scripts' ? '' : 'none'}><ScriptsView /></div>
+    <div style:display={app.view === 'ai' ? '' : 'none'}><AIView /></div>
+    <div style:display={app.view === 'gallery' ? '' : 'none'}><GalleryView /></div>
+    <div style:display={app.view === 'signals' ? '' : 'none'}><SignalsView /></div>
+    <div style:display={app.view === 'dbc' ? '' : 'none'}><DbcView /></div>
+    <div style:display={app.view === 'trace' ? '' : 'none'}><TraceView /></div>
+    <div style:display={app.view === 'capture' ? '' : 'none'}><CaptureView /></div>
+    <div style:display={app.view === 'settings' ? '' : 'none'}><SettingsView /></div>
+    <div style:display={app.view === 'tesla' ? '' : 'none'}><TeslaView /></div>
+    <div style:display={app.view === 'engine' ? '' : 'none'}><EngineView /></div>
   {/snippet}
 </Shell>
 

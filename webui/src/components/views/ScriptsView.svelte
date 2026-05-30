@@ -6,7 +6,7 @@
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
-  import { onDestroy, onMount } from 'svelte';
+
 
   const NEW_SCRIPT = '# Write your Berry script here\n\ndef setup()\n  print("hello from setup")\nend\n';
 
@@ -25,11 +25,11 @@
 
   let editorScrollTop = $state(0);
 
+  let scrollPositions = new Map<string, number>();
+
   let isMobile = $state(false);
   let editorPanelHeight = $state<number | null>(null);
   let editorPanelEl: HTMLElement | undefined;
-
-  let mounted = false;
 
   $effect(() => {
     const mq = window.matchMedia('(max-width: 720px)');
@@ -74,7 +74,7 @@
 
   async function loadScript(filename: string): Promise<void> {
     if (dirty && !confirm('Discard unsaved changes?')) return;
-    if (selFn) app.setScriptScrollPos(selFn, editorScrollTop);
+    if (selFn) scrollPositions.set(selFn, editorScrollTop);
     selFn = filename;
     editorFilename = filename;
     app.setLastScriptFilename(filename);
@@ -86,8 +86,7 @@
       app.pushLog(`scripts: read failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
       return;
     }
-    // Restore scroll AFTER content has loaded and effects have settled.
-    editorScrollTop = app.getScriptScrollPos(filename);
+    editorScrollTop = scrollPositions.get(filename) ?? 0;
   }
 
   async function save(): Promise<void> {
@@ -199,21 +198,11 @@
     reader.readAsText(file);
   }
 
-  onMount(() => {
-    mounted = true;
-    refresh();
-  });
-
-  // Persist scroll position for the current script before the component is destroyed (tab switch).
-  onDestroy(() => {
-    if (selFn) app.setScriptScrollPos(selFn, editorScrollTop);
-  });
-
-  // Re-list on reconnect or kill switch; skip the initial mount (onMount handles it).
+  // Re-list on mount, reconnect, or kill switch.
   $effect(() => {
     void app.connected; void app.scriptsVersion;
-    if (mounted && app.connected) refresh();
-    else if (!app.connected) scripts = [];
+    if (app.connected) refresh();
+    else scripts = [];
   });
 
   $effect(() => {

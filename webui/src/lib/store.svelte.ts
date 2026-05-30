@@ -80,9 +80,6 @@ class AppState {
   /** Persisted last-opened script filename so ScriptsView restores it across tab switches. */
   lastScriptFilename = $state<string | null>(loadLastScriptFilename());
 
-  /** Scroll position per script filename, survives tab switches but not page reload. */
-  scriptScrollPositions = new Map<string, number>();
-
   connected = $state(false);
   connecting = $state(false);
   /** Surfaced as the transport pip subtitle. */
@@ -239,13 +236,6 @@ class AppState {
   setLastScriptFilename(fn: string | null): void {
     this.lastScriptFilename = fn;
     saveLastScriptFilename(fn);
-  }
-
-  getScriptScrollPos(filename: string): number {
-    return this.scriptScrollPositions.get(filename) ?? 0;
-  }
-  setScriptScrollPos(filename: string, pos: number): void {
-    this.scriptScrollPositions.set(filename, pos);
   }
 
   pushLog(msg: string, level: LogLine['level'] = 'info', src = 'system'): void {
