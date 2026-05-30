@@ -6,17 +6,14 @@
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
-  // Boilerplate users land in for a fresh script.
   const NEW_SCRIPT = '# Write your Berry script here\n\ndef setup()\n  print("hello from setup")\nend\n';
 
-  // Server state — populated on connect.
   let scripts = $state<ScriptInfo[]>([]);
   let listError = $state<string | null>(null);
   let busy = $state(false);
 
-  // Editor state — selected file, its loaded code, dirty flag.
   let selFn = $state<string | null>(null);
   let code = $state<string>(NEW_SCRIPT);
   let savedCode = $state<string>(NEW_SCRIPT);
@@ -26,9 +23,13 @@
   const dirty = $derived(code !== savedCode);
   let lastScriptStatusSeq = 0;
 
+  let editorScrollTop = $state(0);
+
   let isMobile = $state(false);
   let editorPanelHeight = $state<number | null>(null);
   let editorPanelEl: HTMLElement | undefined;
+
+  let mounted = false;
 
   $effect(() => {
     const mq = window.matchMedia('(max-width: 720px)');
@@ -59,9 +60,12 @@
       const r = await app.proto.listScripts();
       scripts = r.scripts ?? [];
       listError = null;
-      // Auto-select first script if nothing's selected and no draft started.
       if (!selFn && scripts.length > 0 && code === NEW_SCRIPT) {
-        await loadScript(scripts[0].filename);
+        const lastFn = app.lastScriptFilename;
+        const target = lastFn && scripts.find(s => s.filename === lastFn)
+          ? lastFn
+          : scripts[0].filename;
+        await loadScript(target);
       }
     } catch (e) {
       listError = e instanceof Error ? e.message : String(e);
@@ -70,15 +74,20 @@
 
   async function loadScript(filename: string): Promise<void> {
     if (dirty && !confirm('Discard unsaved changes?')) return;
+    if (selFn) app.setScriptScrollPos(selFn, editorScrollTop);
     selFn = filename;
     editorFilename = filename;
+    app.setLastScriptFilename(filename);
     try {
       const r = await app.proto.readScript(filename);
       code = r.code;
       savedCode = r.code;
     } catch (e) {
       app.pushLog(`scripts: read failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
+      return;
     }
+    // Restore scroll AFTER content has loaded and effects have settled.
+    editorScrollTop = app.getScriptScrollPos(filename);
   }
 
   async function save(): Promise<void> {
@@ -90,6 +99,7 @@
       savedCode = code;
       selFn = fn;
       editorFilename = fn;
+      app.setLastScriptFilename(fn);
       app.pushLog(`scripts: saved ${fn}`, 'info', 'scripts');
       await refresh();
     } catch (e) {
@@ -155,7 +165,6 @@
     savedCode = '';
   }
 
-  /** Drop a bundled `firmware/scripts_examples/*.be` into the editor. */
   function loadExample(e: Event): void {
     const sel = e.currentTarget as HTMLSelectElement;
     const fn = sel.value;
@@ -190,13 +199,21 @@
     reader.readAsText(file);
   }
 
-  onMount(refresh);
+  onMount(() => {
+    mounted = true;
+    refresh();
+  });
+
+  // Persist scroll position for the current script before the component is destroyed (tab switch).
+  onDestroy(() => {
+    if (selFn) app.setScriptScrollPos(selFn, editorScrollTop);
+  });
+
+  // Re-list on reconnect or kill switch; skip the initial mount (onMount handles it).
   $effect(() => {
-    // Re-list whenever connection flips, or whenever the global kill switch
-    // bumps scriptsVersion (engage / release sweeps change enabled state).
     void app.connected; void app.scriptsVersion;
-    if (app.connected) refresh();
-    else { scripts = []; }
+    if (mounted && app.connected) refresh();
+    else if (!app.connected) scripts = [];
   });
 
   $effect(() => {
@@ -205,19 +222,10 @@
     lastScriptStatusSeq = patch.seq;
     scripts = scripts.map(s => {
       if (s.filename !== patch.filename) return s;
-      return {
-        ...s,
-        enabled: patch.enabled,
-        errored: patch.clearError ? false : s.errored,
-        error: patch.clearError ? undefined : s.error,
-      };
+      return { ...s, enabled: patch.enabled, errored: patch.clearError ? false : s.errored, error: patch.clearError ? undefined : s.error };
     });
   });
 
-  /** Cross-view hand-off: EventsView (or anything else) sets
-   * app.pendingExample to a filename in firmware/scripts_examples/ then
-   * navigates here. Consume + clear so a re-mount doesn't replay it.
-   * Confirms before clobbering an unsaved buffer. */
   $effect(() => {
     const fn = app.pendingExample;
     if (!fn) return;
@@ -373,7 +381,7 @@
 
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
-        <CodeMirrorEditor bind:value={code} height="100%" onSave={save} />
+        <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} />
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
           class="resize-corner-editor"

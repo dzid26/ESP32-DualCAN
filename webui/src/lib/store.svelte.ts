@@ -52,6 +52,16 @@ function saveView(v: ViewId): void {
   try { localStorage.setItem('dc-view', v); } catch { /* ignore */ }
 }
 
+function loadLastScriptFilename(): string | null {
+  try { return localStorage.getItem('dc-last-script'); } catch { return null; }
+}
+function saveLastScriptFilename(fn: string | null): void {
+  try {
+    if (fn) localStorage.setItem('dc-last-script', fn);
+    else localStorage.removeItem('dc-last-script');
+  } catch { /* ignore */ }
+}
+
 function nowTs(): string {
   const d = new Date();
   const p2 = (n: number) => String(n).padStart(2, '0');
@@ -66,6 +76,12 @@ class AppState {
 
   // ---- Reactive UI state ----
   view = $state<ViewId>(loadView());
+
+  /** Persisted last-opened script filename so ScriptsView restores it across tab switches. */
+  lastScriptFilename = $state<string | null>(loadLastScriptFilename());
+
+  /** Scroll position per script filename, survives tab switches but not page reload. */
+  scriptScrollPositions = new Map<string, number>();
 
   connected = $state(false);
   connecting = $state(false);
@@ -218,6 +234,18 @@ class AppState {
   setView(v: ViewId): void {
     this.view = v;
     saveView(v);
+  }
+
+  setLastScriptFilename(fn: string | null): void {
+    this.lastScriptFilename = fn;
+    saveLastScriptFilename(fn);
+  }
+
+  getScriptScrollPos(filename: string): number {
+    return this.scriptScrollPositions.get(filename) ?? 0;
+  }
+  setScriptScrollPos(filename: string, pos: number): void {
+    this.scriptScrollPositions.set(filename, pos);
   }
 
   pushLog(msg: string, level: LogLine['level'] = 'info', src = 'system'): void {

@@ -9,12 +9,13 @@
   /* Bound value uses Svelte 5 $bindable() so the parent can write the editor
    * contents (e.g. when loading a script from the device or an example) and
    * also receive every keystroke. */
-  let { value = $bindable(''), language = 'berry', height = '380px', onSave }: {
+  let { value = $bindable(''), language = 'berry', height = '380px', onSave, scrollTop = $bindable(0) }: {
     value: string;
     language?: string;
     height?: string;
     /** Bound to Cmd/Ctrl+S inside the editor; default browser save is suppressed. */
     onSave?: () => void;
+    scrollTop?: number;
   } = $props();
 
   let host: HTMLDivElement | undefined = $state();
@@ -48,6 +49,10 @@
         ],
       }),
     });
+    /* Sync scroll position upward whenever the user scrolls. */
+    view.scrollDOM.addEventListener('scroll', () => {
+      scrollTop = view!.scrollDOM.scrollTop;
+    });
   });
 
   /* Push parent updates into the editor without triggering an echo loop. */
@@ -59,6 +64,15 @@
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
       });
+    }
+  });
+
+  /* Restore scroll position after the document has been updated above. */
+  $effect(() => {
+    if (!view) return;
+    void value;
+    if (view.scrollDOM.scrollTop !== scrollTop) {
+      view.scrollDOM.scrollTop = scrollTop;
     }
   });
 
