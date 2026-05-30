@@ -148,6 +148,7 @@ class AppState {
   otaError = $state<string | null>(null);
   otaDone = $state(false);
   rebootAfterUpdate = $state(true);
+  suppressUnexpectedDisconnect = false;
 
   // ---- AI assistant ----
   aiKey = $state<string>((() => { try { return localStorage.getItem('dc-ai-key') ?? ''; } catch { return ''; } })());
@@ -183,6 +184,10 @@ class AppState {
           duration: 12000,
         });
       } else if (kind === 'unexpected') {
+        if (this.suppressUnexpectedDisconnect) {
+          this.suppressUnexpectedDisconnect = false;
+          return;
+        }
         toast.show({
           severity: 'warn',
           message: 'Dorky disconnected unexpectedly. Out of range, powered off, or another client took over.',
@@ -362,6 +367,14 @@ class AppState {
 
       // Fetch the LATEST value of rebootAfterUpdate just before ending
       const reboot = this.rebootAfterUpdate;
+      if (reboot) {
+        this.suppressUnexpectedDisconnect = true;
+        toast.show({
+          severity: 'info',
+          message: 'OTA complete — device rebooting now. Disconnect is expected.',
+          duration: 7000,
+        });
+      }
       await this.proto.otaEnd(reboot, bin.length);
 
       this.otaDone = true;
@@ -377,6 +390,7 @@ class AppState {
       this.otaError = msg;
       this.otaStatus = '';
       this.pushLog(`OTA failed: ${msg}`, 'error', 'ota');
+      this.suppressUnexpectedDisconnect = false;
       try {
         await this.proto.otaAbort();
       } catch {
@@ -400,10 +414,17 @@ class AppState {
 
   async rebootDevice(): Promise<void> {
     try {
+      this.suppressUnexpectedDisconnect = true;
       await this.proto.systemReboot();
+      toast.show({
+        severity: 'info',
+        message: 'Device rebooting now. Disconnect is expected.',
+        duration: 7000,
+      });
       this.pushLog('Device reboot command sent', 'info', 'system');
       this.otaStatus = 'Rebooting…';
     } catch (e) {
+      this.suppressUnexpectedDisconnect = false;
       const msg = e instanceof Error ? e.message : String(e);
       this.pushLog(`Reboot failed: ${msg}`, 'error', 'system');
     }

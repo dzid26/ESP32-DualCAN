@@ -111,7 +111,7 @@
     confirmResetPairs = false;
     try {
       await app.proto.bleResetPairs();
-      app.pushLog('All BLE bonds wiped — device will disconnect shortly. Remove "Dorky" from your OS Bluetooth settings before reconnecting.', 'warn', 'ble');
+      app.pushLog('All BLE bonds wiped — device will disconnect shortly. Remove "Dorky" from your OS Bluetooth settings before reconnecting. The pairing window will open automatically after the wipe.', 'warn', 'ble');
     } catch (e) {
       bleError = e instanceof Error ? e.message : String(e);
     } finally {
@@ -621,7 +621,7 @@
             Wipe bonds
           </button>
           <span class="muted" style="font-size: 11px">
-            Erases all stored BLE bonds and disconnects. You'll also need to remove "Dorky" from your OS Bluetooth settings before reconnecting.
+            Erases all stored BLE bonds and disconnects. You'll also need to remove "Dorky" from your OS Bluetooth settings before reconnecting. The pairing window will open automatically after the wipe.
           </span>
         </div>
       </div>
