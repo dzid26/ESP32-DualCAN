@@ -215,8 +215,9 @@ int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
     int mi = msg_index(c, msg_id);
     if (mi < 0) return -1;
     const can_msg_state_t *ms = &c->messages[mi];
+    if (!ms->received) return -1;
     memcpy(out_data, ms->data, 8);
-    *out_dlc = ms->received ? ms->dlc : c->dbc.msgs[mi].dlc;
+    *out_dlc = ms->dlc;
     return mi;
 }
 
