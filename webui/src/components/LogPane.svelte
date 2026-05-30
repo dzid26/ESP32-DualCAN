@@ -5,6 +5,9 @@
 
   const LEVELS: LogLevel[] = ['none', 'error', 'warn', 'info', 'debug', 'verbose'];
 
+  let logContainer: HTMLDivElement | null = null;
+  let isAtBottom = $state(true);
+
   function levelColor(level: string): string {
     switch (level) {
       case 'warn':  return 'var(--dc-warn)';
@@ -13,6 +16,27 @@
       default:      return 'var(--dc-info-text)';
     }
   }
+
+  function scrollToBottom() {
+    if (logContainer) {
+      logContainer.scrollTop = logContainer.scrollHeight;
+      isAtBottom = true;
+    }
+  }
+
+  function handleScroll() {
+    if (!logContainer) return;
+    // Check if scrolled to bottom (with small tolerance)
+    isAtBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 10;
+  }
+
+  $effect(() => {
+    app.logs; // Depend on logs array
+    if (isAtBottom) {
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(scrollToBottom, 0);
+    }
+  });
 </script>
 
 <div class="logpane">
@@ -36,12 +60,21 @@
         {/each}
       </select>
       <button class="btn btn--sm btn--ghost" onclick={() => app.clearLogs()}>Clear</button>
+      <button 
+        class="btn btn--sm btn--ghost" 
+        onclick={() => scrollToBottom()}
+        title="Scroll to bottom"
+      >
+        <span style="display: flex; flex-direction: column; gap: -2px; line-height: 0.7">
+          <Icon name="chevD" size={22} />
+        </span>
+      </button>
       <button class="btn btn--sm btn--ghost" onclick={() => (app.logOpen = false)} aria-label="Close logs">
         <Icon name="x" size={12} />
       </button>
     </span>
   </div>
-  <div class="logpane__body mono">
+  <div class="logpane__body mono" bind:this={logContainer} onscroll={handleScroll}>
     {#each app.logs as l}
       <div class="logpane__row">
         <span style="color: var(--dc-text-ghost)">{l.ts}</span>
