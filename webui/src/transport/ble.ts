@@ -125,7 +125,29 @@ export class BleTransport implements Transport {
       optionalServices: [SERVICE_UUID],
     });
 
-    await this.setupDevice(device);
+    // On Windows, gatt.connect can fail right after disconnect. Retry with a
+    // small delay so the user sees "Connecting…" instead of "Connect failed".
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await this.setupDevice(device);
+        return;
+      } catch (err) {
+        if (this.server?.connected) {
+          try { this.server.disconnect(); } catch {}
+        }
+        device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+        this.server = null;
+        this.rxChar = null;
+        this.txChar = null;
+        this.device = null;
+        this.connectedAt = 0;
+        this.disconnectHandled = false;
+        this.setConnected(false);
+
+        if (attempt >= 4) throw err;
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
   }
 
   async disconnect(): Promise<void> {
