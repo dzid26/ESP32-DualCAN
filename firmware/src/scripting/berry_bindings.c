@@ -608,8 +608,11 @@ static int l_can_msg_get(bvm *vm)
 
 static int l_can_msg_set(bvm *vm)
 {
-    if (be_top(vm) >= 3 && be_isinstance(vm, 1) &&
-        be_isstring(vm, 2) && (be_isreal(vm, 3) || be_isint(vm, 3))) {
+    if (be_top(vm) >= 3 && be_isstring(vm, 2) && (be_isreal(vm, 3) || be_isint(vm, 3))) {
+        if (!be_isinstance(vm, 1)) {
+            ESP_LOGW(TAG_BB, "can_msg_set: trying to set signal '%s' but base message is empty", be_tostring(vm, 2));
+            be_return_nil(vm);
+        }
 
         be_getmember(vm, 1, "bus");
         int bus = be_toint(vm, -1);
@@ -652,7 +655,11 @@ static int l_can_msg_set(bvm *vm)
 
 static int l_can_msg_send(bvm *vm)
 {
-    if (be_top(vm) >= 1 && be_isinstance(vm, 1)) {
+    if (be_top(vm) >= 1) {
+        if (!be_isinstance(vm, 1)) {
+            ESP_LOGW(TAG_BB, "can_msg_send: trying to send empty message");
+            be_return_nil(vm);
+        }
         be_getmember(vm, 1, "bus");
         int bus = be_toint(vm, -1);
         be_pop(vm, 1);
