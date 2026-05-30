@@ -11,6 +11,12 @@
 #define CAN_MAX_CALLBACKS 32
 #define CAN_RX_BUF        16  /* per-bus software ring buffer depth for Berry scripts */
 
+/* CAN-layer error codes for int-returning functions.
+ * Callers check < 0 for generic failure, or compare against
+ * a specific code for a precise error message. */
+#define CAN_DBC_ERR     (-201)   /* DBC lookup failed (msg or sig not found) */
+#define CAN_ERR_FULL    (-202)   /* callback registry / resource full */
+
 typedef void (*can_signal_cb_t)(int sig_idx, float value, float prev, void *ctx);
 
 typedef struct {

@@ -161,9 +161,10 @@ int can_poll(can_t *c, uint32_t now_ms)
 // todo: function description
 int can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag)
 {
-    if (!c->loaded) return -1;
+    if (!c->loaded) return CAN_DBC_ERR;
     int si = dbc_find_signal(&c->dbc, sig_name);
-    if (si < 0 || c->cb_count >= CAN_MAX_CALLBACKS) return -1;
+    if (si < 0) return CAN_DBC_ERR;
+    if (c->cb_count >= CAN_MAX_CALLBACKS) return CAN_ERR_FULL;
     c->callbacks[c->cb_count++] = (typeof(c->callbacks[0])){
         .sig_idx = si, .cb = cb, .ctx = ctx, .tag = tag
     };
@@ -173,9 +174,10 @@ int can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx,
 int can_on_change_scoped(can_t *c, const char *msg_name, const char *sig_name,
                           can_signal_cb_t cb, void *ctx, int tag)
 {
-    if (!c->loaded) return -1;
+    if (!c->loaded) return CAN_DBC_ERR;
     int si = dbc_find_signal_by_msg_name(&c->dbc, msg_name, sig_name);
-    if (si < 0 || c->cb_count >= CAN_MAX_CALLBACKS) return -1;
+    if (si < 0) return CAN_DBC_ERR;
+    if (c->cb_count >= CAN_MAX_CALLBACKS) return CAN_ERR_FULL;
     c->callbacks[c->cb_count++] = (typeof(c->callbacks[0])){
         .sig_idx = si, .cb = cb, .ctx = ctx, .tag = tag
     };

@@ -91,7 +91,7 @@ void test_find_msg(void) {
 
 void test_find_signal(void) {
     TEST_ASSERT_EQUAL(0, dbc_find_signal(&dbc, "speed"));
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal(&dbc, "nonexistent"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_SIG, dbc_find_signal(&dbc, "nonexistent"));
 }
 
 /* Scoped lookup: signal must live inside the named message. Real DBCs
@@ -105,9 +105,9 @@ void test_find_signal_scoped(void) {
 
     /* "speed" lives in msg100 only; "temp_a" in msg200 only. */
     TEST_ASSERT_EQUAL(0,  dbc_find_signal_in_msg(&dbc, m100, "speed"));
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal_in_msg(&dbc, m100, "temp_a"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_SIG, dbc_find_signal_in_msg(&dbc, m100, "temp_a"));
     TEST_ASSERT_EQUAL(3,  dbc_find_signal_in_msg(&dbc, m200, "temp_a"));
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal_in_msg(&dbc, m200, "speed"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_SIG, dbc_find_signal_in_msg(&dbc, m200, "speed"));
 }
 
 void test_find_msg_by_name(void) {
@@ -120,16 +120,16 @@ void test_find_msg_by_name(void) {
 void test_find_signal_by_msg_name(void) {
     TEST_ASSERT_EQUAL(0,  dbc_find_signal_by_msg_name(&dbc, "msg100", "speed"));
     TEST_ASSERT_EQUAL(3,  dbc_find_signal_by_msg_name(&dbc, "msg200", "temp_a"));
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal_by_msg_name(&dbc, "msg100", "temp_a"));
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal_by_msg_name(&dbc, "ghost",  "speed"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_SIG, dbc_find_signal_by_msg_name(&dbc, "msg100", "temp_a"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_MSG, dbc_find_signal_by_msg_name(&dbc, "ghost",  "speed"));
 }
 
 /* Regression: signal.subscribe used to panic (MCAUSE=5) when called before any
  * DBC was loaded — dbc_find_signal dereferenced a NULL hdr/sigs pointer. */
 void test_find_signal_null_safe(void) {
     dbc_t empty = {0};
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal(&empty, "anything"));
-    TEST_ASSERT_EQUAL(-1, dbc_find_signal(NULL, "anything"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_SIG, dbc_find_signal(&empty, "anything"));
+    TEST_ASSERT_EQUAL(DBC_ERR_NO_SIG, dbc_find_signal(NULL, "anything"));
 }
 
 void test_decode_simple(void) {

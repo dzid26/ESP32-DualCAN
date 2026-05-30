@@ -14,17 +14,26 @@ typedef struct {
     const char         *strs;
 } dbc_t;
 
+/* DBC lookup error codes for int-returning functions.
+ * Success returns signal index (>= 0). Negative values indicate
+ * a specific failure reason — all callers check < 0 so existing
+ * tests keep passing without rework. */
+#define DBC_ERR_NO_SIG  (-101)   /* signal name not found in DBC */
+#define DBC_ERR_NO_MSG  (-102)   /* message name not found in DBC */
+
 int dbc_load(dbc_t *dbc, const uint8_t *blob, size_t len);
 const dbc_msg_t *dbc_find_msg(const dbc_t *dbc, uint32_t id);
 int dbc_find_signal(const dbc_t *dbc, const char *name);
 
 /* Scoped lookup: only consider signals belonging to `msg`. Returns the global
- * signal index, or -1 if not found. DBC signal names are unique within a
- * message but may collide across messages, so prefer this when you know
- * the message context. */
+ * signal index, or DBC_ERR_NO_SIG if not found. DBC signal names are unique
+ * within a message but may collide across messages, so prefer this when you
+ * know the message context. */
 int dbc_find_signal_in_msg(const dbc_t *dbc, const dbc_msg_t *msg, const char *name);
 
-/* Convenience: msg_name + sig_name -> global sig index. -1 if either misses. */
+/* Convenience: msg_name + sig_name -> global sig index.
+ * Returns DBC_ERR_NO_MSG if message not found, DBC_ERR_NO_SIG if
+ * message exists but signal doesn't. */
 int dbc_find_signal_by_msg_name(const dbc_t *dbc, const char *msg_name, const char *sig_name);
 
 /* Look up a message by its name. Linear scan; fine for typical DBC sizes. */

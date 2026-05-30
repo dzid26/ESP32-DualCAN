@@ -200,11 +200,17 @@ static int l_on_can_signal(bvm *vm)
     }
 
     int ref = refs_alloc(vm, 3);
-    if (can_on_change_scoped(eng, msg_name, sig_name, can_on_trampoline,
-                              (void *)(intptr_t)ref, s_current_script_id) != 0) {
+    int rv = can_on_change_scoped(eng, msg_name, sig_name, can_on_trampoline,
+                                   (void *)(intptr_t)ref, s_current_script_id);
+    if (rv != 0) {
         refs_free(vm, ref);
-        ESP_LOGW(TAG_BB, "on_can_signal: %s.%s not found on bus %d",
-                 msg_name, sig_name, bus);
+        if (rv == CAN_ERR_FULL) {
+            ESP_LOGE(TAG_BB, "on_can_signal callback registry full");
+            be_return_nil(vm);
+        }
+        int si = dbc_find_signal_by_msg_name(&eng->dbc, msg_name, sig_name);
+        if (si == DBC_ERR_NO_MSG) be_raise(vm, "key_error", be_pushfstring(vm, "on_can_signal: message '%s' not found", msg_name));
+        if (si == DBC_ERR_NO_SIG) be_raise(vm, "key_error", be_pushfstring(vm, "on_can_signal: signal '%s' not found in message '%s'", sig_name, msg_name));
         be_return_nil(vm);
     }
 
@@ -527,8 +533,9 @@ static int l_can_signal_get(bvm *vm)
         can_t *eng = get_bus(bus);
         if (!eng) be_return_nil(vm);
 
-        const signal_state_t *e = can_signal_scoped(eng, msg_name, sig_name);
-        if (e) {
+        int si = dbc_find_signal_by_msg_name(&eng->dbc, msg_name, sig_name);
+        if (si >= 0) {
+            const signal_state_t *e = &eng->signals[si];
             be_newobject(vm, "map");
             be_pushstring(vm, "value");
             be_pushreal(vm, (breal)e->value);
@@ -544,6 +551,8 @@ static int l_can_signal_get(bvm *vm)
             be_pop(vm, 2);
             be_return(vm);
         }
+        if (si == DBC_ERR_NO_MSG) be_raise(vm, "key_error", be_pushfstring(vm, "can_signal_get: message '%s' not found", msg_name));
+        if (si == DBC_ERR_NO_SIG) be_raise(vm, "key_error", be_pushfstring(vm, "can_signal_get: signal '%s' not found in message '%s'", sig_name, msg_name));
     }
     be_return_nil(vm);
 }
@@ -566,7 +575,7 @@ static int l_can_msg_get(bvm *vm)
             eng = get_bus(bus);
             if (!eng) be_return_nil(vm);
             const dbc_msg_t *m = dbc_find_msg_by_name(&eng->dbc, msg_name);
-            if (!m) be_return_nil(vm);
+            if (!m) be_raise(vm, "key_error", be_pushfstring(vm, "can_msg_get: message '%s' not found", msg_name));
             msg_id = m->id;
         } else {
             be_return_nil(vm);
@@ -620,8 +629,9 @@ static int l_can_msg_set(bvm *vm)
         float val = be_isreal(vm, 3) ? (float)be_toreal(vm, 3) : (float)be_toint(vm, 3);
 
         const dbc_msg_t *m = dbc_find_msg(&eng->dbc, msg_id);
-        int si = m ? dbc_find_signal_in_msg(&eng->dbc, m, sig_name) : -1;
-        if (si < 0) be_return_nil(vm);
+        if (!m) be_raise(vm, "key_error", be_pushfstring(vm, "can_msg_set: message id 0x%03x not found in DBC", (unsigned)msg_id));
+        int si = dbc_find_signal_in_msg(&eng->dbc, m, sig_name);
+        if (si < 0) be_raise(vm, "key_error", be_pushfstring(vm, "can_msg_set: signal '%s' not found in message id 0x%03x", sig_name, (unsigned)msg_id));
 
         be_getmember(vm, 1, "data");
         size_t len = 0;
