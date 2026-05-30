@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from './lib/store.svelte';
+  import type { ViewId } from './lib/store.svelte';
   import Shell from './components/Shell.svelte';
   import CarPicker from './components/CarPicker.svelte';
   import Toast from './components/Toast.svelte';
@@ -25,21 +26,25 @@
   import SettingsView from './components/views/SettingsView.svelte';
   import TeslaView from './components/views/TeslaView.svelte';
   import EngineView from './components/views/EngineView.svelte';
+
+  function tabStyle(v: ViewId): string {
+    return app.view === v ? 'flex: 1; display: flex; flex-direction: column; min-height: 0;' : 'display: none;';
+  }
 </script>
 
 <Shell>
   {#snippet children()}
-    <div style:display={app.view === 'events' ? '' : 'none'}><DashboardView /></div>
-    <div style:display={app.view === 'scripts' ? '' : 'none'}><ScriptsView /></div>
-    <div style:display={app.view === 'ai' ? '' : 'none'}><AIView /></div>
-    <div style:display={app.view === 'gallery' ? '' : 'none'}><GalleryView /></div>
-    <div style:display={app.view === 'signals' ? '' : 'none'}><SignalsView /></div>
-    <div style:display={app.view === 'dbc' ? '' : 'none'}><DbcView /></div>
-    <div style:display={app.view === 'trace' ? '' : 'none'}><TraceView /></div>
-    <div style:display={app.view === 'capture' ? '' : 'none'}><CaptureView /></div>
-    <div style:display={app.view === 'settings' ? '' : 'none'}><SettingsView /></div>
-    <div style:display={app.view === 'tesla' ? '' : 'none'}><TeslaView /></div>
-    <div style:display={app.view === 'engine' ? '' : 'none'}><EngineView /></div>
+    <div style={tabStyle('events')}><DashboardView /></div>
+    <div style={tabStyle('scripts')}><ScriptsView /></div>
+    <div style={tabStyle('ai')}><AIView /></div>
+    <div style={tabStyle('gallery')}><GalleryView /></div>
+    <div style={tabStyle('signals')}><SignalsView /></div>
+    <div style={tabStyle('dbc')}><DbcView /></div>
+    <div style={tabStyle('trace')}><TraceView /></div>
+    <div style={tabStyle('capture')}><CaptureView /></div>
+    <div style={tabStyle('settings')}><SettingsView /></div>
+    <div style={tabStyle('tesla')}><TeslaView /></div>
+    <div style={tabStyle('engine')}><EngineView /></div>
   {/snippet}
 </Shell>
 

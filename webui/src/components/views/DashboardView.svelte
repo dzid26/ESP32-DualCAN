@@ -187,6 +187,7 @@
   });
 
   $effect(() => { void app.connected; if (app.connected) refresh(); else actions = []; });
+  $effect(() => { if (app.view === 'events') refresh(); });
   $effect(() => {
     if (app.connected) {
       untrack(() => void subscribeAll());

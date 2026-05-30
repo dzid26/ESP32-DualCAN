@@ -21,7 +21,6 @@
   let host: HTMLDivElement | undefined = $state();
   let view: EditorView | undefined;
   let suppressNextChange = false;
-  let ro: ResizeObserver | undefined;
 
   onMount(() => {
     view = new EditorView({
@@ -54,9 +53,6 @@
     view.scrollDOM.addEventListener('scroll', () => {
       scrollTop = view!.scrollDOM.scrollTop;
     });
-    /* Force re-measure when container changes size (e.g. display:none → visible). */
-    ro = new ResizeObserver(() => view?.requestMeasure());
-    ro.observe(host!);
   });
 
   /* Push parent updates into the editor without triggering an echo loop. */
@@ -81,7 +77,6 @@
   });
 
   onDestroy(() => {
-    ro?.disconnect();
     view?.destroy();
   });
 </script>
