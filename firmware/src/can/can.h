@@ -64,7 +64,7 @@ const signal_state_t *can_signal(const can_t *c, const char *name);
 /* Scoped read (msg_name, sig_name). Same rationale as can_on_change_scoped. */
 const signal_state_t *can_signal_scoped(const can_t *c, const char *msg_name, const char *sig_name);
 
-int  can_draft(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc);
+int  can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc);
 void can_encode(const can_t *c, int sig_idx, uint8_t *data, float value);
 int  can_send(can_t *c, int msg_idx, uint8_t *data, uint8_t dlc);
 

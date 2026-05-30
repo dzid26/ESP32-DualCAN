@@ -578,7 +578,7 @@ static int l_can_msg_get(bvm *vm)
         }
 
         uint8_t data[8], dlc;
-        int idx = can_draft(eng, msg_id, data, &dlc);
+        int idx = can_read(eng, msg_id, data, &dlc);
         if (idx < 0) be_return_nil(vm);
 
         be_newobject(vm, "map");

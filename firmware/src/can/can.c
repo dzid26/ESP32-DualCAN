@@ -207,7 +207,7 @@ const signal_state_t *can_signal_scoped(const can_t *c, const char *msg_name, co
     return (si >= 0) ? &c->signals[si] : NULL;
 }
 
-int can_draft(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
+int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
 {
     if (!c->loaded) return -1;
     int mi = msg_index(c, msg_id);
