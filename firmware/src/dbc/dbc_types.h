@@ -10,10 +10,20 @@
  *
  * Layout in the binary blob:
  *   [header] [messages...] [signals...] [string_table]
+ *
+ * Field width rationale:
+ *   - msg_count / sig_count (msg & hdr): uint16_t — 65535 msgs/signals
+ *     is far beyond any real DBC. The dedup Tesla DBC has 403 / 8881.
+ *   - name_off: uint32_t — string tables can exceed 64 KiB; the dedup
+ *     Tesla DBC requires ~53 KiB. uint16_t would overflow above 65535.
+ *   - id: uint32_t — CAN FD supports 29-bit extended IDs.
+ *   - lengths/flags: uint8_t — bits, DLC, and signal count per message.
+ *   - offsets: uint32_t — binary blob can exceed 64 KiB (dedup Tesla
+ *     DBC is 376 KiB).
  */
 
 #define DBC_MAGIC       "DBC\0"
-#define DBC_VERSION     1
+#define DBC_VERSION     2
 
 typedef struct __attribute__((packed)) {
     uint8_t  magic[4];         /* "DBC\0" */
@@ -30,12 +40,12 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     uint32_t id;               /* CAN ID (11- or 29-bit) */
-    uint16_t name_off;         /* offset into string table */
-    uint8_t  dlc;
-    uint8_t  sig_count;        /* signals in this message */
+    uint32_t name_off;         /* offset into string table */
+    uint16_t sig_count;        /* signals in this message */
     uint16_t sig_start;        /* index of first signal in signal array */
-    uint16_t _pad;
-} dbc_msg_t;                   /* 12 bytes */
+    uint8_t  dlc;
+    uint8_t  _pad;
+} dbc_msg_t;                   /* 14 bytes */
 
 /* Signal flags byte */
 #define DBC_SIG_SIGNED      (1 << 0)
@@ -46,7 +56,7 @@ typedef struct __attribute__((packed)) {
 #define DBC_SIG_MUX_MUXED   (2 << 2)   /* this signal is multiplexed */
 
 typedef struct __attribute__((packed)) {
-    uint16_t name_off;         /* offset into string table */
+    uint32_t name_off;         /* offset into string table */
     uint8_t  start_bit;
     uint8_t  bit_length;
     uint8_t  flags;            /* DBC_SIG_* */
@@ -54,4 +64,4 @@ typedef struct __attribute__((packed)) {
     uint16_t _pad;
     float    scale;
     float    offset;
-} dbc_sig_t;                   /* 16 bytes */
+} dbc_sig_t;                   /* 18 bytes */

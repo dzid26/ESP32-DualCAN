@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DBC_MAGIC = b"DBC\0"
-DBC_VERSION = 1
+DBC_VERSION = 2
 
 # Signal flags (must match dbc_types.h)
 SIG_SIGNED      = 1 << 0
@@ -142,7 +142,7 @@ def compile_binary(messages: list[Message], bus_id: int = 0) -> bytes:
                 flags |= SIG_BIG_ENDIAN
             flags |= sig.mux_type
             sig_data += struct.pack(
-                "<HBBBBHff",
+                "<IBBBBHff",
                 intern(sig.name),
                 sig.start_bit,
                 sig.bit_length,
@@ -160,12 +160,12 @@ def compile_binary(messages: list[Message], bus_id: int = 0) -> bytes:
     msg_data = bytearray()
     for msg in messages:
         msg_data += struct.pack(
-            "<IHBBHH",
+            "<IIHHBB",
             msg.id,
             intern(msg.name),
-            msg.dlc,
             len(msg.signals),
             msg._sig_start,
+            msg.dlc,
             0,  # _pad
         )
 

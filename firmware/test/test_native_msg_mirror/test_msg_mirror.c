@@ -20,10 +20,10 @@ static size_t blob_len;
 static void build_blob(void)
 {
     memset(blob, 0, sizeof(blob));
-    char strs[128]; uint16_t offs[4]; int sp = 0;
+    char strs[128]; uint32_t offs[4]; int sp = 0;
     const char *names[] = {"DI_torqueEstimate", "DI_counter", "DI_checksum", "msg_118"};
     for (int i = 0; i < 4; i++) {
-        offs[i] = (uint16_t)sp;
+        offs[i] = (uint32_t)sp;
         int n = strlen(names[i]) + 1;
         memcpy(strs + sp, names[i], n); sp += n;
     }

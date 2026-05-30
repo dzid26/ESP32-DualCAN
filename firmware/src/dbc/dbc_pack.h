@@ -39,7 +39,7 @@ int dbc_find_signal_by_msg_name(const dbc_t *dbc, const char *msg_name, const ch
 /* Look up a message by its name. Linear scan; fine for typical DBC sizes. */
 const dbc_msg_t *dbc_find_msg_by_name(const dbc_t *dbc, const char *name);
 
-static inline const char *dbc_str(const dbc_t *dbc, uint16_t off)
+static inline const char *dbc_str(const dbc_t *dbc, uint32_t off)
 {
     return dbc->strs + off;
 }

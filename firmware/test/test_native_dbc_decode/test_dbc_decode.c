@@ -24,10 +24,10 @@ static void build_test_blob(void)
 
     const char *str_table[] = {"speed", "counter", "msg100", "mux_sel", "temp_a", "temp_b", "msg200"};
     char strs[256];
-    uint16_t str_offsets[7];
+    uint32_t str_offsets[7];
     int str_pos = 0;
     for (int i = 0; i < 7; i++) {
-        str_offsets[i] = (uint16_t)str_pos;
+        str_offsets[i] = (uint32_t)str_pos;
         int slen = strlen(str_table[i]) + 1;
         memcpy(strs + str_pos, str_table[i], slen);
         str_pos += slen;
