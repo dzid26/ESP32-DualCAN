@@ -27,7 +27,15 @@ export class BleTransport implements Transport {
   private _connected = false;
   private connectedAt = 0;
   private userInitiatedDisconnect = false;
+  /** Guards against Windows firing gattserverdisconnected twice. */
+  private disconnectHandled = false;
   private readonly handleGattServerDisconnected = () => {
+    // Windows Web Bluetooth can fire gattserverdisconnected twice for one
+    // disconnect event. Skip the second call so we don't misclassify it
+    // as 'unexpected' (which shows a misleading toast).
+    if (this.disconnectHandled) return;
+    this.disconnectHandled = true;
+
     const sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
     let kind: DisconnectKind;
     if (this.userInitiatedDisconnect) kind = 'user';
@@ -75,7 +83,6 @@ export class BleTransport implements Transport {
   }
 
   private async setupDevice(device: BluetoothDevice): Promise<void> {
-    device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
     device.addEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
 
     this.server = await device.gatt!.connect();
@@ -85,11 +92,11 @@ export class BleTransport implements Transport {
     this.txChar = await service.getCharacteristic(TX_CHAR_UUID);
 
     await this.txChar.startNotifications();
-    this.txChar.removeEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
     this.txChar.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
 
     this.device = device;
     this.connectedAt = Date.now();
+    this.disconnectHandled = false;
     this.setConnected(true);
     console.log('BLE connected to', device.name);
   }
@@ -106,6 +113,7 @@ export class BleTransport implements Transport {
       optionalServices: [SERVICE_UUID],
     });
 
+    this.disconnectHandled = false;
     await this.setupDevice(device);
   }
 
