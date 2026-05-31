@@ -24,6 +24,7 @@
 #include "tesla_ble/tesla_ble.h"
 #include "tesla_ble/tesla_vehicle.h"
 #include "wifi/wifi.h"
+#include "http_file_server/http_file_server.h"
 #include "ota/ota.h"
 
 static const char *TAG = "dorky";
@@ -106,6 +107,7 @@ void app_main(void)
      * elapses — keeps a faulty script from sending into a dead bus on boot. */
     protocol_init(&loader);
     dorky_ble_init(protocol_on_ble_write, NULL);
+    http_file_server_start();
 
     /* Startup-delay guardrail: don't enable user scripts until we've seen the
      * buses come alive, or until this timeout fires. */

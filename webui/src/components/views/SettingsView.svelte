@@ -26,7 +26,7 @@
   // WiFi
   let wifiSsid = $state('');
   let wifiPsk = $state('');
-  let wifiStatus = $state<{ connected: boolean; ssid: string; ip: string } | null>(null);
+  let wifiStatus = $state<{ connected: boolean; ssid: string; ip: string; http_url?: string } | null>(null);
   let wifiBusy = $state(false);
   let wifiError = $state<string | null>(null);
 
@@ -331,7 +331,11 @@
           <span class="mono ghost">
             {wifiStatus.connected ? 'connected' : 'not connected'}
             {#if wifiStatus.ssid}· ssid {wifiStatus.ssid}{/if}
-            {#if wifiStatus.ip}· ip {wifiStatus.ip}{/if}
+            {#if wifiStatus.ip}· ip {wifiStatus.ip} · 
+            <a href="http://{wifiStatus.ip}/" target="_blank" rel="noopener" class="mono" style="color: var(--dc-accent); text-decoration: none">
+              ↪File Server
+            </a>
+            {/if}
           </span>
         </div>
       {/if}

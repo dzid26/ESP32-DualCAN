@@ -13,6 +13,15 @@
   let scripts = $state<ScriptInfo[]>([]);
   let listError = $state<string | null>(null);
   let busy = $state(false);
+  let wifiIp = $state<string | null>(null);
+
+  async function refreshWifiIp(): Promise<void> {
+    try {
+      if (!app.connected) return;
+      const s = await app.proto.wifiStatus();
+      wifiIp = s.connected && s.ip ? s.ip : null;
+    } catch { /* keep stale value */ }
+  }
 
   let selFn = $state<string | null>(null);
   let code = $state<string>(NEW_SCRIPT);
@@ -201,8 +210,8 @@
   // Re-list on mount, reconnect, or kill switch.
   $effect(() => {
     void app.connected; void app.scriptsVersion;
-    if (app.connected) refresh();
-    else scripts = [];
+    if (app.connected) { refresh(); refreshWifiIp(); }
+    else { scripts = []; }
   });
 
   $effect(() => {
@@ -284,6 +293,15 @@
     >
       <div class="frame__head">
         Installed <span class="ghost mono">{scripts.length}</span>
+        {#if wifiIp}
+          <a href="http://{wifiIp}/scripts/" target="_blank" rel="noopener" class="ghost" style="margin-left: auto; font-size: 11px; color: var(--dc-accent); text-decoration: none">
+            Browse files &rarr;
+          </a>
+        {:else}
+          <span class="ghost" style="margin-left: auto; font-size: 11px; color: var(--dc-text-fade)" title="Connect to WiFi in Settings to browse scripts via HTTP">
+            Browse files
+          </span>
+        {/if}
       </div>
       <div style="overflow-y: auto; flex: 1">
           {#if !app.connected}
