@@ -1,5 +1,3 @@
-// Curated subset of commaai/opendbc — same list as the design bundle.
-// Production should generate from the opendbc manifest at build time.
 export type Car = {
   id: string;
   brand: string;
@@ -8,14 +6,22 @@ export type Car = {
   dbc: string;
   icon?: string;
   popular?: boolean;
+  /** Per-bus private DBC files (overrides opendbc `dbc` when present). */
+  customDbc?: Record<number, { filename: string; label: string }>;
+};
+
+// we store tesla files locally in dbc/
+const TESLA_DBC: Car['customDbc'] = {
+  0: { filename: 'Model3_VEH.dbc', label: 'VehicleCAN' },
+  1: { filename: 'Model3_CH.dbc', label: 'ChassisCAN' },
 };
 
 export const OPENDBC_CARS: Car[] = [
   // Tesla
-  { id: 'tesla-m3-2018', brand: 'Tesla', model: 'Model 3', years: '2017+', dbc: 'tesla_model3_party.dbc', icon: '🛻', popular: true },
-  { id: 'tesla-my-2020', brand: 'Tesla', model: 'Model Y', years: '2020+', dbc: 'tesla_modelY_party.dbc', icon: '🛻', popular: true },
-  { id: 'tesla-ms-2021', brand: 'Tesla', model: 'Model S', years: '2021+', dbc: 'tesla_models_2021.dbc' },
-  { id: 'tesla-mx-2021', brand: 'Tesla', model: 'Model X', years: '2021+', dbc: 'tesla_modelx_2021.dbc' },
+  { id: 'tesla-m3-2018', brand: 'Tesla', model: 'Model 3', years: '2017+', dbc: 'tesla_model3_party.dbc', icon: '🛻', popular: true, customDbc: TESLA_DBC },
+  { id: 'tesla-my-2020', brand: 'Tesla', model: 'Model Y', years: '2020+', dbc: 'tesla_modelY_party.dbc', icon: '🛻', popular: true, customDbc: TESLA_DBC },
+  { id: 'tesla-ms-2021', brand: 'Tesla', model: 'Model S', years: '2021+', dbc: 'tesla_models_2021.dbc', customDbc: TESLA_DBC },
+  { id: 'tesla-mx-2021', brand: 'Tesla', model: 'Model X', years: '2021+', dbc: 'tesla_modelx_2021.dbc', customDbc: TESLA_DBC },
   // Toyota
   { id: 'toy-rav4-2019',    brand: 'Toyota', model: 'RAV4',    years: '2019+', dbc: 'toyota_rav4_2019_pt.dbc',    popular: true },
   { id: 'toy-prius-2017',   brand: 'Toyota', model: 'Prius',   years: '2017+', dbc: 'toyota_prius_2017_pt.dbc' },

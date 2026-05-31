@@ -113,9 +113,10 @@
         {/each}
       </div>
       <div class="car-picker__foot mono">
-        List from
-        <a href="https://github.com/commaai/opendbc" target="_blank" rel="noopener">commaai/opendbc</a>
-        · {OPENDBC_CARS.length} platforms shown · syncs nightly
+        Tesla selection auto-loads DBC
+        ·
+        <a href="https://github.com/commaai/opendbc" target="_blank" rel="noopener">opendbc</a>
+        · {OPENDBC_CARS.length} platforms
       </div>
     </div>
   </div>

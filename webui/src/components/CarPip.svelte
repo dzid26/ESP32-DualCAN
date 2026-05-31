@@ -8,7 +8,7 @@
 <button
   class={'pip pip--clickable pip--car' + (car ? ' pip--car-set' : ' pip--car-unset')}
   onclick={onOpen}
-  title={car ? `Vehicle profile: ${car.brand} ${car.model} ${car.years}` : 'Pick a vehicle profile (opendbc)'}
+  title={car ? `Vehicle profile: ${car.brand} ${car.model} ${car.years}` : 'Pick a vehicle profile'}
 >
   <span style="font-size: 13px">{car?.icon ?? '🚗'}</span>
   {#if car}

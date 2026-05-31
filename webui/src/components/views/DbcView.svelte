@@ -73,33 +73,32 @@
     reader.readAsText(file);
   }
 
-  async function loadTeslaDefaults(): Promise<void> {
+  async function loadCustomDbc(entry: Record<number, { filename: string; label: string }>): Promise<void> {
     if (busy) return;
     busy = true;
     status = 'Loading…';
     try {
-      const urlVeh = `${import.meta.env.BASE_URL}dbc/Model3_VEH.dbc`;
-      const urlCh = `${import.meta.env.BASE_URL}dbc/Model3_CH.dbc`;
-      const [vehResp, chResp] = await Promise.all([fetch(urlVeh), fetch(urlCh)]);
-      if (!vehResp.ok) throw new Error(`VEH HTTP ${vehResp.status}`);
-      if (!chResp.ok) throw new Error(`CH HTTP ${chResp.status}`);
-      const [vehText, chText] = await Promise.all([vehResp.text(), chResp.text()]);
-      status = 'Parsing…';
-      const [veh, ch] = await Promise.all([
-        parseDbcInWorker(vehText, urlVeh),
-        parseDbcInWorker(chText, urlCh),
-      ]);
-      if (busDbc[0]?.messages === veh && busDbc[1]?.messages === ch) {
-        status = `Cached — Bus 0: ${veh.length} msgs · Bus 1: ${ch.length} msgs`;
+      const results = await Promise.all(
+        Object.entries(entry).map(async ([b, info]) => {
+          const url = `${import.meta.env.BASE_URL}dbc/${info.filename}`;
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`${info.filename} HTTP ${resp.status}`);
+          const text = await resp.text();
+          const messages = await parseDbcInWorker(text, url);
+          return { bus: Number(b), messages, label: info.label };
+        })
+      );
+      const allCached = results.every(r => busDbc[r.bus]?.messages === r.messages);
+      if (allCached) {
+        status = `Cached — ${results.map(r => `Bus ${r.bus}: ${r.messages.length} msgs`).join(' · ')}`;
         return;
       }
       openMessages = new Set();
-      busDbc = {
-        [0]: { messages: veh, loadedFrom: 'VehicleCAN' },
-        [1]: { messages: ch, loadedFrom: 'ChassisCAN' },
-      };
+      const next = { ...busDbc };
+      for (const r of results) next[r.bus] = { messages: r.messages, loadedFrom: r.label };
+      busDbc = next;
       publishSignals();
-      bus = 0;
+      bus = Math.min(...Object.keys(entry).map(Number));
     } catch (e) {
       status = `load failed: ${e instanceof Error ? e.message : e}`;
     } finally {
@@ -160,6 +159,18 @@
     app.dbcViewBus = null;
   });
 
+  /** Auto-load custom DBCs when a car with private DBC entries is picked. */
+  $effect(() => {
+    const c = app.car;
+    if (!c) return;
+    const entry = c.customDbc;
+    if (!entry) return;
+    const allLoaded = Object.keys(entry).every(b => busDbc[Number(b)]?.loadedFrom === entry[Number(b)].label);
+    if (allLoaded) return;
+    if (busy) return;
+    void loadCustomDbc(entry);
+  });
+
   function hex3(n: number): string {
     return '0x' + n.toString(16).toUpperCase().padStart(3, '0');
   }
@@ -168,9 +179,6 @@
 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">
   <SectionHead title="DBC" sub="Per-bus signal definitions">
     {#snippet actions()}
-      <button class="btn btn--sm btn--info" onclick={loadTeslaDefaults} disabled={busy}>
-        Load Tesla Model 3 defaults
-      </button>
       <label class="btn btn--sm">
         <Icon name="up" size={13} /> Upload .dbc
         <input type="file" accept=".dbc" style="display: none" onchange={handleFile} />
@@ -207,7 +215,7 @@
 
   {#if messages.length === 0}
     <div class="empty">
-      No DBC parsed. Use <strong>Load Tesla defaults</strong> or <strong>Upload .dbc</strong> above.
+      No DBC loaded. Select a compatible car in the car picker, or <strong>Upload .dbc</strong> above.
     </div>
   {:else}
     <div class="dtable" style="flex: 1">

@@ -546,7 +546,8 @@ class AppState {
     this.car = c;
     saveCar(c.id);
     this.carPickerOpen = false;
-    this.pushLog(`Vehicle profile set: ${c.brand} ${c.model} (${c.dbc})`, 'info', 'system');
+    const suffix = c.customDbc ? '' : ` (opendbc: ${c.dbc})`;
+    this.pushLog(`Vehicle profile set: ${c.brand} ${c.model}${suffix}`, 'info', 'system');
     if (this.view === 'tesla' && c.brand !== 'Tesla') this.setView('events');
   }
 
