@@ -1,17 +1,17 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
-  import { parseDbc, compileDbc, type Message } from '../../dbc/parser';
+  import { parseDbcInWorker, compileDbc, type Message } from '../../dbc/parser';
   import { dbcStore } from '../../dbcStore.svelte';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
 
   let bus = $state(0);
-  let messages = $state<Message[]>([]);
+  let messages = $state.raw<Message[]>([]);
   let loadedFrom = $state<string | null>(null);
   let status = $state('No DBC loaded');
   let busy = $state(false);
   let openMessages = $state(new Set<number>());
-  let busDbc = $state<Record<number, { messages: Message[]; loadedFrom: string }>>({});
+  let busDbc = $state.raw<Record<number, { messages: Message[]; loadedFrom: string }>>({});
 
   function publishSignals(): void {
     const flat: { name: string; message: string; msgId: number; sigIndex: number }[] = [];
@@ -19,11 +19,16 @@
     for (const d of Object.values(busDbc)) {
       for (const m of d.messages) {
         msgList.push({ name: m.name, id: m.id });
-        flat.push(...m.signals.map((s, sigIndex) => ({ name: s.name, message: m.name, msgId: m.id, sigIndex })));
+        const sigs = m.signals;
+        for (let si = 0; si < sigs.length; si++)
+          flat.push({ name: sigs[si].name, message: m.name, msgId: m.id, sigIndex: si });
       }
     }
     dbcStore.setSignals(flat);
     dbcStore.setMessages(msgList);
+    dbcStore.setFullMessages(Object.fromEntries(
+      Object.entries(busDbc).map(([bus, d]) => [Number(bus), d.messages])
+    ));
   }
 
   $effect(() => {
@@ -45,11 +50,11 @@
     openMessages = s;
   }
 
-  async function loadText(text: string, label: string, targetBus: number): Promise<void> {
+  async function loadText(text: string, label: string, targetBus: number, cacheKey?: string): Promise<void> {
     status = `Parsing ${label}…`;
     await new Promise(r => setTimeout(r, 0));
     try {
-      const parsed = parseDbc(text);
+      const parsed = await parseDbcInWorker(text, cacheKey);
       openMessages = new Set();
       busDbc = { ...busDbc, [targetBus]: { messages: parsed, loadedFrom: label } };
       publishSignals();
@@ -64,23 +69,41 @@
     input.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { void loadText(reader.result as string, file.name, bus); };
+    reader.onload = () => { void loadText(reader.result as string, file.name, bus, file.name); };
     reader.readAsText(file);
   }
 
   async function loadTeslaDefaults(): Promise<void> {
-    status = 'Loading VehicleCAN…';
+    if (busy) return;
+    busy = true;
+    status = 'Loading…';
     try {
-      let resp = await fetch(`${import.meta.env.BASE_URL}dbc/Model3_VEH.dbc`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      await loadText(await resp.text(), 'VehicleCAN', 0);
-      await new Promise(r => setTimeout(r, 50));
-      resp = await fetch(`${import.meta.env.BASE_URL}dbc/Model3_CH.dbc`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      await loadText(await resp.text(), 'ChassisCAN', 1);
+      const urlVeh = `${import.meta.env.BASE_URL}dbc/Model3_VEH.dbc`;
+      const urlCh = `${import.meta.env.BASE_URL}dbc/Model3_CH.dbc`;
+      const [vehResp, chResp] = await Promise.all([fetch(urlVeh), fetch(urlCh)]);
+      if (!vehResp.ok) throw new Error(`VEH HTTP ${vehResp.status}`);
+      if (!chResp.ok) throw new Error(`CH HTTP ${chResp.status}`);
+      const [vehText, chText] = await Promise.all([vehResp.text(), chResp.text()]);
+      status = 'Parsing…';
+      const [veh, ch] = await Promise.all([
+        parseDbcInWorker(vehText, urlVeh),
+        parseDbcInWorker(chText, urlCh),
+      ]);
+      if (busDbc[0]?.messages === veh && busDbc[1]?.messages === ch) {
+        status = `Cached — Bus 0: ${veh.length} msgs · Bus 1: ${ch.length} msgs`;
+        return;
+      }
+      openMessages = new Set();
+      busDbc = {
+        [0]: { messages: veh, loadedFrom: 'VehicleCAN' },
+        [1]: { messages: ch, loadedFrom: 'ChassisCAN' },
+      };
+      publishSignals();
       bus = 0;
     } catch (e) {
       status = `load failed: ${e instanceof Error ? e.message : e}`;
+    } finally {
+      busy = false;
     }
   }
 
@@ -121,7 +144,7 @@
         const resp = await fetch(p.url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const text = await resp.text();
-        await loadText(text, p.name, p.busId);
+        await loadText(text, p.name, p.busId, p.url);
         if (app.ble.connected) await upload(p.busId);
       } catch (e) {
         status = `gallery load failed: ${e instanceof Error ? e.message : e}`;
@@ -145,7 +168,7 @@
 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">
   <SectionHead title="DBC" sub="Per-bus signal definitions">
     {#snippet actions()}
-      <button class="btn btn--sm btn--info" onclick={loadTeslaDefaults}>
+      <button class="btn btn--sm btn--info" onclick={loadTeslaDefaults} disabled={busy}>
         Load Tesla Model 3 defaults
       </button>
       <label class="btn btn--sm">
