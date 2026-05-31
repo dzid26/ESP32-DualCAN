@@ -13,15 +13,7 @@
   let scripts = $state<ScriptInfo[]>([]);
   let listError = $state<string | null>(null);
   let busy = $state(false);
-  let wifiIp = $state<string | null>(null);
-
-  async function refreshWifiIp(): Promise<void> {
-    try {
-      if (!app.connected) return;
-      const s = await app.proto.wifiStatus();
-      wifiIp = s.connected && s.ip ? s.ip : null;
-    } catch { /* keep stale value */ }
-  }
+  function refreshWifiIp(): void { app.refreshWifiIp(); }
 
   let selFn = $state<string | null>(null);
   let code = $state<string>(NEW_SCRIPT);
@@ -293,8 +285,8 @@
     >
       <div class="frame__head">
         Installed <span class="ghost mono">{scripts.length}</span>
-        {#if wifiIp}
-          <a href="http://{wifiIp}/scripts/" target="_blank" rel="noopener" class="ghost" style="margin-left: auto; font-size: 11px; color: var(--dc-accent); text-decoration: none">
+        {#if app.wifiIp}
+          <a href="http://{app.wifiIp}/scripts/" target="_blank" rel="noopener" class="ghost" style="margin-left: auto; font-size: 11px; color: var(--dc-accent); text-decoration: none">
             Browse files &rarr;
           </a>
         {:else}

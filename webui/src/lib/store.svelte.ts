@@ -136,6 +136,10 @@ class AppState {
    * to the DBC view + bus tab when a slot is populated. */
   loadedDbc = $state<Record<number, string | null>>({ 0: null, 1: null });
 
+  /** WiFi IP address (or null if not connected). Read by any view that needs
+   * to construct the file server URL. Updated by refreshWifiIp(). */
+  wifiIp = $state<string | null>(null);
+
   /** Pure navigation hand-off: bus-pip "(dbc)" link writes the bus id
    * here, then setView('dbc'). DbcView consumes + clears. */
   dbcViewBus = $state<number | null>(null);
@@ -317,6 +321,7 @@ class AppState {
       this.killed = false;
       this.bus0Status = 'idle';
       this.bus1Status = 'idle';
+      this.wifiIp = null;
       this.bus0Rate = 0;
       this.bus1Rate = 0;
       this.resetOtaState();
@@ -339,6 +344,15 @@ class AppState {
     } catch { /* key not set or firmware too old */ }
     /* Apply persisted log level; firmware boots at its compile-time default. */
     this.proto.setLogLevel(this.logLevel).catch(() => { /* firmware too old or busy */ });
+    this.refreshWifiIp();
+  }
+
+  async refreshWifiIp(): Promise<void> {
+    if (!this.connected) return;
+    try {
+      const s = await this.proto.wifiStatus();
+      this.wifiIp = s.connected && s.ip ? s.ip : null;
+    } catch { /* keep stale value */ }
   }
 
   // ---- OTA Actions ----

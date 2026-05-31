@@ -29,6 +29,8 @@
   let wifiStatus = $state<{ connected: boolean; ssid: string; ip: string; http_url?: string } | null>(null);
   let wifiBusy = $state(false);
   let wifiError = $state<string | null>(null);
+  let wifiWaiting = $state(false);
+  let wifiConnectFailed = $state(false);
 
   async function refreshWifi(): Promise<void> {
     if (!app.connected) return;
@@ -41,14 +43,29 @@
   }
 
   async function saveWifi(): Promise<void> {
-    if (!wifiSsid.trim()) { wifiError = 'SSID required'; return; }
     wifiBusy = true;
     wifiError = null;
+    wifiConnectFailed = false;
     try {
-      await app.proto.wifiSetCreds(wifiSsid.trim(), wifiPsk);
+      const ssid = wifiSsid.trim();
+      await app.proto.wifiSetCreds(ssid, ssid ? wifiPsk : '');
       wifiPsk = '';
-      app.pushLog(`WiFi credentials updated for "${wifiSsid.trim()}"`, 'info', 'wifi');
-      setTimeout(refreshWifi, 3000);
+      app.pushLog(ssid ? `WiFi credentials updated for "${ssid}"` : 'WiFi network forgotten', 'info', 'wifi');
+      await refreshWifi();
+      await app.refreshWifiIp();
+      if (ssid && !wifiStatus?.connected) {
+        // Poll until WiFi connects (async) or 30s timeout
+        wifiWaiting = true;
+        let polls = 0;
+        const iv = setInterval(async () => {
+          if (++polls > 30) { clearInterval(iv); wifiWaiting = false; wifiConnectFailed = true; return; }
+          await refreshWifi();
+          if (wifiStatus?.connected) {
+            clearInterval(iv); wifiWaiting = false;
+            app.refreshWifiIp();
+          }
+        }, 1000);
+      }
     } catch (e) {
       wifiError = e instanceof Error ? e.message : String(e);
     } finally {
@@ -329,7 +346,13 @@
         <div class="field">
           <span>Status</span>
           <span class="mono ghost">
-            {wifiStatus.connected ? 'connected' : 'not connected'}
+            {#if wifiConnectFailed}
+              <span style="color: var(--dc-err-text)">connection failed</span>
+            {:else if wifiWaiting}
+              connecting…
+            {:else}
+              {wifiStatus.connected ? 'connected' : 'not connected'}
+            {/if}
             {#if wifiStatus.ssid}· ssid {wifiStatus.ssid}{/if}
             {#if wifiStatus.ip}· ip {wifiStatus.ip} · 
             <a href="http://{wifiStatus.ip}/" target="_blank" rel="noopener" class="mono" style="color: var(--dc-accent); text-decoration: none">
@@ -349,9 +372,14 @@
       </label>
       <div class="field">
         <span></span>
-        <button class="btn btn--info" style="justify-self: start" onclick={saveWifi} disabled={!app.connected || wifiBusy || !wifiSsid.trim()}>
-          {wifiBusy ? 'Saving…' : 'Save & connect'}
-        </button>
+        <div style="display: flex; gap: 8px">
+          <button class="btn btn--info" style="justify-self: start" onclick={saveWifi} disabled={!app.connected || wifiBusy}>
+            {wifiBusy ? 'Saving…' : 'Save & connect'}
+          </button>
+          <button class="btn btn--danger" style="justify-self: start" onclick={() => { wifiSsid = ''; wifiPsk = ''; saveWifi(); }} disabled={!app.connected || wifiBusy || !wifiStatus?.ssid}>
+            Forget network
+          </button>
+        </div>
       </div>
       {#if wifiError}<div class="field"><span></span><span class="mono" style="color: var(--dc-err-text); font-size: 11px">{wifiError}</span></div>{/if}
     </div>

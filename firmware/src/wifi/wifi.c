@@ -119,8 +119,22 @@ void wifi_get_ssid(char *buf, size_t buf_len)
 
 int wifi_set_creds(const char *ssid, const char *psk)
 {
-    if (!ssid || ssid[0] == '\0') return -1;
     if (!psk) psk = "";
+
+    /* Empty SSID → forget network */
+    if (!ssid || ssid[0] == '\0') {
+        esp_wifi_disconnect();
+        /* Clear old creds from NVS */
+        state_remove(WIFI_NS, WIFI_KEY_SSID);
+        state_remove(WIFI_NS, WIFI_KEY_PSK);
+        /* Apply an empty config so the driver doesn't auto-connect */
+        wifi_config_t empty = {0};
+        esp_wifi_set_config(WIFI_IF_STA, &empty);
+        s_current_ip[0] = '\0';
+        xEventGroupClearBits(s_event_group, BIT_CONNECTED);
+        ESP_LOGW(TAG, "credentials cleared — network forgotten");
+        return 0;
+    }
 
     if (state_set(WIFI_NS, WIFI_KEY_SSID, ssid) != ESP_OK) return -1;
     if (state_set(WIFI_NS, WIFI_KEY_PSK,  psk)  != ESP_OK) return -1;

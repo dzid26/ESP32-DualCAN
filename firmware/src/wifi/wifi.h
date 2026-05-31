@@ -17,8 +17,9 @@ bool wifi_connected(void);
  * connected. buf must be at least 16 bytes. */
 void wifi_get_ip(char *buf, size_t buf_len);
 
-/* Persists the credentials to NVS and (re)starts the connection. Returns 0
- * on success, -1 if either string is empty or the NVS write fails. */
+/* Persists the credentials to NVS and (re)starts the connection.  Pass an
+ * empty SSID to forget the network — clears NVS, disconnects, and stops
+ * auto-reconnect.  Returns 0 on success, -1 if the NVS write fails. */
 int  wifi_set_creds(const char *ssid, const char *psk);
 
 /* Returns the currently-stored SSID into buf (or "" if none). buf must be
