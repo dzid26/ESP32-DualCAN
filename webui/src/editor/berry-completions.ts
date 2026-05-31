@@ -1,0 +1,351 @@
+import { snippetCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { hoverTooltip, type Tooltip } from '@codemirror/view';
+import { dbcStore } from '../dbcStore.svelte';
+
+interface DbcCallInfo {
+  fnName: string;
+  argIndex: number;
+  argValues: string[];
+  bus: number;
+}
+
+interface BindingDoc {
+  label: string;
+  detail?: string;
+  documentation?: string;
+  /** Snippet body inserted by CodeMirror; placeholders use `${name}` syntax. */
+  snippet?: string;
+}
+
+/* The scripting API as the firmware exposes it (berry_bindings.c). The UI
+ * shouldn't drift from the device — keep this list in sync with be_regfunc()
+ * calls there.
+ *
+ * Naming hierarchy: can_<level>_<verb>
+ *   raw frame:  can_send_raw, can_recv_raw   (no DBC, no encoding)
+ *   message:    can_msg_get, can_msg_set, can_msg_send   (decoded, by id)
+ *   signal:     can_signal_get, on_can_signal   (scoped by message name) */
+const API: BindingDoc[] = [
+  { label: 'can_send_raw',
+    detail: 'can_send_raw(bus:int, id:int, data:bytes)',
+    documentation: 'Transmit a raw frame. No DBC encoding, no rate limiting.',
+    snippet: 'can_send_raw(${bus}, ${id}, ${data})' },
+  { label: 'can_recv_raw',
+    detail: 'can_recv_raw(bus:int) -> [id, bytes] | nil',
+    documentation: 'Pop one received frame from the bus, or nil if empty.',
+    snippet: 'can_recv_raw(${bus})' },
+  { label: 'can_signal_get',
+    detail: 'can_signal_get(msg:str, sig:str [, bus:int]) -> {value, prev, changed} | nil',
+    documentation: 'Read the current decoded value of a DBC signal. Scoped by message — DBC signal names are unique only within a message.',
+    snippet: 'can_signal_get("${msg}", "${sig}")' },
+  { label: 'on_can_signal',
+    detail: 'on_can_signal(msg:str, sig:str, fn(sig) [, bus:int])',
+    documentation: 'Invoke fn(sig) whenever the signal changes. sig is {value, prev, sig_idx}. Scoped by message — DBC signal names collide across messages.',
+    snippet: 'on_can_signal("${msg}", "${sig}", def(s)\n  ${body}\nend)' },
+  { label: 'can_msg_get',
+    detail: 'can_msg_get(id:int | name:str [, bus:int]) -> draft',
+    documentation: 'Take a draft of the latest rx for this message id or DBC message name. Edit signals with can_msg_set, then can_msg_send to transmit.',
+    snippet: 'can_msg_get("${msg}")' },
+  { label: 'can_msg_set',
+    detail: 'can_msg_set(draft, sig:str, value)',
+    documentation: 'Modify one signal in the draft, leaving other bits intact. Signal lookup is scoped to the draft\'s message.',
+    snippet: 'can_msg_set(${msg}, "${sig}", ${value})' },
+  { label: 'can_msg_send',
+    detail: 'can_msg_send(draft)',
+    documentation: 'Transmit the draft. Auto-handles checksum and counter signals.',
+    snippet: 'can_msg_send(${msg})' },
+  { label: 'led_set',
+    detail: 'led_set(r:int, g:int, b:int)',
+    documentation: 'Set the on-board RGB LED colour (0–255 per channel).',
+    snippet: 'led_set(${r}, ${g}, ${b})' },
+  { label: 'led_off',
+    detail: 'led_off()',
+    documentation: 'Turn the on-board RGB LED off.',
+    snippet: 'led_off()' },
+  { label: 'state_set',
+    detail: 'state_set(key:str, value:str)',
+    documentation: 'Persist a key/value pair in this script\'s NVS namespace.',
+    snippet: 'state_set("${key}", ${value})' },
+  { label: 'state_get',
+    detail: 'state_get(key:str [, default]) -> str | default',
+    documentation: 'Read a previously stored value.',
+    snippet: 'state_get("${key}")' },
+  { label: 'state_remove',
+    detail: 'state_remove(key:str)',
+    documentation: 'Delete a stored key.',
+    snippet: 'state_remove("${key}")' },
+  { label: 'timer_after',
+    detail: 'timer_after(ms:int, fn) -> handle',
+    documentation: 'Run fn once, ms milliseconds from now.',
+    snippet: 'timer_after(${ms}, ${fn})' },
+  { label: 'timer_every',
+    detail: 'timer_every(ms:int, fn) -> handle',
+    documentation: 'Run fn every ms milliseconds. Returns a cancellable handle.',
+    snippet: 'timer_every(${ms}, ${fn})' },
+  { label: 'timer_cancel',
+    detail: 'timer_cancel(handle)',
+    documentation: 'Cancel a previously scheduled timer.',
+    snippet: 'timer_cancel(${handle})' },
+  { label: 'action_register',
+    detail: 'action_register(name:str, fn)',
+    documentation: 'Register fn as an Action. Becomes a tile on the Dashboard.',
+    snippet: 'action_register("${name}", ${fn})' },
+  { label: 'action_invoke',
+    detail: 'action_invoke(name:str)',
+    documentation: 'Invoke a registered action by name.',
+    snippet: 'action_invoke("${name}")' },
+  { label: 'action_list',
+    detail: 'action_list() -> [name…]',
+    documentation: 'Return the names of all currently-registered actions.',
+    snippet: 'action_list()' },
+  { label: 'millis',
+    detail: 'millis() -> int',
+    documentation: 'Milliseconds since boot. Wraps at 2^31.',
+    snippet: 'millis()' },
+  { label: 'print',
+    detail: 'print(...)',
+    documentation: 'Write a line to the device log; streams to the Dashboard log panel.',
+    snippet: 'print(${msg})' },
+];
+
+const KEYWORDS = [
+  'def', 'end', 'if', 'elif', 'else', 'while', 'for', 'in', 'do',
+  'break', 'continue', 'return', 'var', 'true', 'false', 'nil',
+  'and', 'or', 'class', 'static', 'self', 'super', 'import', 'as',
+  'try', 'except', 'raise', 'new',
+];
+
+export const BUILTINS = new Set(API.map(b => b.label));
+export const KEYWORD_SET = new Set(KEYWORDS);
+
+/* Functions that expect a DBC message name as the first string argument. */
+const DBC_MSG_FUNCS = new Set(['can_signal_get', 'on_can_signal', 'can_msg_get']);
+/* Functions that also expect a DBC signal name as the second string argument. */
+const DBC_SIG_FUNCS = new Set(['can_signal_get', 'on_can_signal']);
+
+const berryCompletions: Completion[] = [
+  ...API.map(binding => snippetCompletion(binding.snippet ?? binding.label, {
+    label: binding.label,
+    type: 'function',
+    detail: binding.detail,
+    info: binding.documentation,
+    boost: 10,
+  })),
+  ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })),
+];
+
+function dbcCompletions(textBefore: string, wordFrom: number, insideString: boolean): CompletionResult | null {
+  const callInfo = findDbcCall(textBefore);
+  if (!callInfo) return null;
+  const busHint = callInfo.bus >= 0 ? `bus ${callInfo.bus}` : '';
+
+  if (callInfo.argIndex === 0) {
+    const options = dbcStore.messages.map(msg => ({
+      label: insideString ? msg.name : `"${msg.name}"`,
+      filterText: msg.name,
+      type: 'type' as const,
+      detail: `0x${msg.id.toString(16)}` + (busHint ? ` (${busHint})` : ''),
+      apply: insideString ? msg.name : `"${msg.name}"`,
+    }));
+    if (options.length === 0) return null;
+    return { from: wordFrom, options, validFor: /^\w*$/ };
+  }
+
+  if (callInfo.argIndex === 1) {
+    const msgName = callInfo.argValues[0];
+    const candidates = msgName
+      ? dbcStore.signals.filter(s => s.message === msgName)
+      : dbcStore.signals;
+    const options = candidates.map(sig => ({
+      label: insideString ? sig.name : `"${sig.name}"`,
+      filterText: sig.name,
+      type: 'property' as const,
+      detail: sig.message + (busHint ? ` (${busHint})` : ''),
+      apply: insideString ? sig.name : `"${sig.name}"`,
+    }));
+    if (options.length === 0) return null;
+    return { from: wordFrom, options, validFor: /^\w*$/ };
+  }
+
+  return null;
+}
+
+/* True if the non-whitespace content before cursor on this line is empty,
+   suggesting we're at a statement-start position. */
+function atStatementStart(textBefore: string): boolean {
+  const line = textBefore.split('\n').pop() ?? '';
+  return line.trim() === '';
+}
+
+/* Determine cursor context by scanning the text left of the cursor.
+   Berry tokeniser processes # (comment) before strings, so a # anywhere
+   before a quote takes precedence. */
+type CursorContext = 'comment' | 'string' | 'code';
+
+function findContext(text: string): CursorContext {
+  let inString = false;
+  let quoteChar = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '\\') { i++; continue; }
+    if (!inString && ch === '#') return 'comment';
+    if (ch === '"' || ch === "'") {
+      if (!inString) { inString = true; quoteChar = ch; }
+      else if (ch === quoteChar) { inString = false; }
+    }
+  }
+  return inString ? 'string' : 'code';
+}
+
+/* Scan text before the cursor to detect whether we're inside a DBC-aware
+   function call, which argument index we're typing, and the values of any
+   preceding string arguments. */
+function findDbcCall(text: string): DbcCallInfo | null {
+  let depth = 0;
+  let parenPos = -1;
+  for (let i = text.length - 1; i >= 0; i--) {
+    const ch = text[i];
+    if (ch === ')') depth++;
+    else if (ch === '(') {
+      depth--;
+      if (depth < 0) { parenPos = i; break; }
+    }
+  }
+  if (parenPos < 0) return null;
+
+  const beforeParen = text.slice(0, parenPos).trimEnd();
+  const fnMatch = beforeParen.match(/([A-Za-z_]\w*)$/);
+  if (!fnMatch) return null;
+  const fnName = fnMatch[1];
+  if (!DBC_MSG_FUNCS.has(fnName)) return null;
+
+  const argText = text.slice(parenPos + 1);
+  const argValues: string[] = [];
+  let commaCount = 0;
+  let i = 0;
+  while (i < argText.length) {
+    const ch = argText[i];
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      const start = i + 1;
+      let j = start;
+      while (j < argText.length && argText[j] !== quote) {
+        if (argText[j] === '\\') j++;
+        j++;
+      }
+      const terminated = j < argText.length;
+      argValues.push(argText.slice(start, j));
+      if (!terminated) break;
+      i = j + 1;
+    } else if (ch === ',') {
+      commaCount++;
+      i++;
+    } else {
+      i++;
+    }
+  }
+  const argIndex = commaCount;
+
+  return { fnName, argIndex, argValues, bus: dbcStore.lastUploadedBus };
+}
+
+export function completeBerry(context: CompletionContext): CompletionResult | null {
+  const word = context.matchBefore(/\w*/);
+  if (!word) return null;
+  const wordEmpty = word.from === word.to;
+
+  const textBefore = context.state.sliceDoc(0, context.pos);
+
+  const ctx = findContext(textBefore);
+
+  if (ctx === 'comment') {
+    if (wordEmpty && !context.explicit) return null;
+    const bus = dbcStore.lastUploadedBus;
+    const busHint = bus >= 0 ? `bus ${bus}` : '';
+    const opts: Completion[] = [];
+    dbcStore.signals.forEach(sig => opts.push({
+      label: sig.name, type: 'property', detail: sig.message + (busHint ? ` (${busHint})` : ''),
+    }));
+    dbcStore.messages.forEach(msg => opts.push({
+      label: msg.name, type: 'type', detail: `0x${msg.id.toString(16)}` + (busHint ? ` (${busHint})` : ''),
+    }));
+    if (opts.length === 0) return null;
+    return { from: word.from, options: opts, validFor: /^\w*$/ };
+  }
+
+  if (ctx === 'string') {
+    const result = dbcCompletions(textBefore, word.from, true);
+    if (result) return result;
+    if (wordEmpty) return null;
+  }
+
+  if (wordEmpty && !context.explicit) return null;
+
+  const callInfo = findDbcCall(textBefore);
+
+  if (callInfo) {
+    const result = dbcCompletions(textBefore, word.from, false);
+    if (result) return result;
+  }
+
+  const atStart = atStatementStart(textBefore);
+
+  const opts: Completion[] = [];
+
+  if (atStart) {
+    opts.push(...berryCompletions, ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
+    const bus = dbcStore.lastUploadedBus;
+    const busHint = bus >= 0 ? `bus ${bus}` : '';
+    dbcStore.signals.forEach(sig => opts.push({
+      label: sig.name, type: 'property', detail: sig.message + (busHint ? ` (${busHint})` : ''), boost: 5,
+    }));
+    dbcStore.messages.forEach(msg => opts.push({
+      label: msg.name, type: 'type', detail: `0x${msg.id.toString(16)}` + (busHint ? ` (${busHint})` : ''), boost: 5,
+    }));
+  } else if (callInfo) {
+    opts.push(...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
+  }
+
+  if (opts.length === 0) return null;
+  return { from: word.from, options: opts, validFor: /^\w*$/ };
+}
+
+function wordBounds(text: string, pos: number): { from: number; to: number; word: string } | null {
+  let from = pos;
+  let to = pos;
+  while (from > 0 && /[\w]/.test(text[from - 1])) from--;
+  while (to < text.length && /[\w]/.test(text[to])) to++;
+  if (from === to) return null;
+  return { from, to, word: text.slice(from, to) };
+}
+
+export const berryHover = hoverTooltip((view, pos): Tooltip | null => {
+  const line = view.state.doc.lineAt(pos);
+  const bounds = wordBounds(line.text, pos - line.from);
+  if (!bounds) return null;
+
+  const binding = API.find(entry => entry.label === bounds.word);
+  if (!binding) return null;
+
+  return {
+    pos: line.from + bounds.from,
+    end: line.from + bounds.to,
+    above: true,
+    create() {
+      const dom = document.createElement('div');
+      dom.className = 'cm-berry-doc';
+
+      const detail = document.createElement('code');
+      detail.textContent = binding.detail ?? binding.label;
+      dom.append(detail);
+
+      if (binding.documentation) {
+        const docs = document.createElement('p');
+        docs.textContent = binding.documentation;
+        dom.append(docs);
+      }
+
+      return { dom };
+    },
+  };
+});

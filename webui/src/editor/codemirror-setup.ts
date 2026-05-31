@@ -2,124 +2,17 @@
  * CodeMirror 6 editor setup.
  *
  * The web UI uses CodeMirror's core packages directly rather than an editor
- * wrapper. This module owns the custom Berry stream tokenizer, static device
- * API completions, hover docs, and the warm theme shared with app.css.
+ * wrapper. This module owns the custom Berry stream tokenizer, the warm
+ * theme shared with app.css, and the extension factory.
  */
-import { autocompletion, closeBrackets, snippetCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { autocompletion, closeBrackets } from '@codemirror/autocomplete';
 import { bracketMatching, defaultHighlightStyle, indentOnInput, indentUnit, syntaxHighlighting, HighlightStyle, StreamLanguage, type StreamParser } from '@codemirror/language';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
-import { drawSelection, dropCursor, EditorView, highlightActiveLine, highlightActiveLineGutter, hoverTooltip, keymap, lineNumbers, type Tooltip } from '@codemirror/view';
+import { drawSelection, dropCursor, EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
+import { completeBerry, berryHover, BUILTINS, KEYWORD_SET } from './berry-completions';
 
-interface BindingDoc {
-  label: string;
-  detail?: string;
-  documentation?: string;
-  /** Snippet body inserted by CodeMirror; placeholders use `${name}` syntax. */
-  snippet?: string;
-}
-
-/* The scripting API as the firmware exposes it (berry_bindings.c). The UI
- * shouldn't drift from the device — keep this list in sync with be_regfunc()
- * calls there.
- *
- * Naming hierarchy: can_<level>_<verb>
- *   raw frame:  can_send_raw, can_recv_raw   (no DBC, no encoding)
- *   message:    can_msg_get, can_msg_set, can_msg_send   (decoded, by id)
- *   signal:     can_signal_get, on_can_signal   (scoped by message name) */
-const API: BindingDoc[] = [
-  { label: 'can_send_raw',
-    detail: 'can_send_raw(bus:int, id:int, data:bytes)',
-    documentation: 'Transmit a raw frame. No DBC encoding, no rate limiting.',
-    snippet: 'can_send_raw(${bus}, ${id}, ${data})' },
-  { label: 'can_recv_raw',
-    detail: 'can_recv_raw(bus:int) -> [id, bytes] | nil',
-    documentation: 'Pop one received frame from the bus, or nil if empty.',
-    snippet: 'can_recv_raw(${bus})' },
-  { label: 'can_signal_get',
-    detail: 'can_signal_get(msg:str, sig:str [, bus:int]) -> {value, prev, changed} | nil',
-    documentation: 'Read the current decoded value of a DBC signal. Scoped by message — DBC signal names are unique only within a message.',
-    snippet: 'can_signal_get("${msg}", "${sig}")' },
-  { label: 'on_can_signal',
-    detail: 'on_can_signal(msg:str, sig:str, fn(sig) [, bus:int])',
-    documentation: 'Invoke fn(sig) whenever the signal changes. sig is {value, prev, sig_idx}. Scoped by message — DBC signal names collide across messages.',
-    snippet: 'on_can_signal("${msg}", "${sig}", def(s)\n  ${body}\nend)' },
-  { label: 'can_msg_get',
-    detail: 'can_msg_get(id:int | name:str [, bus:int]) -> draft',
-    documentation: 'Take a draft of the latest rx for this message id or DBC message name. Edit signals with can_msg_set, then can_msg_send to transmit.',
-    snippet: 'can_msg_get("${msg}")' },
-  { label: 'can_msg_set',
-    detail: 'can_msg_set(draft, sig:str, value)',
-    documentation: 'Modify one signal in the draft, leaving other bits intact. Signal lookup is scoped to the draft\'s message.',
-    snippet: 'can_msg_set(${msg}, "${sig}", ${value})' },
-  { label: 'can_msg_send',
-    detail: 'can_msg_send(draft)',
-    documentation: 'Transmit the draft. Auto-handles checksum and counter signals.',
-    snippet: 'can_msg_send(${msg})' },
-  { label: 'led_set',
-    detail: 'led_set(r:int, g:int, b:int)',
-    documentation: 'Set the on-board RGB LED colour (0–255 per channel).',
-    snippet: 'led_set(${r}, ${g}, ${b})' },
-  { label: 'led_off',
-    detail: 'led_off()',
-    documentation: 'Turn the on-board RGB LED off.',
-    snippet: 'led_off()' },
-  { label: 'state_set',
-    detail: 'state_set(key:str, value:str)',
-    documentation: 'Persist a key/value pair in this script\'s NVS namespace.',
-    snippet: 'state_set("${key}", ${value})' },
-  { label: 'state_get',
-    detail: 'state_get(key:str [, default]) -> str | default',
-    documentation: 'Read a previously stored value.',
-    snippet: 'state_get("${key}")' },
-  { label: 'state_remove',
-    detail: 'state_remove(key:str)',
-    documentation: 'Delete a stored key.',
-    snippet: 'state_remove("${key}")' },
-  { label: 'timer_after',
-    detail: 'timer_after(ms:int, fn) -> handle',
-    documentation: 'Run fn once, ms milliseconds from now.',
-    snippet: 'timer_after(${ms}, ${fn})' },
-  { label: 'timer_every',
-    detail: 'timer_every(ms:int, fn) -> handle',
-    documentation: 'Run fn every ms milliseconds. Returns a cancellable handle.',
-    snippet: 'timer_every(${ms}, ${fn})' },
-  { label: 'timer_cancel',
-    detail: 'timer_cancel(handle)',
-    documentation: 'Cancel a previously scheduled timer.',
-    snippet: 'timer_cancel(${handle})' },
-  { label: 'action_register',
-    detail: 'action_register(name:str, fn)',
-    documentation: 'Register fn as an Action. Becomes a tile on the Dashboard.',
-    snippet: 'action_register("${name}", ${fn})' },
-  { label: 'action_invoke',
-    detail: 'action_invoke(name:str)',
-    documentation: 'Invoke a registered action by name.',
-    snippet: 'action_invoke("${name}")' },
-  { label: 'action_list',
-    detail: 'action_list() -> [name…]',
-    documentation: 'Return the names of all currently-registered actions.',
-    snippet: 'action_list()' },
-  { label: 'millis',
-    detail: 'millis() -> int',
-    documentation: 'Milliseconds since boot. Wraps at 2^31.',
-    snippet: 'millis()' },
-  { label: 'print',
-    detail: 'print(...)',
-    documentation: 'Write a line to the device log; streams to the Dashboard log panel.',
-    snippet: 'print(${msg})' },
-];
-
-const KEYWORDS = [
-  'def', 'end', 'if', 'elif', 'else', 'while', 'for', 'in', 'do',
-  'break', 'continue', 'return', 'var', 'true', 'false', 'nil',
-  'and', 'or', 'class', 'static', 'self', 'super', 'import', 'as',
-  'try', 'except', 'raise', 'new',
-];
-
-const BUILTINS = new Set(API.map(b => b.label));
-const KEYWORD_SET = new Set(KEYWORDS);
 const IDENT = /[A-Za-z_][\w]*/;
 
 const berryParser: StreamParser<unknown> = {
@@ -158,67 +51,6 @@ const berryHighlight = HighlightStyle.define([
   { tag: tags.operator, color: '#e6c07a' },
   { tag: tags.bracket, color: '#a08555' },
 ]);
-
-const berryCompletions: Completion[] = [
-  ...API.map(binding => snippetCompletion(binding.snippet ?? binding.label, {
-    label: binding.label,
-    type: 'function',
-    detail: binding.detail,
-    info: binding.documentation,
-    boost: 10,
-  })),
-  ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })),
-];
-
-function completeBerry(context: CompletionContext): CompletionResult | null {
-  const word = context.matchBefore(/\w*/);
-  if (!word || (word.from === word.to && !context.explicit)) return null;
-  return {
-    from: word.from,
-    options: berryCompletions,
-    validFor: /^\w*$/,
-  };
-}
-
-function wordBounds(text: string, pos: number): { from: number; to: number; word: string } | null {
-  let from = pos;
-  let to = pos;
-  while (from > 0 && /[\w]/.test(text[from - 1])) from--;
-  while (to < text.length && /[\w]/.test(text[to])) to++;
-  if (from === to) return null;
-  return { from, to, word: text.slice(from, to) };
-}
-
-const berryHover = hoverTooltip((view, pos): Tooltip | null => {
-  const line = view.state.doc.lineAt(pos);
-  const bounds = wordBounds(line.text, pos - line.from);
-  if (!bounds) return null;
-
-  const binding = API.find(entry => entry.label === bounds.word);
-  if (!binding) return null;
-
-  return {
-    pos: line.from + bounds.from,
-    end: line.from + bounds.to,
-    above: true,
-    create() {
-      const dom = document.createElement('div');
-      dom.className = 'cm-berry-doc';
-
-      const detail = document.createElement('code');
-      detail.textContent = binding.detail ?? binding.label;
-      dom.append(detail);
-
-      if (binding.documentation) {
-        const docs = document.createElement('p');
-        docs.textContent = binding.documentation;
-        dom.append(docs);
-      }
-
-      return { dom };
-    },
-  };
-});
 
 const warmTheme = EditorView.theme({
   '&': {
