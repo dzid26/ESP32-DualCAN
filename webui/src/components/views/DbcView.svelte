@@ -11,13 +11,33 @@
   let status = $state('No DBC loaded');
   let busy = $state(false);
   let openMessages = $state(new Set<number>());
+  let busDbc = $state<Record<number, { messages: Message[]; loadedFrom: string }>>({});
 
   function publishSignals(): void {
-    const flat = messages.flatMap(m =>
-      m.signals.map(s => ({ name: s.name, message: m.name, msgId: m.id }))
-    );
+    const flat: { name: string; message: string; msgId: number; sigIndex: number }[] = [];
+    const msgList: { name: string; id: number }[] = [];
+    for (const d of Object.values(busDbc)) {
+      for (const m of d.messages) {
+        msgList.push({ name: m.name, id: m.id });
+        flat.push(...m.signals.map((s, sigIndex) => ({ name: s.name, message: m.name, msgId: m.id, sigIndex })));
+      }
+    }
     dbcStore.setSignals(flat);
+    dbcStore.setMessages(msgList);
   }
+
+  $effect(() => {
+    const d = busDbc[bus];
+    if (d) {
+      messages = d.messages;
+      loadedFrom = d.loadedFrom;
+      status = `Bus ${bus}: ${d.messages.length} messages, ${d.messages.reduce((n, m) => n + m.signals.length, 0)} signals — ${d.loadedFrom}`;
+    } else {
+      messages = [];
+      loadedFrom = null;
+      status = `Bus ${bus}: not loaded`;
+    }
+  });
 
   function toggleMessage(e: Event, id: number): void {
     const s = new Set(openMessages);
@@ -25,15 +45,13 @@
     openMessages = s;
   }
 
-  async function loadText(text: string, label: string): Promise<void> {
+  async function loadText(text: string, label: string, targetBus: number): Promise<void> {
     status = `Parsing ${label}…`;
     await new Promise(r => setTimeout(r, 0));
     try {
-      messages = parseDbc(text);
+      const parsed = parseDbc(text);
       openMessages = new Set();
-      const totalSigs = messages.reduce((n, m) => n + m.signals.length, 0);
-      status = `${label}: ${messages.length} messages, ${totalSigs} signals`;
-      loadedFrom = label;
+      busDbc = { ...busDbc, [targetBus]: { messages: parsed, loadedFrom: label } };
       publishSignals();
     } catch (e) {
       status = `parse failed: ${e instanceof Error ? e.message : e}`;
@@ -46,33 +64,38 @@
     input.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => { void loadText(reader.result as string, file.name); };
+    reader.onload = () => { void loadText(reader.result as string, file.name, bus); };
     reader.readAsText(file);
   }
 
   async function loadTeslaDefaults(): Promise<void> {
-    status = 'Loading Tesla Model 3 vehicle DBC…';
+    status = 'Loading VehicleCAN…';
     try {
-      const resp = await fetch(`${import.meta.env.BASE_URL}dbc/tesla_model3_vehicle.dbc`);
+      let resp = await fetch(`${import.meta.env.BASE_URL}dbc/Model3_VEH.dbc`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const text = await resp.text();
-      void loadText(text, 'Tesla Model 3 Vehicle');
+      await loadText(await resp.text(), 'VehicleCAN', 0);
+      await new Promise(r => setTimeout(r, 50));
+      resp = await fetch(`${import.meta.env.BASE_URL}dbc/Model3_CH.dbc`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      await loadText(await resp.text(), 'ChassisCAN', 1);
+      bus = 0;
     } catch (e) {
       status = `load failed: ${e instanceof Error ? e.message : e}`;
     }
   }
 
   async function upload(busId: number): Promise<void> {
-    if (messages.length === 0) return;
+    const d = busDbc[busId];
+    if (!d || d.messages.length === 0) return;
     busy = true;
     try {
-      const binary = compileDbc(messages, busId);
-      status = `Compiled ${binary.length} bytes for bus ${busId}`;
+      const binary = compileDbc(d.messages, busId);
+      status = `Compiled ${binary.length} bytes for bus ${busId} (${d.loadedFrom})`;
       if (app.ble.connected) {
         await app.ble.send(binary);
         status += ' — uploaded';
         dbcStore.setLastBus(busId);
-        app.loadedDbc = { ...app.loadedDbc, [busId]: loadedFrom ?? 'custom.dbc' };
+        app.loadedDbc = { ...app.loadedDbc, [busId]: d.loadedFrom };
         app.pushLog(`DBC uploaded to bus ${busId} (${binary.length} bytes)`, 'info', 'dbc');
       } else {
         status += ' — not connected (compile-only)';
@@ -98,7 +121,7 @@
         const resp = await fetch(p.url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const text = await resp.text();
-        await loadText(text, p.name);
+        await loadText(text, p.name, p.busId);
         if (app.ble.connected) await upload(p.busId);
       } catch (e) {
         status = `gallery load failed: ${e instanceof Error ? e.message : e}`;

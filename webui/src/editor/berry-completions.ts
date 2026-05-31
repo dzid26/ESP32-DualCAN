@@ -134,35 +134,56 @@ const berryCompletions: Completion[] = [
   ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })),
 ];
 
-function dbcCompletions(textBefore: string, wordFrom: number, insideString: boolean): CompletionResult | null {
-  const callInfo = findDbcCall(textBefore);
-  if (!callInfo) return null;
-  const busHint = callInfo.bus >= 0 ? `bus ${callInfo.bus}` : '';
+const MAX_DBC = 200;
 
-  if (callInfo.argIndex === 0) {
-    const options = dbcStore.messages.map(msg => ({
+/* Return DBC message names filtered by prefix, capped. */
+function dbcMsgCompletions(prefix: string, insideString: boolean, busHint: string): Completion[] {
+  const lower = prefix.toLowerCase();
+  return dbcStore.messages
+    .filter(m => !lower || m.name.toLowerCase().includes(lower))
+    .slice(0, MAX_DBC)
+    .map(msg => ({
       label: insideString ? msg.name : `"${msg.name}"`,
       filterText: msg.name,
       type: 'type' as const,
       detail: `0x${msg.id.toString(16)}` + (busHint ? ` (${busHint})` : ''),
       apply: insideString ? msg.name : `"${msg.name}"`,
     }));
-    if (options.length === 0) return null;
-    return { from: wordFrom, options, validFor: /^\w*$/ };
-  }
+}
 
-  if (callInfo.argIndex === 1) {
-    const msgName = callInfo.argValues[0];
-    const candidates = msgName
-      ? dbcStore.signals.filter(s => s.message === msgName)
-      : dbcStore.signals;
-    const options = candidates.map(sig => ({
+/* Return DBC signal names filtered by prefix and optional message scope, capped. */
+function dbcSigCompletions(prefix: string, insideString: boolean, busHint: string, msgName?: string): Completion[] {
+  const lower = prefix.toLowerCase();
+  const candidates = msgName
+    ? dbcStore.signals.filter(s => s.message === msgName)
+    : dbcStore.signals;
+  return candidates
+    .filter(s => !lower || s.name.toLowerCase().includes(lower))
+    .slice(0, MAX_DBC)
+    .map(sig => ({
       label: insideString ? sig.name : `"${sig.name}"`,
       filterText: sig.name,
       type: 'property' as const,
       detail: sig.message + (busHint ? ` (${busHint})` : ''),
       apply: insideString ? sig.name : `"${sig.name}"`,
     }));
+}
+
+function dbcCompletions(textBefore: string, wordFrom: number, insideString: boolean): CompletionResult | null {
+  const callInfo = findDbcCall(textBefore);
+  if (!callInfo) return null;
+  const busHint = callInfo.bus >= 0 ? `bus ${callInfo.bus}` : '';
+  const prefix = textBefore.slice(wordFrom);
+
+  if (callInfo.argIndex === 0) {
+    const options = dbcMsgCompletions(prefix, insideString, busHint);
+    if (options.length === 0) return null;
+    return { from: wordFrom, options, validFor: /^\w*$/ };
+  }
+
+  if (callInfo.argIndex === 1) {
+    const msgName = callInfo.argValues[0];
+    const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
     if (options.length === 0) return null;
     return { from: wordFrom, options, validFor: /^\w*$/ };
   }
@@ -262,13 +283,11 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
     if (wordEmpty && !context.explicit) return null;
     const bus = dbcStore.lastUploadedBus;
     const busHint = bus >= 0 ? `bus ${bus}` : '';
-    const opts: Completion[] = [];
-    dbcStore.signals.forEach(sig => opts.push({
-      label: sig.name, type: 'property', detail: sig.message + (busHint ? ` (${busHint})` : ''),
-    }));
-    dbcStore.messages.forEach(msg => opts.push({
-      label: msg.name, type: 'type', detail: `0x${msg.id.toString(16)}` + (busHint ? ` (${busHint})` : ''),
-    }));
+    const prefix = textBefore.slice(word.from);
+    const opts: Completion[] = [
+      ...dbcSigCompletions(prefix, true, busHint),
+      ...dbcMsgCompletions(prefix, true, busHint),
+    ];
     if (opts.length === 0) return null;
     return { from: word.from, options: opts, validFor: /^\w*$/ };
   }
@@ -296,12 +315,9 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
     opts.push(...berryCompletions, ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
     const bus = dbcStore.lastUploadedBus;
     const busHint = bus >= 0 ? `bus ${bus}` : '';
-    dbcStore.signals.forEach(sig => opts.push({
-      label: sig.name, type: 'property', detail: sig.message + (busHint ? ` (${busHint})` : ''), boost: 5,
-    }));
-    dbcStore.messages.forEach(msg => opts.push({
-      label: msg.name, type: 'type', detail: `0x${msg.id.toString(16)}` + (busHint ? ` (${busHint})` : ''), boost: 5,
-    }));
+    const prefix = textBefore.slice(word.from);
+    opts.push(...dbcSigCompletions(prefix, true, busHint).map(o => ({ ...o, boost: 5 })));
+    opts.push(...dbcMsgCompletions(prefix, true, busHint).map(o => ({ ...o, boost: 5 })));
   } else if (callInfo) {
     opts.push(...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
   }

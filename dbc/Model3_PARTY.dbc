@@ -1,0 +1,2792 @@
+VERSION ""
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    CAT_DEF_
+    CAT_
+    FILTER
+    BA_DEF_DEF_
+    EV_DATA_
+    ENVVAR_DATA_
+    SGTYPE_
+    SGTYPE_VAL_
+    BA_DEF_SGTYPE_
+    BA_SGTYPE_
+    SIG_TYPE_REF_
+    VAL_TABLE_
+    SIG_GROUP_
+    SIG_VALTYPE_
+    SIGTYPE_VALTYPE_
+    BO_TX_BU_
+    BA_DEF_REL_
+    BA_REL_
+    BA_DEF_DEF_REL_
+    BU_SG_REL_
+    BU_EV_REL_
+    BU_BO_REL_
+    SG_MUL_VAL_
+
+BS_: 
+
+BU_: ETH
+
+BO_ 17 RCM_collision: 8 Vector__XXX
+ SG_ RCM_collisionChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionRear : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionRight : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionLeft : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionFront : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionRollover : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionPedPro : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_collisionSeverity : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 49 EPAS3P_status: 8 Vector__XXX
+ SG_ EPAS3P_statusCrc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_state : 12|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_powerMode : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_role : 19|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_redundantCommStatus : 21|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_torsionBarTorqueQF : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_eacMaximumAngle : 24|7@1+ (10,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_eacMaximumAngleSpeed : 31|7@1+ (10,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_inputVoltage : 38|12@1+ (0.0073,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_tireIDActive : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_systemTorqueAvailability : 51|5@1+ (5,0) [0|0] "" Vector__XXX
+
+BO_ 50 RCM_peripheralSensors1: 8 Vector__XXX
+ SG_ RCM_leftFrontDoorPressure : 0|10@1- (0.48828125,0) [0|0] "" Vector__XXX
+ SG_ RCM_rightFrontDoorPressure : 10|10@1- (0.48828125,0) [0|0] "" Vector__XXX
+ SG_ RCM_leftRearDoorPressure : 20|10@1- (0.48828125,0) [0|0] "" Vector__XXX
+ SG_ RCM_rightRearDoorPressure : 30|10@1- (0.48828125,0) [0|0] "" Vector__XXX
+ SG_ RCM_peripheralSensors1Counter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_peripheralSensors1Checksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 81 EPAS3S_status: 8 Vector__XXX
+ SG_ EPAS3S_statusCrc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_state : 12|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_powerMode : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_role : 19|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_redundantCommStatus : 21|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_torsionBarTorqueQF : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_eacMaximumAngle : 24|7@1+ (10,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_eacMaximumAngleSpeed : 31|7@1+ (10,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_inputVoltage : 38|12@1+ (0.0073,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_tireIDActive : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3S_systemTorqueAvailability : 51|5@1+ (5,0) [0|0] "" Vector__XXX
+
+BO_ 84 DI_autonomyHealth: 8 Vector__XXX
+ SG_ DI_ah_vehicleSpeedLimit : 0|9@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_vehicleReverseSpeedLimit : 9|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_autonomyBehavior : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_vehicleNoGradeAccelMax : 16|8@1+ (0.04,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_vehicleNoGradeDecelMax : 24|9@1+ (0.04,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_timeToNoPropulsion : 33|12@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_dGearAvailable : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_rGearAvailable : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_ah_pGearAvailable : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_loncDegradedAvailable : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_loncDegradedReason : 49|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_epbUnavailable : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_opdAvailableForPedalInterface : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_loncInPreFaultStopping : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 129 RCM_impactSummary: 8 Vector__XXX
+ SG_ RCM_maxDvLateralEvent1 : 0|8@1+ (1,-127) [0|0] "" Vector__XXX
+ SG_ RCM_maxDvLongitudinalEvent1 : 8|8@1+ (1,-127) [0|0] "" Vector__XXX
+ SG_ RCM_impactDirectionEvent1 : 16|4@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 257 RCM_inertial1: 8 Vector__XXX
+ SG_ RCM_yawRate : 0|16@1- (0.0001,0) [0|0] "" Vector__XXX
+ SG_ RCM_pitchRate : 16|15@1- (0.00025,0) [0|0] "" Vector__XXX
+ SG_ RCM_rollRate : 31|15@1- (0.00025,0) [0|0] "" Vector__XXX
+ SG_ RCM_rollRateQF : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_yawRateQF : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_pitchRateQF : 50|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_inertial1Counter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_inertial1Checksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 258 VCLEFT_doorStatus: 8 Vector__XXX
+ SG_ VCLEFT_doorClosureStatusFront : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_doorClosureStatusRear : 4|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontLatchSwitch : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearLatchSwitch : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontHandlePulled : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearHandlePulled : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontRelActuatorSwitch : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearRelActuatorSwitch : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontLatchStatus : 14|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearLatchStatus : 18|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_lastDoorReqSourceFront : 22|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_lastDoorReqSourceRear : 25|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontIntSwitchFaulted : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearIntSwitchFaulted : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontIntSwitchPressed : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearIntSwitchPressed : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorTiltXPosition : 33|8@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorTiltYPosition : 41|8@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorState : 49|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorFoldState : 52|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorRecallState : 55|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorHeatState : 58|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearHandlePulledPersist : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontHandlePulledPersist : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorDipped : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 259 VCRIGHT_doorStatus: 8 Vector__XXX
+ SG_ VCRIGHT_doorClosureStatusFront : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_doorClosureStatusRear : 4|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontLatchSwitch : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearLatchSwitch : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontHandlePulled : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearHandlePulled : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontRelActuatorSwitch : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearRelActuatorSwitch : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontLatchStatus : 14|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearLatchStatus : 18|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_lastDoorReqSourceFront : 22|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_lastDoorReqSourceRear : 25|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontIntSwitchFaulted : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearIntSwitchFaulted : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontHandlePulledPersist : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontIntSwitchPressed : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearIntSwitchPressed : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorTiltXPosition : 33|8@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorTiltYPosition : 41|8@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorState : 49|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorFoldState : 52|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorDipped : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_trunkLatchStatus : 56|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorRecallState : 60|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearHandlePulledPersist : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 260 VCFRONT_partyDebug: 8 Vector__XXX
+ SG_ VCFRONT_vcleftHighPower : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightHighPower : 1|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_uiHighPower : 2|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_5VAStable : 3|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_5VBStable : 4|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_12VAStable : 5|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_12VBStable : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_railA : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_railB : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_chargePumpStable : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vehicleSM : 10|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_revBattFault : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battSM : 16|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_U13Init : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_U16Init : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_anyVehLoadShedActiveDBG : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battVoltage : 24|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battCurrent : 40|16@1- (0.005,0) [0|0] "" Vector__XXX
+
+BO_ 261 ESP_motorLimits: 8 Vector__XXX
+ SG_ ESP_rearTorqueRequest : 0|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ ESP_understeerActive : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_oversteerActive : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_frontNegTorqueLimit : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_frontTorqueRequest : 16|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ ESP_factoryMode : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_rearNegTorqueLimit : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_rearPosTorqueLimit : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_frontPosTorqueLimit : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeMasterCylPressEst : 36|10@1+ (0.3,-30) [0|0] "" Vector__XXX
+ SG_ ESP_evacFillStatus : 47|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_motorLimitsCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_motorLimitsChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 264 DIR_torque: 8 Vector__XXX
+ SG_ DIR_torqueChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_torqueCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_torqueCommand : 12|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DIR_axleSpeedQF : 25|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_torqueActual : 27|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DIR_axleSpeed : 40|16@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ DIR_axleTorqueQF : 56|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_axlePowerCalcQF : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_gear : 59|3@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 273 RCM_inertial2: 8 Vector__XXX
+ SG_ RCM_longitudinalAccel : 0|16@1- (0.00125,0) [0|0] "" Vector__XXX
+ SG_ RCM_lateralAccel : 16|16@1- (0.00125,0) [0|0] "" Vector__XXX
+ SG_ RCM_verticalAccel : 32|16@1- (0.00125,0) [0|0] "" Vector__XXX
+ SG_ RCM_longitudinalAccelQF : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_lateralAccelQF : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_verticalAccelQF : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_CGTranslationFault : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_inertial2Counter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_inertial2Checksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 280 DI_systemStatus: 8 Vector__XXX
+ SG_ DI_systemStatusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_systemStatusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_immobilizerState : 13|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_systemState : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakePedalState : 19|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_gear : 21|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_driveBlocked : 24|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_hvilSystemStatus : 27|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_accelPedalPos : 32|8@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ DI_tractionControlMode : 40|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_dynoModeAvailable : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_epbRequest : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeSource : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_keepDrivePowerStateRequest : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_trackModeState : 48|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_autonomyControlActive : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_regenLight : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vehicleAcceleration : 52|12@1- (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 281 DI_vdcLeft: 8 Vector__XXX
+ SG_ DI_vdcLeftChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcLeftCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandTypeFrL : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandTypeReL : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandABSFrL : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandABSReL : 19|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeTorqueTarFrL : 22|12@1+ (3,-3) [0|0] "" Vector__XXX
+ SG_ DI_brakeTorqueTarReL : 34|12@1+ (3,-3) [0|0] "" Vector__XXX
+ SG_ DI_wheelSlipLimitFrL : 46|8@1+ (0.004,-0.004) [0|0] "" Vector__XXX
+ SG_ DI_wheelSlipLimitReL : 54|6@1+ (0.004,-0.004) [0|0] "" Vector__XXX
+ SG_ DI_vdcPumpSpeedIndex : 60|4@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 282 DI_vdcRight: 8 Vector__XXX
+ SG_ DI_vdcRightChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcRightCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandTypeFrR : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandTypeReR : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandABSFrR : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcCommandABSReR : 19|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeTorqueTarFrR : 22|12@1+ (3,-3) [0|0] "" Vector__XXX
+ SG_ DI_brakeTorqueTarReR : 34|12@1+ (3,-3) [0|0] "" Vector__XXX
+ SG_ DI_wheelSlipLimitFrR : 46|8@1+ (0.004,-0.004) [0|0] "" Vector__XXX
+ SG_ DI_wheelSlipLimitReR : 54|6@1+ (0.004,-0.004) [0|0] "" Vector__XXX
+ SG_ DI_rawLowMuProbability : 60|4@1+ (0.06666666666666667,0) [0|0] "" Vector__XXX
+
+BO_ 283 DAS_matrixBendAngleRequest: 8 Vector__XXX
+ SG_ DAS_adaptiveBendAngle : 0|8@1- (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 285 ESP_vdcStatus: 8 Vector__XXX
+ SG_ ESP_vdcStatusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_vdcStatusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSlipFrL : 12|10@1+ (0.001,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSlipFrR : 22|10@1+ (0.001,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSlipReL : 32|10@1+ (0.001,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSlipReR : 42|10@1+ (0.001,0) [0|0] "" Vector__XXX
+ SG_ ESP_vdcActuatorState : 54|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSaturationFrL : 56|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSaturationFrR : 58|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSaturationReL : 60|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSaturationReR : 62|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 289 RCM_nearDeploy: 8 Vector__XXX
+ SG_ RCM_nearDeployChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_nearDeployCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_nearDeployRear : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_nearDeployRight : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_nearDeployLeft : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_nearDeployFront : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_nearDeployRollover : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_crashAlgoWakeup : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 290 VCLEFT_doorStatus2: 8 Vector__XXX
+ SG_ VCLEFT_doorStatus2Index M : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontLatchRelDuty m1 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearLatchRelDuty m0 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_BPillarCameraHeaterState m1 : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_vehicleInMotion m0 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontDoorState m0 : 17|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearDoorState m0 : 20|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontHandleRawStatus m0 : 24|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearHandleRawStatus m0 : 27|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorFoldType m0 : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontHandleDebounceStatus m0 : 32|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearHandleDebounceStatus m0 : 35|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontHandle5vEnable m0 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearHandle5vEnable m0 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_BPillarCameraHeaterCurrent m1 : 40|6@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorFoldCurrent m0 : 40|7@1- (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorDimmed m0 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontHandlePWM m0 : 48|7@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorTiltXOffset m1 : 48|8@1- (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_mirrorTiltYOffset m1 : 56|8@1- (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearHandlePWM m0 : 56|7@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 291 VCRIGHT_doorStatus2: 8 Vector__XXX
+ SG_ VCRIGHT_doorStatus2Index M : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontLatchRelDuty m1 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearLatchRelDuty m0 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_BPillarCameraHeaterState m1 : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_vehicleInMotion m0 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontDoorState m0 : 17|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearDoorState m0 : 20|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorDimmed m0 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontHandleRawStatus m0 : 24|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearHandleRawStatus m0 : 27|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorFoldType m0 : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontHandleDebounceStatus m0 : 32|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearHandleDebounceStatus m0 : 35|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontHandle5vEnable m0 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearHandle5vEnable m0 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_BPillarCameraHeaterCurrent m1 : 40|6@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorFoldCurrent m0 : 40|7@1- (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_gloveboxOutput m0 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorTiltXOffset m1 : 48|8@1- (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearDefrostCurrentFiltered m0 : 48|7@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_mirrorTiltYOffset m1 : 56|8@1- (0.02,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_trunkRatchetSwitch m0 : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_trunkPawlSwitch m0 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_trunkHomeSwitch m0 : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 294 DIR_motorStatus: 8 Vector__XXX
+ SG_ DIR_motorCurrent : 0|11@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_switchingFrequency : 11|11@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ DIR_targetFluxMode : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_switchShortTestRetryCount : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_keepAliveRequest : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_motorStatusCounter : 27|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_motorStatusChecksum : 32|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 297 SCCM_steeringAngleSensor: 8 Vector__XXX
+ SG_ SCCM_steeringAngleCrc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_supplierID : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleSensorStatus : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngle : 16|14@1+ (0.1,-819.2) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleValidity : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleSpeed : 32|14@1+ (0.5,-4096) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleSensorReservd1 : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleSensorReservd2 : 48|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ SCCM_steeringAngleSensorReservd3 : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 310 DI_slaveCommand: 8 Vector__XXX
+ SG_ DI_slaveTorqueCmd : 0|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveStateCmd : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveTcLimit : 16|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveTcMax : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveTcMin : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slavePowerDrive : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slavePowerLimit : 32|11@1+ (0.25,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveReverseGear : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveCommandCounter : 44|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveSlipIndicator : 48|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveCommandChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 311 DI_slave0Command: 8 Vector__XXX
+ SG_ DI_slave0TorqueCmd : 0|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0StateCmd : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0TcLimit : 16|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0TcMax : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0TcMin : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0PowerDrive : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0PowerLimit : 32|11@1+ (0.25,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0ReverseGear : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0CommandCounter : 44|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0SlipIndicator : 48|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0CommandChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 322 DI_slaveCommand2: 8 Vector__XXX
+ SG_ DI_slaveCommand2Checksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveCommand2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveAddLimit : 16|13@1- (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveAddMax : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveAddMin : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slaveExcessHeatCmd : 32|8@1+ (0.08,0) [0|0] "" Vector__XXX
+
+BO_ 323 DI_slave0Command2: 8 Vector__XXX
+ SG_ DI_slave0Command2Checksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0Command2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0AddLimit : 16|13@1- (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0AddMax : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0AddMin : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_slave0ExcessHeatCmd : 32|8@1+ (0.08,0) [0|0] "" Vector__XXX
+
+BO_ 325 ESP_status: 8 Vector__XXX
+ SG_ ESP_statusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_espModeActive : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_stabilityControlSts2 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_ebdFaultLamp : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_absFaultLamp : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_espFaultLamp : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_hydraulicBoostEnabled : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_espLampFlash : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeLamp : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_absBrakeEvent2 : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_longitudinalAccelQF : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_lateralAccelQF : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_yawRateQF : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_steeringAngleQF : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeDiscWipingActive : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_driverBrakeApply : 29|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeApply : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_aesPrimaryActuatorStatus : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_cdpStatus : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_ptcTargetState : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_btcTargetState : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_ebrStandstillSkid : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_ebrStatus : 49|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueTarget : 51|13@1+ (3,0) [0|0] "" Vector__XXX
+
+BO_ 326 ESP_redundantBrakingStatus: 8 Vector__XXX
+ SG_ ESP_redundantBrakingStatusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_redundantBrakingStatusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_redundantBrakingSystemStatus : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_longitudinalStabilityControlAvailable : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 328 DI_chassisControl: 8 Vector__XXX
+ SG_ DI_chassisControlChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_chassisControlCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_imuOffsetLearnRequest : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeCommandType : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeTorqueRequestActive : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeTorqueCommand : 16|13@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ DI_ptcStateGlobal : 29|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_ptcActive : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcState : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_isAnyVdcControlActive : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcMode : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_pedalAssistCurveSelect : 38|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_isAnyTcActive : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_VehicleMuConfidence : 43|6@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ DI_VehicleMu : 49|6@1+ (0.024,0) [0|0] "" Vector__XXX
+ SG_ DI_trailerSwayIndex : 55|5@1+ (0.035,0) [0|0] "" Vector__XXX
+ SG_ DI_vdcControlActive : 60|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_treadDepthAlertSet : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 329 IBST_redundantBrakingStatus: 8 Vector__XXX
+ SG_ IBST_redundantBrakingStatusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_redundantBrakingStatusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_redundantBrakingSystemStatus : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_brakeTorqueTarget : 15|13@1+ (3,0) [0|0] "" Vector__XXX
+
+BO_ 341 ESP_wheelRotation: 8 Vector__XXX
+ SG_ ESP_wheelPulseCountFrL : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelPulseCountFrR : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelPulseCountReL : 16|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelPulseCountReR : 24|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_WheelRotationReR : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_WheelRotationReL : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_WheelRotationFrR : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_WheelRotationFrL : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSpeedsQF : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_vehicleStandstillSts : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_vehicleSpeed : 42|10@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelRotationCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelRotationChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 373 ESP_wheelSpeeds: 8 Vector__XXX
+ SG_ ESP_wheelSpeedFrL : 0|13@1+ (0.042,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSpeedFrR : 13|13@1+ (0.042,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSpeedReL : 26|13@1+ (0.042,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSpeedReR : 39|13@1+ (0.042,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSpeedsCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_wheelSpeedsChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 389 ESP_brakeTorque: 8 Vector__XXX
+ SG_ ESP_brakeTorqueFrL : 0|12@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueFrR : 12|12@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueReL : 24|12@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueReR : 36|12@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueQF : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeTorqueChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 390 DIF_torque: 8 Vector__XXX
+ SG_ DIF_torqueChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_torqueCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_torqueCommand : 12|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DIF_axleSpeedQF : 25|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_torqueActual : 27|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DIF_axleSpeed : 40|16@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ DIF_axleTorqueQF : 56|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_axlePowerCalcQF : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_gear : 59|3@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 391 DIF_capability: 8 Vector__XXX
+ SG_ DIF_capabilityChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_capabilityCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_torquePedalMin : 12|12@1+ (2,-7500) [0|0] "" Vector__XXX
+ SG_ DIF_torquePedalMax : 24|12@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ DIF_torquePostPedalMin : 36|12@1+ (2,-7500) [0|0] "" Vector__XXX
+ SG_ DIF_torquePostPedalMax : 48|12@1+ (2,0) [0|0] "" Vector__XXX
+
+BO_ 394 DIR_capability: 8 Vector__XXX
+ SG_ DIR_capabilityChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_capabilityCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_torquePedalMin : 12|12@1+ (2,-7500) [0|0] "" Vector__XXX
+ SG_ DIR_torquePedalMax : 24|12@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ DIR_torquePostPedalMin : 36|12@1+ (2,-7500) [0|0] "" Vector__XXX
+ SG_ DIR_torquePostPedalMax : 48|12@1+ (2,0) [0|0] "" Vector__XXX
+
+BO_ 421 DIF_motorStatus: 8 Vector__XXX
+ SG_ DIF_motorCurrent : 0|11@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_switchingFrequency : 11|11@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ DIF_targetFluxMode : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_switchShortTestRetryCount : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_keepAliveRequest : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_motorStatusCounter : 27|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_motorStatusChecksum : 32|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 463 PM_systemState: 8 Vector__XXX
+ SG_ PM_torqueCheckState : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_limpRequest : 3|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_torqueCommand : 8|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ PM_torqueState : 21|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_systemStateCounter : 53|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_systemStateChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 485 PM_locState: 8 Vector__XXX
+ SG_ PM_cruiseFaultRequest : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_shiftState : 1|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_cruiseState : 4|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_vehicleHoldRequest : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_aebRequest : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_torqueCmdState : 9|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_btcCmdState : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_unparkAllowed : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_stationaryMode : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_onePedalFaultRequest : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_backfillDisableRequest : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_autoparkState : 18|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_hvilSystemStatus : 48|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_locStateCounter : 53|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_locStateChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 518 DI_btcRequest: 8 Vector__XXX
+ SG_ DI_btcRequest_FrL : 0|12@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequest_FrR : 12|12@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequest_ReL : 24|12@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequest_ReR : 36|12@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequestActive_FrR : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequestActive_ReL : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequestActive_FrL : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequestActive_ReR : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequestCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_btcRequestChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 521 DAS_longControl: 8 Vector__XXX
+ SG_ DAS_longControlChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_longControlCounter : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_gearRequest : 11|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_accelFwd_t0 m3 : 13|11@1- (0.012,-0.216) [0|0] "" Vector__XXX
+ SG_ DAS_torqueProfiler_accelMinPed m2 : 14|9@1+ (0.04,-15) [0|0] "" Vector__XXX
+ SG_ DAS_aebControl_active m4 : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pedalControl_accelPedalPos m5 : 16|12@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ DAS_torqueControl_sysTorqueCommandFwd m6 : 16|15@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DAS_aebControl_targetAccelDis m4 : 18|11@1- (0.01,-7.5) [0|0] "" Vector__XXX
+ SG_ DAS_torqueProfiler_accelMaxPed m2 : 23|9@1+ (0.04,-15) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_jerkFwd_t0t1 m3 : 24|8@1- (0.12,0) [0|0] "" Vector__XXX
+ SG_ DAS_pedalControl_brakeTorqueCommand m5 : 32|13@1+ (3.5,0) [0|0] "" Vector__XXX
+ SG_ DAS_torqueControl_standstillRequest m6 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_torqueProfiler_targetSpeedPed m2 : 32|12@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_futureTargetSpeedFwd m3 : 32|12@1- (0.08,80.08) [0|0] "" Vector__XXX
+ SG_ DAS_torqueProfiler_jerkMinPed m2 : 44|9@1+ (0.03,-15.232) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_jerkFwd_t1t2 m3 : 44|8@1- (0.12,0) [0|0] "" Vector__XXX
+ SG_ DAS_pedalControl_noGradeAccelMax m5 : 45|6@1+ (0.25,0) [0|0] "" Vector__XXX
+ SG_ DAS_pedalControl_speedMax m5 : 51|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_maxAllowedTargetErrorReg m3 : 52|6@1- (0.1,1.1) [0|0] "" Vector__XXX
+ SG_ DAS_torqueProfiler_jerkMaxPed m2 : 53|8@1+ (0.059,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_calcDelay m3 : 58|3@1+ (0.006666666666666667,0) [0|0] "" Vector__XXX
+ SG_ DAS_longControlStack M : 61|3@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 522 DAS_longControlTuningParameters: 8 Vector__XXX
+ SG_ DAS_longControlTuningParametersChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_longControlTuningParametersCounter : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_delayBeforet0 : 11|7@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_futureTargetSpeedFwdDt : 18|7@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_Dt_t0t1 : 32|7@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ DAS_velocityProfile_Dt_t1t2 : 39|7@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 526 DAS_autonomyControl: 8 Vector__XXX
+ SG_ DAS_autonomyControlChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autonomyControlCounter : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_manualDrivingProhibited : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autonomyControlActive : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autonomyBehavior : 13|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_epbFallbackRequest : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_suppressAPedalOverride : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_useEpbRedundantBraking : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_epbOnlyStoppingTarget : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_requireFirmBPedalCancel : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 529 RCM_status: 8 Vector__XXX
+ SG_ RCM_statusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_armStatus : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_warningIndicatorState : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_passAirbagIndicatorRequest : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_airbagCutoffStatus : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_alrSwitchStatus : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_vinLearnFlag : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_seatTrackPositionDrvr : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_seatTrackPositionPass : 26|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_edr1State : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_edr2State : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_keepPowerReason : 32|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_imuOffsetLearnState : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_edr3State : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_driverOrientationInitStatus : 40|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_occupantClassificationSource : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_pedProEDR1State : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_pedProEDR2State : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 545 VCFRONT_LVPowerState: 8 Vector__XXX
+ SG_ VCFRONT_LVPowerStateIndex M : 0|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vehiclePowerState : 5|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_cpLVRequest m1 : 8|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_parkLVState m0 : 8|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epasLVState m1 : 10|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_espLVState m0 : 10|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hvcLVRequest m1 : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_radcLVState m0 : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hvacCompLVState m0 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tasLVState m1 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsLVState m1 : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_ptcLVRequest m0 : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_CMPDLVState m1 : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_sccmLVRequest m0 : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hcmlLVState m1 : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tpmsLVRequest m0 : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hcmrLVState m1 : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_rcmLVRequest m0 : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_MCUAudioLVState m1 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_iBoosterLVState m0 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_espValveLVState m1 : 26|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tunerLVRequest m0 : 26|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_MCUGraphicsLVState m1 : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_amplifierLVRequest m0 : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_das1HighCurrentLVState m0 : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_dcdcSupportRequest m1 : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_hvStateRequest m1 : 31|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_das2HighCurrentLVState m0 : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_dirLVRequest m0 : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_autonomyBehavior m1 : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_difLVState m0 : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_oilPumpFrontLVState m0 : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_persistAccPowerRequestOverridden m1 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_oilPumpRearLVRequest m0 : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_accPortPowerRequest m1 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_persistAccPortPowerState m1 : 41|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_ocsLVRequest m0 : 42|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftHiCurrentLVState m0 : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightHiCurrentLVState m0 : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VC_noAccDeviceDetectedWhileIdle m1 : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_uiHiCurrentLVState m0 : 48|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_inAccessoryPlus : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_LVShuttingDown : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_LVPowerStateCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_LVPowerStateChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 546 VCLEFT_epbmStatus: 8 Vector__XXX
+ SG_ VCLEFT_cdpRequestState : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbmSystemStatusQF : 3|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbmUnitStatus : 4|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbmCdpState : 9|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbmRedundantBrakingEnabled : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbmStatusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbmStatusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 567 RCM_status2: 8 Vector__XXX
+ SG_ RCM_status2Checksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_status2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_thirdRowABStatusL : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_thirdRowABStatusR : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_temperatureIMU : 16|8@1+ (0.5,-40) [0|0] "" Vector__XXX
+ SG_ RCM_undersideAbuseEventDetected : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ RCM_inputVoltageVCRIGHT : 42|11@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ RCM_inputVoltageVCLEFT : 53|11@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 576 PM_state2: 8 Vector__XXX
+ SG_ PM_state2Checksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_state2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_vdcCmdState : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_ebrCmdState : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_vehicleSpeedQF : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 584 DAS_autonomyUiControl: 8 Vector__XXX
+ SG_ DAS_autonomyUiControlChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autonomyUiControlCounter : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_rideState : 11|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_infotainmentResetRequested : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_rideHailingActive : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autonomyCriticalMode : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_micFocusRequest : 17|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autonomyUiBehavior : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 598 DIR_status: 8 Vector__XXX
+ SG_ DIR_statusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_state : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_soptState : 16|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_sysLimpRequest : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_softSysLimpRequest : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_adState : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_lvSupplyV : 24|8@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ DIR_driveModeState : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_wasteState : 33|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_haltRequest : 35|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_axleSpeedLimitRequest : 40|12@1+ (1,40) [0|0] "" Vector__XXX
+ SG_ DIR_adDirection : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_spinDownLearningState : 56|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIR_spinDownLearningMode : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 599 DI_speed: 8 Vector__XXX
+ SG_ DI_speedChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_speedCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_opdVehicleModelSpeedRef : 12|12@1+ (0.08,-40) [0|0] "" Vector__XXX
+ SG_ DI_uiSpeed : 24|9@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_uiSpeedUnits : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_accelPedalPressed : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_sideslipEstimate : 35|8@1- (0.0025,0) [0|0] "" Vector__XXX
+ SG_ DI_vehicleSpeed : 43|13@1+ (0.08,-40) [0|0] "" Vector__XXX
+ SG_ DI_velocityEstimatorState : 56|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_autoEnableHazards : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_longControlCommandActive : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 605 APP_trafficControl: 8 Vector__XXX
+ SG_ APP_tcFeatureState : 0|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcStateMachine : 2|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcControlSource : 9|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcControlType : 11|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcControlDistance : 16|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcControlLightState : 24|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcContinuationReason : 27|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcConfirmationType : 31|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcWarningSuppressionReason : 33|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcUnavailableReason : 38|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcVisionLight : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcVisionSign : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcVisionRoadMarking : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_tcVisionLine : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 611 VCRIGHT_epbmStatus: 8 Vector__XXX
+ SG_ VCRIGHT_cdpRequestState : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbmSystemStatusQF : 3|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbmUnitStatus : 4|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbmCdpState : 9|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbmRedundantBrakingEnabled : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbmStatusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbmStatusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 615 DI_vehicleEstimates: 8 Vector__XXX
+ SG_ DI_mass : 0|8@1+ (25,1500) [0|0] "" Vector__XXX
+ SG_ DI_massRLS : 8|7@1+ (45,1500) [0|0] "" Vector__XXX
+ SG_ DI_trailerDetected : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vehicleEstimatesCounter : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_relativeTireTreadDepth : 19|6@1- (0.4,0) [0|0] "" Vector__XXX
+ SG_ DI_tireFitment : 25|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_rollCoeff : 27|5@1+ (0.001,0) [0|0] "" Vector__XXX
+ SG_ DI_massConfidence : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_gradeEst : 33|7@1- (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vehicleEstimatesChecksum : 40|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_gradeEstInternal : 48|7@1- (1,0) [0|0] "" Vector__XXX
+ SG_ DI_massConfidenceRLS : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_steeringAngleOffset : 56|8@1- (0.2,0) [0|0] "" Vector__XXX
+
+BO_ 628 VCLEFT_stationaryDetect: 8 Vector__XXX
+ SG_ VCLEFT_angleVar : 0|20@1+ (1e-05,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_accelVar : 20|20@1+ (1e-05,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_detectedMovingWhileStopped : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_detectedStationaryAtSpeed : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_slopeStable : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_stationaryParkRequest : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_brakePressHeld : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_epbOpenUnableToPark : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_slopeParkable : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_uiNotAvailable : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_varianceStationary : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 637 APS_eacMonitor: 8 Vector__XXX
+ SG_ APS_eacAllow : 0|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_eacMonitorCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_eacMonitorChecksum : 16|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 646 DI_locStatus: 8 Vector__XXX
+ SG_ DI_locStatusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_locStatusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_cruiseState : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_cruiseSetSpeed : 15|9@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ DI_cruiseSetSpeedUnits : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_autoparkState : 25|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_parkBrakeState : 29|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_aebState : 33|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_loncDeactivationReason : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vehicleHoldState : 38|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_summonInPanic : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_onePedalDrivingState : 42|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeStandActive : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_regenBackfillState : 47|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_cruiseNotAvailableReason : 49|6@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_cruiseFaultReason : 55|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_cruiseCancelReason : 60|4@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 649 DAS_pmmControl: 8 Vector__XXX
+ SG_ DAS_pmmControlChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmControlCounter : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmAccelMax : 11|9@1+ (0.04,-15) [0|0] "" Vector__XXX
+ SG_ DAS_brakePrefillRequest : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 659 UI_chassisControl: 8 Vector__XXX
+ SG_ UI_steeringTuneRequest : 0|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_tractionControlMode : 2|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_parkBrakeRequest : 5|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_narrowGarages : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_winchModeRequest : 8|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_zeroSpeedConfirmed : 10|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_trailerMode : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_distanceUnits : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_dasDebugEnable : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_accOvertakeEnable : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_aebEnable : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_aesEnable : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_ahlbEnable : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_autoLaneChangeEnable : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_winchProxUserOverride : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_rebootAutopilot : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_autoParkRequest : 28|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_bsdEnable : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_fcwEnable : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_fcwSensitivity : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_latControlEnable : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_ldwEnable : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_pedalSafetyEnable : 42|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_pedalMap_epas : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_redLightStopSignEnable : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_selfParkTune : 48|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_chassisControlCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ UI_chassisControlChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 665 DAS_integratedSafetyFront: 8 Vector__XXX
+ SG_ DAS_safetyFrontChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_safetyFrontCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_timeToImpactFront : 12|9@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_timeToImpactFrontQF : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_predictedImpactVelFront : 22|7@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ DAS_predictedImpactVelFrontQF : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_relativeVelocityFront : 30|6@1+ (1,-32) [0|0] "" Vector__XXX
+ SG_ DAS_relativeVelocityFrontQF : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_targetDistanceFront : 37|7@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ DAS_targetDistanceFrontQF : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_relativeAccelerationFront : 45|8@1+ (0.1,-12.8) [0|0] "" Vector__XXX
+ SG_ DAS_relativeAccelerationFrontQF : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_imminentCollisionFront : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_imminentCollisionFrontQF : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_predictedImpactOvrlapFront : 56|3@1+ (12.5,0) [0|0] "" Vector__XXX
+ SG_ DAS_predictedImpactOvrlapFrontQF : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_idfEnableFlag : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 680 EPBL_status: 8 Vector__XXX
+ SG_ EPBL_systemStatus : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_freeRollModeStatus : 4|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_driverIsLeaving : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_driverIsLeavingAnySpeed : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_systemCdpAvailable : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_chimeRequest : 9|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_telltale : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_contactorCycleNotNeededForWinchEntry : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_redundantBrakingEnabled : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_summonEnabled : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_brakeLight : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_epbConfigMismatch : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_brakeConfirmedPressed : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_requestUserConfirmation : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_uiWinchModeMiscBlocking : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_winchModeActive : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_updateMode : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_winchModePermissive : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_winchModePending : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_cdpRequest : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_uiParkAvailable : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_brakeDiscWipeRequest : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_showUiGearShifter : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_uiWinchModeLvStatus : 33|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_autonomyBehavior : 43|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_showStalkFaultedOnUi : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_espPowerRequest : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_okToPark : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_hornRequest : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_winchModeAvailable : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_bothDisconnected : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_blockDrive : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_statusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBL_statusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 690 VCFRONT_LVDebugData: 8 Vector__XXX
+ SG_ VCFRONT_LVDebugDataIndex M : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battSensorCurrentIntrvlMax5s m0 : 4|16@1- (0.005,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftMaxCurrent m1 : 4|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightMaxCurrent m2 : 4|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_wiperHeaterMaxCurrent m11 : 4|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_batBridgeMaxCurrent m9 : 8|13@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3pMaxCurrent m3 : 8|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3sMaxCurrent m4 : 8|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hcuEspAbsMaxCurrent m6 : 8|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_iBoosterMaxCurrent m5 : 8|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_loadshedMaxCurrent m10 : 8|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsMaxCurrent m7 : 8|13@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vehicleCurrentIntrvlMax5s m8 : 8|16@1- (0.01,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftMinCurrent m1 : 16|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightMinCurrent m2 : 16|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_wiperHeaterMinCurrent m11 : 16|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battSensorCurrentIntrvlMin5s m0 : 20|16@1- (0.005,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_loadshedMinCurrent m10 : 22|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_batBridgeMinCurrent m9 : 24|13@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3pMinCurrent m3 : 24|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3sMinCurrent m4 : 24|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hcuEspAbsMinCurrent m6 : 24|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_iBoosterMinCurrent m5 : 24|14@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsMinCurrent m7 : 24|13@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vehicleCurrentIntrvlMin5s m8 : 24|16@1- (0.01,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_frontOilPumpMaxCurrent m11 : 28|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftMaxVoltage m1 : 28|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightMaxVoltage m2 : 28|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battSensorVoltIntrvlMax5s m0 : 36|13@1- (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsBridgeMaxCurrent m9 : 37|13@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3pMaxVoltage m3 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3sMaxVoltage m4 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_frontOilPumpMinCurrent m11 : 40|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hcuEspAbsMaxVoltage m6 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_iBoosterMaxVoltage m5 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsMaxVoltage m7 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftMinVoltage m1 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightMinVoltage m2 : 40|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battSensorVoltIntrvlMin5s m0 : 49|13@1- (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsBridgeMinCurrent m9 : 50|13@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3pMinVoltage m3 : 52|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epas3sMinVoltage m4 : 52|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hcuEspAbsMinVoltage m6 : 52|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_iBoosterMinVoltage m5 : 52|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_pcsMinVoltage m7 : 52|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+
+BO_ 697 DAS_control: 8 Vector__XXX
+ SG_ DAS_setSpeed : 0|12@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ DAS_accState : 12|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_aebEvent : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_jerkMin : 18|9@1+ (0.03,-15.232) [0|0] "" Vector__XXX
+ SG_ DAS_jerkMax : 27|8@1+ (0.059,0) [0|0] "" Vector__XXX
+ SG_ DAS_accelMin : 35|9@1+ (0.04,-15) [0|0] "" Vector__XXX
+ SG_ DAS_accelMax : 44|9@1+ (0.04,-15) [0|0] "" Vector__XXX
+ SG_ DAS_controlCounter : 53|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_controlChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 714 APP_gpsTime: 8 Vector__XXX
+ SG_ APP_gpsSeconds : 0|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_gpsNanoseconds : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 725 DIF_status: 8 Vector__XXX
+ SG_ DIF_statusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_state : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_soptState : 16|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_sysLimpRequest : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_softSysLimpRequest : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_adState : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_lvSupplyV : 24|8@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ DIF_driveModeState : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_wasteState : 33|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_haltRequest : 35|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_axleSpeedLimitRequest : 40|12@1+ (1,40) [0|0] "" Vector__XXX
+ SG_ DIF_adDirection : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_spinDownLearningState : 56|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DIF_spinDownLearningMode : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 744 EPBR_status: 8 Vector__XXX
+ SG_ EPBR_systemStatus : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_freeRollModeStatus : 4|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_driverIsLeaving : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_driverIsLeavingAnySpeed : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_systemCdpAvailable : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_chimeRequest : 9|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_telltale : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_audioCurrentSpikeDetected : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_redundantBrakingEnabled : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_summonEnabled : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_brakeLight : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_epbConfigMismatch : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_brakeConfirmedPressed : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_requestUserConfirmation : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_uiWinchModeMiscBlocking : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_winchModeActive : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_updateMode : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_winchModePermissive : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_winchModePending : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_cdpRequest : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_uiParkAvailable : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_brakeDiscWipeRequest : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_showUiGearShifter : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_uiWinchModeLvStatus : 33|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_contactorCycleNotNeededForWinchEntry : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_autonomyBehavior : 43|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_showStalkFaultedOnUi : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_espPowerRequest : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_okToPark : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_hornRequest : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_winchModeAvailable : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_bothDisconnected : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_blockDrive : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_statusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPBR_statusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 778 VCLEFT_restraintStatus: 8 Vector__XXX
+ SG_ VCLEFT_frontOccupancyStatus : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_frontBuckleStatus : 3|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearLeftOccupancyStatus : 5|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearCenterOccupancyStatus : 8|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearRightOccupancyStatus : 10|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearLeftBuckleStatus : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_rearCenterBuckleStatus : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_seatTrackPosition : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_restraintStatusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_restraintStatusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 785 VCFRONT_AP_vehicleState10Hz: 8 Vector__XXX
+ SG_ VCFRONT_AP_vehicleState10HzChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_vehicleState10HzCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_driverPresent : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_driverBuckleStatus : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_das1OkToUseHighPower : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_das2OkToUseHighPower : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_vehiclePowerState : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_inAccessoryPlus : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_highBeamSwitchActive : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_hornSwitchPressed : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_swcAnyInteraction : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_simLatchingTurnStalk : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_indicatorLeftRequest : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_indicatorRightRequest : 26|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_anyClosureOpen : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_anyClosureSwitchPress : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_anyLeftDoorOpen : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_anyRightDoorOpen : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperSpeed : 32|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperState : 36|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_rearTrunkOpen : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_rightMirrorFoldState : 41|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_leftMirrorFoldState : 44|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_radarHeaterState : 47|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_highBeamControlState : 50|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_falconOpenToFitActive : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_frunkOpen : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 794 VCRIGHT_restraintStatus: 8 Vector__XXX
+ SG_ VCRIGHT_frontOccupancyStatus : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_frontBuckleStatus : 3|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearCenterBuckleStatus : 5|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearRightBuckleStatus : 8|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_rearRightOccupancyStatus : 10|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_3RowLeftBuckleStatus : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_3RowRightBuckleStatus : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_3RowLeftOccupancyStatus : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_3RowRightOccupancyStatus : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_seatTrackPosition : 20|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_occupantClassification : 23|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_occupantClassificationQF : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_classificationEnabled : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_classificationEnabledQF : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_restraintStatusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_restraintStatusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 811 APP_gpsAccuracies: 8 Vector__XXX
+ SG_ APP_gpsAccuracy3D : 0|7@1+ (0.2,0) [0|0] "" Vector__XXX
+ SG_ APP_gpsAccuracyHorizontal : 8|8@1+ (0.2,0) [0|0] "" Vector__XXX
+ SG_ APP_gpsAccuracyVertical : 16|8@1+ (0.2,0) [0|0] "" Vector__XXX
+ SG_ APP_gpsElevation : 24|14@1- (1,0) [0|0] "" Vector__XXX
+
+BO_ 817 EPAS3P_info: 8 Vector__XXX
+ SG_ EPAS3P_infoIndex M : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoBootUdsProtoVersion m20 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoBuildType m10 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoPcbaID m11 : 16|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoAssemblyID m11 : 24|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoApplicationCRC m13 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoBootloaderCRC m20 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoSubcomponent2 m23 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoUsageID m11 : 32|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_infoComponentID m10 : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 822 DI_maxRatedPower: 8 Vector__XXX
+ SG_ DI_sysDrivePowerRated : 0|10@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_performancePackage : 11|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_sysRegenPowerRated : 16|8@1+ (1,-100) [0|0] "" Vector__XXX
+
+BO_ 823 DI_accelPedal: 8 Vector__XXX
+ SG_ DI_track1IdlePedalVoltage : 0|9@1+ (0.0010784313725490198,0.65) [0|0] "" Vector__XXX
+ SG_ DI_track2IdlePedalVoltage : 9|9@1+ (0.0008823529411764706,0.25) [0|0] "" Vector__XXX
+ SG_ DI_track1MinVoltage30s : 18|12@1+ (0.0011355311355311355,0.65) [0|0] "" Vector__XXX
+ SG_ DI_track1MaxVoltage30s : 32|12@1+ (0.0011355311355311355,0.65) [0|0] "" Vector__XXX
+ SG_ DI_track1MinVoltageBrakePress : 44|12@1+ (0.0011355311355311355,0.65) [0|0] "" Vector__XXX
+ SG_ DI_idleOffsetLearningActive : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 847 APP_gnssReceiverRaw: 8 Vector__XXX
+ SG_ APP_gnssReceiverRawGroundSpeed : 0|20@1- (1,0) [0|0] "" Vector__XXX
+ SG_ APP_gnssReceiverRawEHPE : 20|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_gnssReceiverRawNumSatellitesUsed : 36|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_gnssReceiverRawDistinctDataIndex : 44|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APP_gnssReceiverRawNormalizedCovariance : 48|8@1+ (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 880 EPAS3P_sysStatus: 12 Vector__XXX
+ SG_ EPAS3P_steeringRackForce : 1|10@0+ (50,-25575) [0|0] "" Vector__XXX
+ SG_ EPAS3P_steeringFault : 2|1@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_steeringReduced : 3|1@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_internalSASQF : 4|1@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_currentTuneMode : 7|3@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_torsionBarTorque : 19|12@0+ (0.01,-20.5) [0|0] "" Vector__XXX
+ SG_ EPAS3P_eacErrorCode : 23|4@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_internalSAS : 37|14@0+ (0.1,-819.2) [0|0] "" Vector__XXX
+ SG_ EPAS3P_handsOnLevel : 39|2@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_sysStatusCounter : 51|4@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_driverlessState : 52|1@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_eacStatus : 55|3@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_sysStatusChecksum : 63|8@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 901 ESP_offsets: 8 Vector__XXX
+ SG_ ESP_latAccelOffsetComp : 0|8@1+ (0.02,-2.25) [0|0] "" Vector__XXX
+ SG_ ESP_longAccelOffsetComp : 8|8@1+ (0.02,-2.25) [0|0] "" Vector__XXX
+ SG_ ESP_yawrateOffsetComp : 16|9@1+ (0.0009765625,-0.24) [0|0] "" Vector__XXX
+ SG_ ESP_masterCylOffsetComp : 25|7@1+ (0.25,-16) [0|0] "" Vector__XXX
+ SG_ ESP_offsetsCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_offsetsChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 905 DAS_status2: 8 Vector__XXX
+ SG_ DAS_accSpeedLimit : 0|9@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ DAS_versionIdentifier : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmObstacleSeverity : 10|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmLoggingRequest : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_activationFailureStatus : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmUltrasonicsFaultReason : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmRadarFaultReason : 19|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmSysFaultReason : 21|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_pmmCameraFaultReason : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_ACC_report : 26|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_relaxCruiseLimits : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_csaState : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_radarTelemetry : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_robState : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_driverInteractionLevel : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_ppOffsetDesiredRamp : 40|8@1+ (0.01,-1.28) [0|0] "" Vector__XXX
+ SG_ DAS_longCollisionWarning : 48|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_status2Counter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_status2Checksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 907 ESP_party1: 8 Vector__XXX
+ SG_ ESP_party1Crc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_party1Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_ignitionOn : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_privateVehicleSpeedQF : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_privateVehicleSpeed : 16|8@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ ESP_pEstMax : 24|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 908 ESP_party2: 8 Vector__XXX
+ SG_ ESP_party2Crc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_party2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_qTargetExternalQF : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_qTargetExternal : 16|16@1+ (0.0078125,-252) [0|0] "" Vector__XXX
+
+BO_ 909 ESP_party3: 8 Vector__XXX
+ SG_ ESP_party3Crc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_party3Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_absActive : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ ESP_brakeMasterCylPress : 44|10@1+ (0.3,-30) [0|0] "" Vector__XXX
+ SG_ ESP_brakeMasterCylPressQF : 54|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 910 IBST_party1: 8 Vector__XXX
+ SG_ IBST_party1Crc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_party1Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_extReqPrio : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_extReqStatus : 13|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_sOutputRodDriver : 16|12@1+ (0.015625,-5) [0|0] "" Vector__XXX
+ SG_ IBST_sOutputRodDriverQF : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_sOutputRodAct : 32|12@1+ (0.015625,-5) [0|0] "" Vector__XXX
+ SG_ IBST_sOutputRodActQF : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 911 IBST_party2: 8 Vector__XXX
+ SG_ IBST_party2Crc : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_party2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_compatibilityIndex : 12|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_brakePedalApplied : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_brakePedalAppliedQF : 17|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_hbcRequest : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_diagnosticActive : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_pRunoutQF : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_pRunout : 24|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 914 EPAS3P_alertMatrix: 8 Vector__XXX
+ SG_ EPAS3P_matrixIndex M : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a001_sent1Mia m0 : 4|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a061_bridgeUv m1 : 4|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a121_pvtEcuStatCrcError m2 : 4|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a002_sent1Error m0 : 5|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a062_assistCorrError m1 : 5|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a122_olpActive m2 : 5|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a003_trqSens1Supply m0 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a063_dampCorrError m1 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a123_combEcu2StatFail m2 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a004_trqSens1Eeprom m0 : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a064_phaseCompCorrError m1 : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a124_tempSensStuckInRange m2 : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a005_sent2Mia m0 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a065_trqTarCorrError m1 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a125_trqSensTrimOutRange m2 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a006_sent2Error m0 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a066_returnCorrError m1 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a126_apsMia m2 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a007_trqSens2Supply m0 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a067_yawDampCorrError m1 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a127_apsCntError m2 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a008_trqSens2Eeprom m0 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a068_hystCorrError m1 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a128_apsCsError m2 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a009_sentDiff m0 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a069_eacCorrError m1 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a129_combEcu1StatFail m2 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a010_trqSensCalError m0 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a070_hodCorrError m1 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a130_sasOffsetNotCal m2 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a011_currentSensError m0 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a071_vehSpdCorrError m1 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a131_phaseFeedbackError m2 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a012_currentSensCalError m0 : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a072_motFeedFwdError m1 : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a132_motFeedFwdCounter25 m2 : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a013_gateDriveError m0 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a073_motParEstError m1 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a133_motFeedFwdCounter50 m2 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a014_gateDriveTxError m0 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a074_overHeatProtect m1 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a134_motFeedFwdCounter85 m2 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a015_gateDriveEeprom m0 : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a075_fspPwrCut m1 : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a135_piCtrlCounter25 m2 : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a016_phaseUhighUv m0 : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a076_tempSensOutofRange m1 : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a136_piCtrlCounter50 m2 : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a017_phaseUlowUv m0 : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a077_highSideFetError m1 : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a137_piCtrlCounter85 m2 : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a018_phaseVhighUv m0 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a078_phaseDisconnectError m1 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a144_diSpdMia m2 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a019_phaseVlowUv m0 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a079_backupCurrentPlaus m1 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a145_diSpdCntError m2 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a020_phaseWhighUv m0 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a080_ecuInitArbError m1 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a146_diSpdCsError m2 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a021_phaseWlowUv m0 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a081_coggCompError m1 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a147_backupVehSpeed m2 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a022_phaseUhighOv m0 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a082_polarityCalError m1 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a148_vMaxAssist m2 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a023_phaseUlowOv m0 : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a083_crcMismatch m1 : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a149_currentSensPathSwitch m2 : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a024_phaseVhighOv m0 : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a084_eacCancelled m1 : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a150_currentSensOffsetDetect m2 : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a025_phaseVlowOv m0 : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a085_canBusOff m1 : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsCboot m2 : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a026_phaseWhighOv m0 : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a086_dasMia m1 : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsDiagReg m2 : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a027_phaseWlowOv m0 : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a087_dasCntError m1 : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a153_dcsInitOffset m2 : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a028_phaseUbootUv m0 : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a088_dasCsError m1 : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a154_assistTorqueDisabled m2 : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a029_phaseVbootUv m0 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a089_espWsMia m1 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a155_backupEacActive m2 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a030_phaseWbootUv m0 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a090_espWsCntError m1 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a156_angleSensorDivergence m2 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a031_abnormalShutdown m0 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a091_espWsCsError m1 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a157_pmState2Mia m2 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a032_vRegOutputUv m0 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a092_espWrMia m1 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a158_pmState2CntError m2 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a033_vRegOutputOv m0 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a093_espWrCntError m1 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a159_pmState2CsError m2 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a034_vRegError m0 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a094_espWrCsError m1 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_latentFaultTestResult m2 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a035_vbbSupplyUv m0 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a095_espWsStatus m1 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a161_initTestPhaDisconnInfo m2 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a036_vbbSupplyOv m0 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a096_rcmMia m1 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a162_initTestHSDFetInfo m2 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a037_motPos1ParityError m0 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a097_rcmCntError m1 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_initTestGateDrvrInfo m2 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a038_motPos1Uv m0 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a098_rcmCsError m1 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a164_initTestDCSInfo m2 : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a039_motPos1MagnetMia m0 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a099_yawRateStatus m1 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a165_epbStatusMia m2 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a040_motPos1LogicError m0 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a100_diMia m1 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a166_epbStatusCntError m2 : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a041_motPos1tempError m0 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a101_diCntError m1 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a167_epbStatusCsError m2 : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a042_motPos2ParityError m0 : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a102_diCsError m1 : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a168_torsionBarTorqueQfDegraded m2 : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a043_motPos2Uv m0 : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a103_vcFrontMia m1 : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a044_motPos2MagnetMia m0 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a104_vcFrontCntError m1 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a045_motPos2LogicError m0 : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a105_vcFrontCsError m1 : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a046_motPos2tempError m0 : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a106_vcFrontTempMia m1 : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a047_motPosCorrError m0 : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a107_uiTuneReqMia m1 : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a048_motPosCalError m0 : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a108_uiTuneReqCntError m1 : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a049_piCtrlError m0 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a109_uiTuneReqCsError m1 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a050_mcuSmuError m0 : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a110_sasMia m1 : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a051_mcuSupError m0 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a111_sasCntError m1 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a052_intWatchdogError m0 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a112_sasCsError m1 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a053_extWatchdogError m0 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a113_sasStatusError m1 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a054_memoryProtectError m0 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a114_gtwConfigMia m1 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a055_floatPointError m0 : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a115_ecuStatMia m1 : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a056_battUv m0 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a116_ecuStatCntError m1 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a057_battUvReduced m0 : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a117_ecuStatCrcError m1 : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a058_battOv m0 : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a118_privateBusOff m1 : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a059_battOvReduced m0 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a119_pvtEcuStatMia m1 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a060_battBridgeDiff m0 : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a120_pvtEcuStatCntError m1 : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 923 DAS_status: 8 Vector__XXX
+ SG_ DAS_autopilotState : 0|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_blindSpotRearLeft : 4|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_blindSpotRearRight : 6|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_fusedSpeedLimit : 8|5@1+ (5,0) [0|0] "" Vector__XXX
+ SG_ DAS_suppressSpeedWarning : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_summonObstacle : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_summonClearedGate : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_visionOnlySpeedLimit : 16|5@1+ (5,0) [0|0] "" Vector__XXX
+ SG_ DAS_heaterState : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_forwardCollisionWarning : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autoparkReady : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autoParked : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autoparkActive : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_summonFwdLeashReached : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_summonRvsLeashReached : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_lssState : 29|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_sideCollisionAvoid : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_sideCollisionWarning : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_sideCollisionInhibit : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_laneDepartureWarning : 37|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_fleetSpeedState : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autopilotHandsOnState : 42|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_autoLaneChangeState : 46|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_summonAvailable : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_statusCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_statusChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 924 VCRIGHT_stationaryDetect: 8 Vector__XXX
+ SG_ VCRIGHT_angleVar : 0|20@1+ (1e-05,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_accelVar : 20|20@1+ (1e-05,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_detectedMovingWhileStopped : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_detectedStationaryAtSpeed : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_slopeStable : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_stationaryParkRequest : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_brakePressHeld : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_epbOpenUnableToPark : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_slopeParkable : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_uiNotAvailable : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_varianceStationary : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 925 IBST_status: 8 Vector__XXX
+ SG_ IBST_statusChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_statusCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_iBoosterStatus : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_driverBrakeApply : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_internalState : 18|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ IBST_sInputRodDriver : 21|12@1+ (0.015625,-5) [0|0] "" Vector__XXX
+ SG_ IBST_LVPowerModeState : 35|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 930 VCFRONT_outputPowerStatus: 8 Vector__XXX
+ SG_ VCFRONT_outputPowerStatusMuxIndex M : 0|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftCurrentInputResistance m0 : 1|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightCurrentInputResistance m1 : 1|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftVoltageInputResistance m0 : 14|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightVoltageInputResistance m1 : 14|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcleftSampleTimestamp m0 : 26|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_vcrightSampleTimestamp m1 : 26|32@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 931 VCLEFT_sourceImpedanceSyncStatus: 8 Vector__XXX
+ SG_ VCLEFT_upstreamVoltage : 0|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_upstreamCurrent : 12|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_localVoltage : 24|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_resistanceEstimate : 36|12@1+ (0.00061,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_prevUpstreamCurrent : 48|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_voltageRational : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 932 VCRIGHT_sourceImpedanceSyncStatus: 8 Vector__XXX
+ SG_ VCRIGHT_upstreamVoltage : 0|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_upstreamCurrent : 12|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_localVoltage : 24|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_resistanceEstimate : 36|12@1+ (0.00061,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_prevUpstreamCurrent : 48|12@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_voltageRational : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 933 VCLEFT_sourceImpedanceSyncStatusDebug: 8 Vector__XXX
+ SG_ VCLEFT_timeOffset : 0|31@1- (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_timeSyncValid : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_sampleTransmitLatency : 33|9@1+ (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 934 VCRIGHT_sourceImpedanceSyncStatusDebug: 8 Vector__XXX
+ SG_ VCRIGHT_timeOffset : 0|31@1- (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_timeSyncValid : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_sampleTransmitLatency : 33|9@1+ (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 949 BRAKE_primaryActuator: 8 Vector__XXX
+ SG_ BRAKE_primaryActuatorChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ BRAKE_primaryActuatorCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ BRAKE_primaryActuatorValveVolt : 12|11@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ BRAKE_primaryActuatorMotorVolt : 23|11@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 950 BRAKE_secondaryActuator: 8 Vector__XXX
+ SG_ BRAKE_secondaryActuatorChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ BRAKE_secondaryActuatorCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ BRAKE_secondaryActuatorValveVolt : 12|11@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ BRAKE_secondaryActuatorMotorVolt : 23|11@1+ (0.01,0) [0|0] "" Vector__XXX
+
+BO_ 977 EPAS3P_angleCalibration: 8 Vector__XXX
+ SG_ EPAS3P_appliedAngleOffset : 0|8@1+ (0.1,-12.8) [0|0] "" Vector__XXX
+ SG_ EPAS3P_calculatedAngleOffset : 8|8@1+ (0.1,-12.8) [0|0] "" Vector__XXX
+ SG_ EPAS3P_resyncStatus : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_pullDriftLongTermTrq : 17|12@1+ (0.01,-10) [0|0] "" Vector__XXX
+ SG_ EPAS3P_pullDriftCompTrq : 29|12@1+ (0.01,-10) [0|0] "" Vector__XXX
+ SG_ EPAS3P_learnedSCCMOffset : 41|8@1+ (0.1,-12.8) [0|0] "" Vector__XXX
+
+BO_ 993 VCFRONT_LVPowerStateParty: 8 Vector__XXX
+ SG_ VCFRONT_vehiclePowerStatePTY : 0|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_parkLVStatePTY : 3|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_espLVStatePTY : 5|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_radcLVStatePTY : 7|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_hvacCompLVStatePTY : 9|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_ptcLVRequestPTY : 11|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_sccmLVRequestPTY : 13|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tpmsLVRequestPTY : 15|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_rcmLVRequestPTY : 17|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_iBoosterLVStatePTY : 19|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_epasLVStatePTY : 21|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tunerLVRequestPTY : 23|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_dirLVRequestPTY : 25|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_difLVStatePTY : 27|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_LVPowerStateCounterPTY : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_LVPowerStateChecksumPTY : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1009 VCFRONT_AP_vehicleState1HzMuxed: 8 Vector__XXX
+ SG_ VCFRONT_AP_vehicleState1HzMuxedIndex M : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperECUType m0 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_APGlassHeaterType m1 : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionInwipeSpeed m0 : 16|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_APGlassHeaterResistance m1 : 19|10@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionOutwipeSpeed m0 : 19|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionAvgInwipePower m0 : 22|8@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_maxAllowedSleepPower m1 : 30|8@1+ (0.25,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionAvgOutwipePower m0 : 30|8@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_hasNarrowWipingHardware m1 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionInwipeTime m0 : 38|7@1+ (10,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_narrowWipingAvailable m1 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_ah_coolantSystemState m1 : 40|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionOutwipeTime m0 : 45|7@1+ (10,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_LVPowerSecondsToPrecondition m1 : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionAvgWetOutwipePower m0 : 52|8@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_wiperFrictionOutwipeCycleCount m0 : 60|4@1+ (100,0) [0|0] "" Vector__XXX
+
+BO_ 1023 APS_selfTest: 8 Vector__XXX
+ SG_ APS_selfTestReserved : 0|64@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1057 VCFRONT_sensors: 8 Vector__XXX
+ SG_ VCFRONT_tempCoolantBatInlet : 0|10@1+ (0.125,-40) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tempCoolantPTInlet : 10|11@1+ (0.125,-40) [0|0] "" Vector__XXX
+ SG_ VCFRONT_coolantLevel : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_brakeFluidLevel : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tempAmbient : 24|8@1+ (0.5,-40) [0|0] "" Vector__XXX
+ SG_ VCFRONT_washerFluidLevel : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_tempAmbientFiltered : 40|8@1+ (0.5,-40) [0|0] "" Vector__XXX
+ SG_ VCFRONT_battSensorIrrational : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_ptSensorIrrational : 49|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_sensorsCounter : 52|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_sensorsChecksum : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1160 DAS_steeringControl: 8 Vector__XXX
+ SG_ DAS_steeringAngleRequest : 6|15@0+ (0.1,-1638.35) [0|0] "" Vector__XXX
+ SG_ DAS_steeringHapticRequest : 7|1@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_steeringControlCounter : 19|4@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_steeringControlType : 23|3@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_steeringControlChecksum : 31|8@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1161 DAS_redundantBrakingControl: 8 Vector__XXX
+ SG_ DAS_redundantBrakingControlChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_redundantBrakingControlCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_useDasFallbackBrakeCommands : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_brakeTorqueCommand : 13|13@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ DAS_brakeTorqueRequestActive : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_miaBrakeTorqueCommand : 27|13@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ DAS_preAbbaBrakeTorqueDebug : 40|13@1+ (3,0) [0|0] "" Vector__XXX
+ SG_ DAS_abbaStateDebug : 56|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_abbaESPMiaBit : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DAS_abbaLongStabilityIsUnavailableBit : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1249 VCFRONT_vehicleTime: 8 Vector__XXX
+ SG_ VCFRONT_timeSync : 0|32@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1265 VCFRONT_AP_vehicleState1Hz: 8 Vector__XXX
+ SG_ VCFRONT_AP_vehicleState1HzChecksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_vehicleState1HzCounter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_glassHeaterState : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_preconditionRequest : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_tempAmbientFiltered : 16|8@1+ (0.5,-40) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_thsTemperature : 24|8@1+ (1,-40) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_thsActive : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_coolantLevel : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_leftTurnSignalFault : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_rightTurnSignalFault : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_interiorCameraLedLVState : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_isAdaptiveHighBeamAvailable : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_bothHeadlampsAimed : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_highBeamLeftStatus : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_highBeamRightStatus : 42|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_lowBeamLeftStatus : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_lowBeamRightStatus : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_washerFluidLevel : 48|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_passengerPresent : 50|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_hvacBlowerRPMActual : 51|5@1+ (200,0) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_hvacCabinTempEst : 56|7@1+ (1,-30) [0|0] "" Vector__XXX
+ SG_ VCFRONT_AP_hvacOn : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1270 DI_locStatus2: 8 Vector__XXX
+ SG_ DI_locStatus2Checksum : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_locStatus2Counter : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_doublePedalState : 12|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_autopilotRequest : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_rollPreventionState : 17|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_locIntegratorSaturated : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_temporaryOpdActiveAfterLoncCancel : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_reapplyOnParkRequest : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_brakeCpScale : 25|11@1+ (0.005,0) [0|0] "" Vector__XXX
+ SG_ DI_rollbackDistance : 36|8@1+ (0.005,0) [0|0] "" Vector__XXX
+ SG_ DI_lowMuProbabilityConfidence : 44|4@1+ (0.06666666666666667,0) [0|0] "" Vector__XXX
+ SG_ DI_pedalAssistCurveSelectForSX : 48|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_longitudinalControlStack : 52|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_useDasFallbackBrakeCommands : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1271 DI_systemTorque: 8 Vector__XXX
+ SG_ DI_sysTorqueCommand : 0|16@1- (0.5,0) [0|0] "" Vector__XXX
+ SG_ DI_sysTorqueActual : 16|16@1- (0.5,0) [0|0] "" Vector__XXX
+
+BO_ 1361 EPAS3P_bootID: 8 Vector__XXX
+ SG_ EPAS3P_bootIdData : 0|64@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1365 DIF_statistics: 8 Vector__XXX
+ SG_ DIF_torqueEstimated : 0|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DIF_torqueErrorEstimated : 16|11@1- (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 1426 EPAS3P_alertLog: 8 Vector__XXX
+ SG_ EPAS3P_alertID M : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_alertState : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a084_eacCancelMtrq m84 : 16|10@1+ (0.01,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a132_motorTorqueCommand m132 : 16|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a133_motorTorqueCommand m133 : 16|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a134_motorTorqueCommand m134 : 16|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a135_motorTorqueCommand m135 : 16|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a136_motorTorqueCommand m136 : 16|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a137_motorTorqueCommand m137 : 16|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a147_transitionReason m147 : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a148_vehicleSpeed m148 : 16|10@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a149_pcbTemp m149 : 16|8@1- (1,60) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a150_pcbTemp m150 : 16|8@1- (1,60) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsVBridge m151 : 16|6@1+ (0.328,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsVBridge m152 : 16|6@1+ (0.328,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a153_dcsOffsetA m153 : 16|10@1- (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a154_vehicleSpeed m154 : 16|10@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a155_vehicleSpeed m155 : 16|10@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a156_vehicleSpeed m156 : 16|10@1+ (0.5,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_currentSensorStatus m160 : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a161_pcoMinPhaseBCurrent m161 : 16|12@1- (0.1025,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a162_vBridgeClosed m162 : 16|16@1+ (0.00537,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_gateDrvrStatusReg m163 : 16|11@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a164_dcsRegister0x19 m164 : 16|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_gateDriverStatus m160 : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_highSideDisconnectFetStatus m160 : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsMainChannelA m151 : 22|10@1- (0.41,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_phaseDisconnectFetStatus m160 : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsModIndex m152 : 23|7@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a132_motorTorqueInverse m132 : 24|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a133_motorTorqueInverse m133 : 24|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a134_motorTorqueInverse m134 : 24|8@1- (0.0787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a135_iqReference m135 : 24|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a136_iqReference m136 : 24|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a137_iqReference m137 : 24|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a150_phaUMainPathCalcDiff m150 : 24|15@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_inverterFetStatus m160 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a084_eacCancelTtrq m84 : 26|10@1+ (0.05,-25) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a153_dcsOffsetB m153 : 26|10@1- (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_hsdFetFailShortTest m160 : 26|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_gateDrvrDiag2Reg m163 : 27|9@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_phaDisconnFailOpenTest m160 : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a161_pcoMaxPhaseBCurrent m161 : 28|12@1- (0.1025,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsMainPathErrReg m152 : 30|11@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_phaDisconnFailShortTest m160 : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a132_idMeasured m132 : 32|8@1+ (0.787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a133_idMeasured m133 : 32|8@1+ (0.787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a134_idMeasured m134 : 32|8@1+ (0.787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsMainChannelB m151 : 32|10@1- (0.41,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_invFetInitTest m160 : 32|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a162_vBridgeOpen m162 : 32|16@1+ (0.00537,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a164_currentSensorRailed m164 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a135_idMeasured m135 : 33|8@1+ (0.787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a136_idMeasured m136 : 33|8@1+ (0.787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a137_idMeasured m137 : 33|8@1+ (0.787,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a160_gateDrvrInitTest m160 : 34|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a084_eacCancelAngleGrad m84 : 36|12@1+ (1,-2048) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_gateDrvrDiag1Reg m163 : 36|9@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a150_phaVMainPathCalcDiff m150 : 39|15@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a132_iqMeasured m132 : 40|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a133_iqMeasured m133 : 40|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a134_iqMeasured m134 : 40|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a161_pcoMinPhaseACurrent m161 : 40|12@1- (0.1025,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a135_iqMeasured m135 : 41|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a136_iqMeasured m136 : 41|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a137_iqMeasured m137 : 41|9@1- (0.78125,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsTubErrReg m152 : 41|6@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsOffsetA m151 : 42|10@1- (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_gateDrvrDiag0Reg m163 : 45|9@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsErrSumReg m152 : 47|10@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a084_eacCancelAngle m84 : 48|12@1+ (1,-2048) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a132_motorVelocity m132 : 49|10@1- (0.9765625,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a133_motorVelocity m133 : 49|10@1- (0.9765625,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a134_motorVelocity m134 : 49|10@1- (0.9765625,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a135_motorVelocity m135 : 50|10@1- (0.9765625,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a136_motorVelocity m136 : 50|10@1- (0.9765625,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a137_motorVelocity m137 : 50|10@1- (0.9765625,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsOffsetB m151 : 52|10@1- (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a161_pcoMaxPhaseACurrent m161 : 52|12@1- (0.1025,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a150_otherECUAssistStatusFlag m150 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_diagStatus m163 : 54|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a163_powerStatus m163 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a152_dcsVbusDiagPathErrReg m152 : 57|7@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a084_eacCancelCode m84 : 60|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsCBootA m151 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ EPAS3P_a151_dcsCBootB m151 : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1488 APS_cpuStats: 8 Vector__XXX
+ SG_ APS_A_totalCpuUtilization : 0|7@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1492 APS_A_powerStateTrace: 8 Vector__XXX
+ SG_ APS_A_powerTrace1 : 0|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace2 : 8|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace3 : 16|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace4 : 24|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace5 : 32|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace6 : 40|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace7 : 48|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_A_powerTrace8 : 56|5@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1493 DIR_statistics: 8 Vector__XXX
+ SG_ DIR_torqueEstimated : 0|13@1- (2,0) [0|0] "" Vector__XXX
+ SG_ DIR_torqueErrorEstimated : 13|11@1- (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 1509 APS_B_powerStateTrace: 8 Vector__XXX
+ SG_ APS_B_powerTrace1 : 0|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace2 : 8|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace3 : 16|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace4 : 24|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace5 : 32|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace6 : 40|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace7 : 48|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ APS_B_powerTrace8 : 56|5@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1618 VCBATT0_info: 8 Vector__XXX
+ SG_ VCBATT0_infoIndex M : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoAppCrc m13 : 8|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoAppGitHash m17 : 8|56@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoBootGitHash m18 : 8|56@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoBootUdsProtoVersion m20 : 8|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoBuildType m10 : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoPcbaId m11 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoPlatformType m19 : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoAssemblyId m11 : 16|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoBuildConfigId m10 : 16|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoBootCrc m20 : 24|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoUsageId m11 : 24|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoHardwareId m10 : 32|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubcomponent1 m16 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubcomponent2 m23 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubcomponent3 m24 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubcomponent4 m31 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubcomponent5 m32 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubcomponent6 m33 : 32|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoSubUsageId m11 : 40|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_infoComponentId m10 : 48|16@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1637 XCP_epasRequest: 12 Vector__XXX
+ SG_ XCP_epasRequestData : 7|64@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1639 EPAS3P_xcpResponse: 12 Vector__XXX
+ SG_ EPAS3P_xcpResponseData : 7|64@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1808 VCBATT0_logging0Point1Hz: 8 Vector__XXX
+ SG_ VCBATT0_nmWakeUpReasonDBG : 0|6@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1809 VCBATT0_CPULoad: 8 Vector__XXX
+ SG_ VCBATT0_CPULoadTotal : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_CPULoad1msTask : 8|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_CPULoad10msTask : 16|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_CPULoad100msTask : 24|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCBATT0_CPULoad1000msTask : 32|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1840 UDS_epas3pRequestPARTY: 12 Vector__XXX
+ SG_ UDS_epas3pRequestDataPARTY : 7|64@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1848 EPAS3P_udsResponse: 12 Vector__XXX
+ SG_ EPAS3P_udsResponseData : 7|64@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1861 DI_chassisControl2: 8 Vector__XXX
+ SG_ DI_gradeAngle : 0|6@1- (0.01,0) [0|0] "" Vector__XXX
+ SG_ DI_bankAngle : 6|6@1- (0.01,0) [0|0] "" Vector__XXX
+ SG_ DI_chassisControlVideoRequest : 12|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_eepDeliveryBitStatus : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_tireUtilizationRatioFrL : 17|5@1+ (0.0625,0) [0|0] "" Vector__XXX
+ SG_ DI_tireUtilizationRatioFrR : 22|5@1+ (0.0625,0) [0|0] "" Vector__XXX
+ SG_ DI_tireUtilizationRatioReL : 27|5@1+ (0.0625,0) [0|0] "" Vector__XXX
+ SG_ DI_tireUtilizationRatioReR : 32|5@1+ (0.0625,0) [0|0] "" Vector__XXX
+ SG_ DI_counterSteerTarget : 37|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_splitMuProbability : 39|2@1+ (0.334,0) [0|0] "" Vector__XXX
+ SG_ DI_mzError : 41|2@1+ (1667,0) [0|0] "" Vector__XXX
+ SG_ DI_slipDifferenceFrontRear : 43|3@1- (0.133,0) [0|0] "" Vector__XXX
+ SG_ DI_highFreqYawRate : 46|2@1+ (0.334,0) [0|0] "" Vector__XXX
+ SG_ DI_turnDirection : 48|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_absolutePreControlRequest : 49|2@1+ (5000,0) [0|0] "" Vector__XXX
+ SG_ DI_oppositeBuildDirFrontAxle : 51|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_oppositeBuildDirRearAxle : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_saturatedEffectiveness : 53|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_driverPanicIndex : 54|2@1+ (0.334,0) [0|0] "" Vector__XXX
+ SG_ DI_learnDownMu : 56|2@1+ (0.334,0) [0|0] "" Vector__XXX
+ SG_ DI_preControlOpposingTurnDir : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_driverFxError : 59|2@1+ (1000,0) [0|0] "" Vector__XXX
+ SG_ DI_targetSaturation : 61|3@1+ (0.572,0) [0|0] "" Vector__XXX
+
+BO_ 1869 DI_chassisControl3: 8 Vector__XXX
+ SG_ DI_tireWearFactor_FrL : 0|6@1+ (0.00125,0.96) [0|0] "" Vector__XXX
+ SG_ DI_tireWearFactor_FrR : 6|6@1+ (0.00125,0.96) [0|0] "" Vector__XXX
+ SG_ DI_tireWearFactor_ReL : 12|6@1+ (0.00125,0.96) [0|0] "" Vector__XXX
+ SG_ DI_tireWearFactor_ReR : 18|6@1+ (0.00125,0.96) [0|0] "" Vector__XXX
+ SG_ DI_kTireEstReUnSat : 24|7@1+ (0.001,0.008) [0|0] "" Vector__XXX
+ SG_ DI_tireConfigSaved : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_distanceSinceLastTireConfig : 32|6@1+ (500,0) [0|0] "" Vector__XXX
+ SG_ DI_hydroplaningRisk : 38|2@1+ (0.3333333333333333,0) [0|0] "" Vector__XXX
+ SG_ DI_hydroplaningPuddlesWet : 40|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_hydroplaningPuddlesDry : 44|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_vehicleStuck : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ DI_kTireEstRe : 48|5@1+ (0.001,0.03) [0|0] "" Vector__XXX
+ SG_ DI_stickyMu : 53|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ DI_stickyMuConfidence : 59|5@1+ (0.1,0) [0|0] "" Vector__XXX
+
+BO_ 1923 VCRIGHT_LVHealthDebug: 8 Vector__XXX
+ SG_ VCRIGHT_uvReferenceMonitor : 0|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_loadshedFaultActive : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_loadshedSharedMonitor : 16|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_loadshedProtectionsArmed : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_uvLoadshedFaultInject : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_loadshedReset : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_uvLoadshedFromFrontMonitor : 32|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCRIGHT_vbusProtFusedSeatVoltage : 44|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+
+BO_ 1924 VCLEFT_LVHealthDebug: 8 Vector__XXX
+ SG_ VCLEFT_uvReferenceMonitor : 0|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_loadshedFaultActive : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_loadshedSharedMonitor : 13|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_vbatCurrent : 25|12@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_loadshedProtectionsArmed : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_uvLoadshedFaultInject : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_loadshedReset : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_ocLoadshedFaultInject : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_uvLoadshedFromFrontMonitor : 41|10@1+ (0.017595307917888565,0) [0|0] "" Vector__XXX
+ SG_ VCLEFT_vbusProtFusedSeatVoltage : 51|12@1+ (0.005443676098,0) [0|0] "" Vector__XXX
+
+BO_ 1973 PM_itpmsDisplay: 8 Vector__XXX
+ SG_ PM_itpmsDisplaySelector M : 0|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_fusedPressureEstimateFrL m2 : 2|9@1+ (0.008,0) [0|0] "" Vector__XXX
+ SG_ PM_fusedPressureEstimateReL m3 : 2|9@1+ (0.008,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSTellTale m0 : 2|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSDisplayState m0 : 4|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSDisplayProgress m0 : 8|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSRecommendedColdPressureFront m1 : 8|8@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_fusedPressureEstimateFrR m2 : 11|9@1+ (0.008,0) [0|0] "" Vector__XXX
+ SG_ PM_fusedPressureEstimateReR m3 : 11|9@1+ (0.008,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSDisplayWarningIndicatorFL m0 : 13|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSDisplayWarningIndicatorFR m0 : 16|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSRecommendedColdPressureRear m1 : 16|8@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSDisplayWarningIndicatorRL m0 : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_indirectTPMSDisplayWarningIndicatorRR m0 : 20|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1974 PM_itpmsData: 8 Vector__XXX
+ SG_ PM_itpmsDataSelector M : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusConvergenceConditions m5 : 3|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusCovariance m4 : 3|10@1+ (1e-07,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssConsistencyDistanceFrL m6 : 3|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_itpmsState m0 : 3|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorCurrentFrL m3 : 3|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorReferenceFrL m2 : 3|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossGNSSFrL m1 : 8|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusCurrentFrL m5 : 8|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_gnssConsistencyDistanceFrR m6 : 8|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_itpmsStateRelative m0 : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_itpmsStateGNSS m0 : 11|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorCurrentFrR m3 : 12|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorReferenceFrR m2 : 12|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusReferenceFrL m4 : 13|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_itpmsStateNominalPressure m0 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossGNSSFrR m1 : 15|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssConsistencyDistanceReL m6 : 16|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_itpmsCalibrationConfidenceRelative m0 : 16|6@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusCurrentFrR m5 : 19|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorCurrentReL m3 : 21|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorReferenceReL m2 : 21|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossGNSSReL m1 : 22|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusReferenceFrR m4 : 24|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_gnssConsistencyDistanceReR m6 : 24|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_itpmsCalibrationConfidenceGNSS m0 : 24|6@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossGNSSReR m1 : 29|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorCurrentReR m3 : 30|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_wheelSpeedFactorReferenceReR m2 : 30|9@1+ (0.00012,0.97) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusCurrentReL m5 : 32|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_permeabilityDeflationInitDay m0 : 32|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusReferenceReL m4 : 35|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossRelativeFrL m1 : 36|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossRelativeFrR m1 : 43|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusCurrentReR m5 : 43|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_gnssAbsRadiusReferenceReR m4 : 48|11@1+ (6.5e-05,0.32) [0|0] "" Vector__XXX
+ SG_ PM_permeabilityNominalPressureEstimate m0 : 48|8@1+ (0.015,0) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossRelativeReL m1 : 50|7@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_estimatedPressureLossRelativeReR m1 : 57|7@1+ (0.025,0) [0|0] "" Vector__XXX
+
+BO_ 1975 PM_looseBoltDetection: 8 Vector__XXX
+ SG_ PM_latLinkLooseBoltDetectionState : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1976 PM_looseBoltDetectionDebug: 8 Vector__XXX
+ SG_ PM_lbdDebugSelector M : 0|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdBMat0 m0 : 3|30@1- (0.0001,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdBMat1 m1 : 3|30@1- (2e-11,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdLogisticRegressionFlagStreak m3 : 8|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdMLPRawConfidence m4 : 8|16@1- (0.002,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdOdomLastUpdateKm m2 : 8|16@1+ (5,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdHiddenLayer0 m4 : 24|32@1- (0.0001,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdTotalRegressionSamples m2 : 24|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdUpdatesSinceLowTP m3 : 24|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdBMat2 m0 : 33|31@1- (1e-14,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdBMat3 m1 : 33|31@1- (1e-16,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdUpdatesSinceMLPFlag m3 : 40|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdLogisticRegressionConfidence m4 : 56|6@1+ (0.02,0) [0|0] "" Vector__XXX
+ SG_ PM_lbdAlertSet m4 : 62|2@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 2015 UDS_functionalRequest: 12 Vector__XXX
+ SG_ UDS_functionalRequestData_0 : 7|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_1 : 15|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_2 : 23|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_3 : 31|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_4 : 39|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_5 : 47|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_6 : 55|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ UDS_functionalRequestData_7 : 63|8@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 2031 DBG_testMessage: 8 Vector__XXX
+ SG_ DBG_testID : 0|16@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 2038 PM_vdcDebug: 8 Vector__XXX
+ SG_ PM_vdcDebugSelector M : 0|6@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceRequest_FrL m0 : 6|9@1- (20,-4940) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceRequest_FrR m1 : 6|9@1- (20,-4940) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceRequest_ReL m2 : 6|9@1- (20,-4940) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceRequest_ReR m3 : 6|9@1- (20,-4940) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_dMzRequestPreControl m32 : 6|10@1- (60,720) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_observerDirWillChange m24 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_turnDirection m22 : 6|2@1- (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarOSTurnOutMod m26 : 6|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathWheelVelocityInTolerance_FrL m11 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathWheelVelocityInTolerance_ReL m12 : 6|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzLimitMax_allActuators m23 : 6|11@1- (30,720) [0|0] "" Vector__XXX
+ SG_ PM_VSE_muVehicleDecLeakRate m29 : 6|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_obvserverYawRatePredict m24 : 7|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSActiveNoSlip_FrL m11 : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSActiveNoSlip_ReL m12 : 7|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_initThreshold_FrL m14 : 8|6@1+ (0.1875,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_initThreshold_FrR m15 : 8|6@1+ (0.1875,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_initThreshold_ReL m16 : 8|6@1+ (0.1875,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_initThreshold_ReR m17 : 8|6@1+ (0.1875,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_Fr_Rwd m10 : 8|7@1- (56,-2464) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_Fr_Fwd m18 : 8|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_ReL_Fwd m20 : 8|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_ReR_Fwd m21 : 8|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_Re_Fwd m19 : 8|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_TCSlipTargetMod_FA_Fwd m4 : 8|6@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_TCSlipTargetMod_RA_Fwd m5 : 8|6@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimit_Fr m6 : 8|8@1- (50,3600) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimit_Re m7 : 8|8@1- (50,3600) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimit_ReL m8 : 8|8@1- (50,3600) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimit_ReR m9 : 8|8@1- (50,3600) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_dMzRequest m25 : 8|11@1- (30,720) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_ALOSAuthorityIndicator m27 : 8|5@1+ (0.0325,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_ALOSAuthorityThreshMult m28 : 8|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_osInitThreshBase m22 : 8|8@1- (0.006,0.366) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelNotInSlip_FrL m11 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelNotInSlip_ReL m12 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_fxmFres m13 : 8|8@1- (200,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu m30 : 8|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_SurfaceUtil_contConf m31 : 8|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelInSlip_FrL m11 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelInSlip_ReL m12 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactZeroForceNoFlare_FrL m11 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactZeroForceNoFlare_ReL m12 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathFourWheelSlipZeroKValues_FrL m11 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathFourWheelSlipZeroKValues_ReL m12 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_muVehicleLearnDown m29 : 11|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_ALUSAuthorityThreshMult m28 : 12|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNotFourWheelSlipNormKValues_FrL m11 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNotFourWheelSlipNormKValues_ReL m12 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_SurfaceUtil_instConf m31 : 12|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathForceInfeasible_FrL m11 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathForceInfeasible_ReL m12 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathControlledBraking_FrL m11 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathControlledBraking_ReL m12 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_Fr_Fwd m10 : 15|7@1- (63,3213) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yawRateTarOversteer m26 : 15|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathLowSpeedCorrection_FrL m11 : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathLowSpeedCorrection_ReL m12 : 15|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_muFxDriverFF_FrL m14 : 16|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_muFxDriverFF_FrR m15 : 16|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_muFxDriverFF_ReL m16 : 16|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_muFxDriverFF_ReR m17 : 16|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_Fr_Rwd m18 : 16|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_ReL_Rwd m20 : 16|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_ReR_Rwd m21 : 16|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slipErrorFiltered_Re_Rwd m19 : 16|6@1- (0.25,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_TCSlipTargetMod_FA_Rwd m4 : 16|6@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_TCSlipTargetMod_RA_Rwd m5 : 16|6@1- (0.1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMinReq_Fr m6 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMinReq_Re m7 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMinReq_ReL m8 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMinReq_ReR m9 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_MotorRedistributionUP m28 : 16|8@1- (40,120) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_dMzRequestAyDmz m32 : 16|10@1- (60,720) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_isPreConOpposingTurnDir m24 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_osInitThreshHighFreqOff m22 : 16|8@1- (0.006,0.366) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionZeroK_FrL m11 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionZeroK_ReL m12 : 16|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_fxAccelMass m13 : 16|8@1- (0.16,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzSlipTargetLatDeg_Fwd m27 : 16|7@1- (240,480) [0|0] "" Vector__XXX
+ SG_ PM_VSE_longActuatorEff_FrL m0 : 16|7@1- (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_longActuatorEff_FrR m1 : 16|7@1- (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_longActuatorEff_ReL m2 : 16|7@1- (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_longActuatorEff_ReR m3 : 16|7@1- (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_muVehicleDecFilter m29 : 16|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMuTarget m30 : 16|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_TC_contConf m31 : 16|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMaxReq_Fr m6 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMaxReq_Re m7 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMaxReq_ReL m8 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_motorTorqueLimMaxReq_ReR m9 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_dMzRequestPreControlTotal m24 : 17|10@1- (60,720) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionSumOfAxleK_FrL m11 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionSumOfAxleK_ReL m12 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzLimitMin_allActuators m23 : 17|11@1- (30,720) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitModification_Fr m6 : 18|6@1+ (0.032,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitModification_Re m7 : 18|6@1+ (0.032,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitModification_ReL m8 : 18|6@1+ (0.032,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitModification_ReR m9 : 18|6@1+ (0.032,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSBrakingCorrection_FrL m11 : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSBrakingCorrection_ReL m12 : 18|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNonABSBrakingCorrection_FrL m11 : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNonABSBrakingCorrection_ReL m12 : 19|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzCurrent m25 : 19|11@1- (30,720) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathWheelVelocityInTolerance_FrR m11 : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathWheelVelocityInTolerance_ReR m12 : 20|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_TC_instConf m31 : 20|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSActiveNoSlip_FrR m11 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSActiveNoSlip_ReR m12 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_muVehicleLatDecLeakRate m29 : 21|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_Re_Rwd m10 : 22|7@1- (56,-2464) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelNotInSlip_FrR m11 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelNotInSlip_ReR m12 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_forceY_FA m4 : 22|9@1- (40,240) [0|0] "" Vector__XXX
+ SG_ PM_VSE_forceY_RA m5 : 22|9@1- (40,240) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelInSlip_FrR m11 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactWheelInSlip_ReR m12 : 23|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiLatAndVelocity_Fr m18 : 24|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiLatAndVelocity_Re m19 : 24|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiLatAndVelocity_ReL m20 : 24|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiLatAndVelocity_ReR m21 : 24|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_preVdcSlipTarget_FrL m14 : 24|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_preVdcSlipTarget_FrR m15 : 24|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_preVdcSlipTarget_ReL m16 : 24|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_preVdcSlipTarget_ReR m17 : 24|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitOperatingPoint_Fr m6 : 24|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitOperatingPoint_Re m7 : 24|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitOperatingPoint_ReL m8 : 24|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_torqueSplitOperatingPoint_ReR m9 : 24|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_osInitThreshold m22 : 24|8@1- (0.006,0.366) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarUSFiltered m26 : 24|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactZeroForceNoFlare_FrR m11 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSInactZeroForceNoFlare_ReR m12 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_vxDotGrade m13 : 24|8@1- (0.1,0.8) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzSlipTargetLatDeg_Rwd m27 : 24|7@1- (240,480) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXCurrentBrakes_FrL m0 : 24|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXCurrentBrakes_FrR m1 : 24|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXCurrentBrakes_ReL m2 : 24|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXCurrentBrakes_ReR m3 : 24|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMuTotalConfidence m30 : 24|5@1+ (0.1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_VDC_contConf m31 : 24|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VSP_vdcState m28 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathFourWheelSlipZeroKValues_FrR m11 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathFourWheelSlipZeroKValues_ReR m12 : 25|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_dMzRequestRolloverDmz m32 : 26|10@1- (60,720) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_threshMultDriverSensorOS m28 : 26|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNotFourWheelSlipNormKValues_FrR m11 : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNotFourWheelSlipNormKValues_ReR m12 : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_splitMuProbability m29 : 26|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_preConMuScaledActGain m24 : 27|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathForceInfeasible_FrR m11 : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathForceInfeasible_ReR m12 : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathControlledBraking_FrR m11 : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathControlledBraking_ReR m12 : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzLimitMax_powertrain m23 : 28|10@1- (30,360) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_VDC_instConf m31 : 28|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_Re_Fwd m10 : 29|7@1- (63,3213) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathLowSpeedCorrection_FrR m11 : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathLowSpeedCorrection_ReR m12 : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionZeroK_FrR m11 : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionZeroK_ReR m12 : 30|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzDriver m25 : 30|9@1- (60,360) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_observerSlipAngle_FA m4 : 31|9@1- (0.005,0.03) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_observerSlipAngle_RA m5 : 31|9@1- (0.005,0.03) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionSumOfAxleK_FrR m11 : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathBTCCorrectionSumOfAxleK_ReR m12 : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_splitMuTotalMz m29 : 31|9@1- (60,360) [0|0] "" Vector__XXX
+ SG_ PM_MAST_torqueSplitPreVDC_Fr m6 : 32|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_MAST_torqueSplitPreVDC_Re m7 : 32|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_MAST_torqueSplitPreVDC_ReL m8 : 32|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_MAST_torqueSplitPreVDC_ReR m9 : 32|6@1+ (0.016,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiTorque_Fr m18 : 32|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiTorque_Re m19 : 32|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiTorque_ReL m20 : 32|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiTorque_ReR m21 : 32|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_postVdcSlipTarget_FrL m14 : 32|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_postVdcSlipTarget_FrR m15 : 32|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_postVdcSlipTarget_ReL m16 : 32|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_postVdcSlipTarget_ReR m17 : 32|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_controlActive m28 : 32|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_decelControlAxRequest m24 : 32|8@1- (0.1,0.8) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarDriverSteadyState m22 : 32|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_betaEst m13 : 32|8@1- (0.01,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSBrakingCorrection_FrR m11 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathABSBrakingCorrection_ReR m12 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzTorqueSplitLatDeg m27 : 32|8@1- (120,480) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeSat_FrL m0 : 32|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeSat_FrR m1 : 32|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeSat_ReL m2 : 32|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeSat_ReR m3 : 32|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_SurfaceUtil_targetMu m30 : 32|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_WheelSat_contConf m31 : 32|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarUSSurfaceSat m26 : 33|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNonABSBrakingCorrection_FrR m11 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_corrPathNonABSBrakingCorrection_ReR m12 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_vxDotFx m12 : 34|8@1- (0.16,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelCorrectionGainFinal_FrL m11 : 34|4@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_threshMultDriverSensorUS m28 : 35|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_ReL_Rwd m10 : 36|7@1- (56,-2464) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_observerLateralAccelPredict m32 : 36|10@1- (0.03,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_WheelSat_instConf m31 : 36|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_dMzLimitMin_powertrain m23 : 38|10@1- (30,360) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_osYawRateError m25 : 39|8@1- (0.006,0.018) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_Fr_Rwd m6 : 40|7@1- (63,-3969) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_ReL_Rwd m8 : 40|7@1- (63,-3969) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_ReR_Rwd m9 : 40|7@1- (63,-3969) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_Re_Rwd m7 : 40|7@1- (63,-3969) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiErrorError_Fr m18 : 40|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiErrorError_Re m19 : 40|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiErrorError_ReL m20 : 40|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiErrorError_ReR m21 : 40|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slip_FrL m14 : 40|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slip_FrR m15 : 40|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slip_ReL m16 : 40|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_slip_ReR m17 : 40|6@1+ (0.125,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_decelControlStatus m24 : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_dmzMotorRedistribution m27 : 40|8@1- (120,480) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_threshMultTargetSensor m28 : 40|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelCorrectionGainFinal_FrR m11 : 40|4@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_attitudeBankAngle m29 : 40|9@1- (0.005,0.03) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeUnSat_FrL m0 : 40|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeUnSat_FrR m1 : 40|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeUnSat_ReL m2 : 40|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_fXDriverBrakeUnSat_ReR m3 : 40|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VSE_muVehicleFxHigh m13 : 40|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_muVehicleFxLow m5 : 40|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_TC_targetMu m30 : 40|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_YawRateDiv_contConf m31 : 40|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarDriverPreSatDyn m22 : 41|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_decelControlActGain m24 : 42|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yawRateTarUndersteer m26 : 42|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_vxDotAx m12 : 42|8@1- (0.16,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_ReL_Fwd m10 : 43|7@1- (63,3213) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelCorrectionGainFinal_ReL m11 : 44|4@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_YawRateDiv_instConf m31 : 44|4@1+ (0.07,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiError_Fr m18 : 46|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiError_Re m19 : 46|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiError_ReL m20 : 46|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiError_ReR m21 : 46|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_lateralJerkFrom2HzFilteredLateralAccel m32 : 46|10@1- (0.2,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_VDC_targetMu m30 : 46|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCR_usYawRateError m25 : 47|8@1- (0.006,0.018) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_decelControlInitThresh m24 : 47|8@1- (0.006,0.366) [0|0] "" Vector__XXX
+ SG_ PM_TC_absMaxVehicleMz m15 : 48|8@1+ (100,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_absVehicleMotorMz m14 : 48|8@1+ (100,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_Fr_Fwd m6 : 48|7@1+ (63,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_ReL_Fwd m8 : 48|7@1+ (63,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_ReR_Fwd m9 : 48|7@1+ (63,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_ff_limit_Re_Fwd m7 : 48|7@1+ (63,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_nominalSlipBoostPerMotor m17 : 48|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceHighLim_FrL m0 : 48|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceHighLim_FrR m1 : 48|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceHighLim_ReL m2 : 48|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceHighLim_ReR m3 : 48|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_oversteerBaseThreshMult m27 : 48|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_usInitThreshBase m23 : 48|8@1- (0.006,0.366) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelCorrectionGainFinal_ReR m11 : 48|4@1+ (0.4,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_attitudeDBetaInControl m29 : 49|8@1- (0.01,0.03) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_ReR_Rwd m10 : 50|7@1- (56,-2464) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarDriverSatDyn m22 : 50|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VE_vxDot m12 : 50|8@1- (0.16,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_observerYawRateEstimate m26 : 51|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiBase_Fr m18 : 52|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiBase_Re m19 : 52|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiBase_ReL m20 : 52|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kiBase_ReR m21 : 52|6@1+ (25,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yawRateTargetMotorAL m27 : 52|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_WheelSat_targetMu m30 : 52|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_maxSurfaceYawRate m24 : 55|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_yrTarOSSaturated m25 : 55|9@1- (0.006,0.234) [0|0] "" Vector__XXX
+ SG_ PM_TC_maxSlipBoost m17 : 56|5@1+ (0.05,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceLowLim_FrL m0 : 56|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceLowLim_FrR m1 : 56|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceLowLim_ReL m2 : 56|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCA_brakeForceLowLim_ReR m3 : 56|8@1- (40,-4880) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_usInitThreshold m23 : 56|8@1- (0.006,0.366) [0|0] "" Vector__XXX
+ SG_ PM_TC_limit_ReR_Fwd m10 : 57|7@1- (63,3213) [0|0] "" Vector__XXX
+ SG_ PM_VSE_roadWheelAngleAverage m29 : 57|7@1- (0.015,0.255) [0|0] "" Vector__XXX
+ SG_ PM_TC_kp_Fr m18 : 58|6@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kp_Re m19 : 58|6@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kp_ReL m20 : 58|6@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ PM_TC_kp_ReR m21 : 58|6@1+ (2,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelFlare_FrL m12 : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VSE_stickyMu_YawRateDiv_targetMu m30 : 58|6@1+ (0.025,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelFlare_FrR m12 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VDCT_threshMultDriverTarget m26 : 60|4@1+ (0.1,1) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelFlare_ReL m12 : 60|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ PM_VE_wheelFlare_ReR m12 : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 2047 GTW_carConfig: 8 Vector__XXX
+ SG_ GTW_carConfigMultiplexer M : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_birthday m4 : 8|32@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_deliveryStatus m1 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_exteriorTrimType m2 : 8|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_gloveboxUSBType m5 : 8|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_mapRegion m3 : 8|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rcmUndersideAbuseZThreshold m9 : 8|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_fasciaType m7 : 9|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontSeatHeaters m2 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_wiperMotorType m6 : 9|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_cabinPTCHeaterType m1 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_coolantPumpType m5 : 10|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontOverheadConsoleType m6 : 10|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rearSeatHeaters m2 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_sohRegulatoryStatus m8 : 10|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rcmUndersideAbuseYThreshold m9 : 11|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rightHandDrive m1 : 11|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_eCallAntennaHW m2 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_performancePackage m3 : 12|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rearLightType m1 : 12|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_shifterType m6 : 12|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_compressorType m6 : 13|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_epblHwType m5 : 13|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_homelinkType m2 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_powerSteeringColumn m7 : 13|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontSeatHeaterType m7 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_headlamps m1 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rcmUndersideAbuseWindow m9 : 14|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_vdcType m2 : 14|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_softPerformanceLimit m7 : 15|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_country m1 : 16|16@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_epbrHwType m5 : 17|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_m3yBusArchitecture m8 : 17|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_memoryMirrors m2 : 17|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_twelveVBatteryType m6 : 17|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_chassisType m3 : 18|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_powerLiftgateType m2 : 18|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_efuseSWConfig m6 : 20|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_lumbarECUType m2 : 20|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_blowerMotorType m5 : 21|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_interiorUpperTrimType m8 : 21|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_airSuspension m3 : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_alcoholInterlockType m7 : 22|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_blindSpotIndicatorLightType m8 : 22|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_immersiveAudio m7 : 23|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_bleEndpointUpdateMethod m6 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_centerConsoleControllerType m3 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_powerMirrorFoldType m5 : 24|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rearSeatHeaterType m2 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_wiperMotorAsicType m8 : 24|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_steeringWheelControllerType m6 : 25|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_autopilotCameraType m3 : 26|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_auxParkLamps m2 : 26|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_passengerOccupancySensorType m7 : 26|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_connectivityPackage m3 : 27|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontUsbHubType m5 : 27|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_interiorCabinRadarType m2 : 28|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_plcSupportType m3 : 28|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_gloveboxActuatorType m6 : 29|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_hvacPanelVaneType m2 : 29|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_badgingVersion m3 : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_packPerformanceDeviation m7 : 30|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_superManifoldType m5 : 30|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rduCableType m8 : 31|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_eBuckConfig m2 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_epasType m6 : 32|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_packEnergy m3 : 32|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_parkTelltaleBehaviorType m8 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rcmLocation m5 : 32|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_tireType m1 : 32|6@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_autopilotExteriorCameraType m5 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_epasSubType m9 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_steeringHeaterEnabled m2 : 33|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_activeHighBeam m2 : 34|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_airbagCutoffSwitch m2 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontFogLamps m7 : 35|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_wiperSupplyChainOrigin m9 : 35|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_homologationRegionOverride m6 : 36|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_intrusionSensorType m2 : 36|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_audioType m7 : 37|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontSeatReclinerHardware m3 : 37|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_sirenType m5 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_spoilerType m2 : 37|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_hornType m5 : 38|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_roofGlassType m1 : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_windowCommandsPermissionType m6 : 38|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_brakeLineSwitchType m3 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_interiorCameraType m8 : 39|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rearFogLamps m2 : 39|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_dasHw m1 : 40|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_eCallEnabled m4 : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_espValveType m3 : 40|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_mRecordVersion m9 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_roofType m2 : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontFasciaCameraType m8 : 41|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_autopilot m2 : 42|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_headlightStepperStallDetectMode m6 : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_parkAssistECUType m4 : 42|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_softRange m3 : 42|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_steeringColumnMotorType m5 : 42|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_brakeHWType m1 : 43|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_rgbInteriorLightingEnabled m6 : 43|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_passengerAirbagType m4 : 44|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_interiorCamFanType m8 : 45|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_refrigerantType m3 : 45|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_superchargingAccess m2 : 45|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_windshieldWiperHeaterType m6 : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_forwardRadarHw m4 : 46|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontControllerArchitectureType m7 : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_driveInterfaceType m6 : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_exteriorColor m2 : 48|5@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontSeatType m4 : 48|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_refrigACLineType m5 : 48|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_restraintsHardwareType m1 : 48|8@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_wheelType m3 : 48|7@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_efficiencyPackage m6 : 49|6@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_tpmsType m7 : 49|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_refrigFilterType m5 : 50|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_authenticationEndpointLayout m7 : 52|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_diBurnInType m5 : 52|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_pedestrianWarningSound m2 : 53|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_specialBadgingType m5 : 53|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_wirelessPhoneChargerType m4 : 53|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_chassisSubType m5 : 55|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_ethernetTunerType m4 : 55|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_ptcControlMode m3 : 55|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_steeringColumnUJointType m2 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_visorLightType m6 : 55|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_bPillarNFCParam m2 : 56|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_drivetrainType m1 : 56|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_brakeActuationType m3 : 57|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontSeatVentilationType m5 : 57|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_interiorLighting m2 : 57|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_socSleepOverride m7 : 57|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_gnssAntennaType m6 : 58|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_towPackage m5 : 58|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_v2xEnabled m9 : 58|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_r79BehaviorOverride m7 : 59|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_headlightLevelerType m2 : 60|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_interiorTrimType m4 : 60|4@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_radarHeaterType m1 : 60|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_repeaterAeroRibType m8 : 60|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_steeringHeaterType m7 : 60|3@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_restraintControlsType m5 : 61|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_caliperColorType m5 : 62|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_frontSeatHeatersEnabled m6 : 62|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_numberHVILNodes m2 : 62|2@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_narrowWipingSupported m7 : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+ SG_ GTW_windshieldWiperHeaterEnabled m6 : 63|1@1+ (1,0) [0|0] "" Vector__XXX
+
+VAL_ 17 RCM_collisionRear 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 17 RCM_collisionRight 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 17 RCM_collisionLeft 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 17 RCM_collisionFront 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 17 RCM_collisionRollover 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 17 RCM_collisionPedPro 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 17 RCM_collisionSeverity 0 "PRETENSIONER" 1 "FIRST_STAGE" 2 "SECOND_STAGE" 3 "PEDPRO_EVENT" ;
+VAL_ 49 EPAS3P_state 0 "STANDBY" 1 "DRIVE" 2 "SUPPORT" 3 "CHARGE" 4 "FEIM" 5 "CLEAR_FAULT" 6 "FAULT" 7 "WELD" 8 "TEST" 9 "SNA" 10 "DIAG" ;
+VAL_ 81 EPAS3S_state 0 "STANDBY" 1 "DRIVE" 2 "SUPPORT" 3 "CHARGE" 4 "FEIM" 5 "CLEAR_FAULT" 6 "FAULT" 7 "WELD" 8 "TEST" 9 "SNA" 10 "DIAG" ;
+VAL_ 84 DI_ah_vehicleSpeedLimit 511 "SNA" ;
+VAL_ 257 RCM_yawRate 4294934528 "SNA" ;
+VAL_ 257 RCM_pitchRate 4294950912 "SNA" ;
+VAL_ 257 RCM_rollRate 4294950912 "SNA" ;
+VAL_ 257 RCM_rollRateQF 0 "INIT" 1 "VALID" 2 "TEMP_INVALID" 3 "FAULTED" ;
+VAL_ 257 RCM_yawRateQF 0 "FAULTED" 1 "NOT_FAULTED" ;
+VAL_ 257 RCM_pitchRateQF 0 "INIT" 1 "VALID" 2 "TEMP_INVALID" 3 "FAULTED" ;
+VAL_ 258 VCLEFT_frontLatchStatus 0 "SNA" 1 "OPENED" 2 "CLOSED" 3 "CLOSING" 4 "OPENING" 5 "AJAR" 6 "TIMEOUT" 7 "DEFAULT" 8 "FAULT" ;
+VAL_ 258 VCLEFT_rearLatchStatus 0 "SNA" 1 "OPENED" 2 "CLOSED" 3 "CLOSING" 4 "OPENING" 5 "AJAR" 6 "TIMEOUT" 7 "DEFAULT" 8 "FAULT" ;
+VAL_ 258 VCLEFT_mirrorState 0 "IDLE" 1 "TILT_X" 2 "TILT_Y" 3 "FOLD_UNFOLD" 4 "RECALL" ;
+VAL_ 258 VCLEFT_mirrorFoldState 0 "UNKNOWN" 1 "FOLDED" 2 "UNFOLDED" 3 "FOLDING" 4 "UNFOLDING" ;
+VAL_ 258 VCLEFT_mirrorRecallState 0 "INIT" 1 "RECALLING_AXIS_1" 2 "RECALLING_AXIS_2" 3 "RECALLING_COMPLETE" 4 "RECALLING_FAILED" 5 "RECALLING_STOPPED" ;
+VAL_ 258 VCLEFT_mirrorHeatState 0 "SNA" 1 "ON" 2 "OFF" 3 "OFF_UNAVAILABLE" 4 "FAULT" ;
+VAL_ 259 VCRIGHT_frontLatchStatus 0 "SNA" 1 "OPENED" 2 "CLOSED" 3 "CLOSING" 4 "OPENING" 5 "AJAR" 6 "TIMEOUT" 7 "DEFAULT" 8 "FAULT" ;
+VAL_ 259 VCRIGHT_rearLatchStatus 0 "SNA" 1 "OPENED" 2 "CLOSED" 3 "CLOSING" 4 "OPENING" 5 "AJAR" 6 "TIMEOUT" 7 "DEFAULT" 8 "FAULT" ;
+VAL_ 259 VCRIGHT_mirrorState 0 "IDLE" 1 "TILT_X" 2 "TILT_Y" 3 "FOLD_UNFOLD" 4 "RECALL" ;
+VAL_ 259 VCRIGHT_mirrorFoldState 0 "UNKNOWN" 1 "FOLDED" 2 "UNFOLDED" 3 "FOLDING" 4 "UNFOLDING" ;
+VAL_ 259 VCRIGHT_trunkLatchStatus 0 "SNA" 1 "OPENED" 2 "CLOSED" 3 "CLOSING" 4 "OPENING" 5 "AJAR" 6 "TIMEOUT" 7 "DEFAULT" 8 "FAULT" ;
+VAL_ 259 VCRIGHT_mirrorRecallState 0 "INIT" 1 "RECALLING_AXIS_1" 2 "RECALLING_AXIS_2" 3 "RECALLING_COMPLETE" 4 "RECALLING_FAILED" 5 "RECALLING_STOPPED" ;
+VAL_ 261 ESP_factoryMode 0 "DISABLED" 1 "ENABLED" ;
+VAL_ 264 DIR_torqueCommand 4294963200 "SNA" ;
+VAL_ 264 DIR_axleSpeedQF 0 "INVALID" 1 "VALID" 2 "FAULTED" ;
+VAL_ 264 DIR_torqueActual 4294963200 "SNA" ;
+VAL_ 264 DIR_axleSpeed 4294934528 "SNA" ;
+VAL_ 264 DIR_axleTorqueQF 0 "INVALID" 1 "VALID" 2 "FAULTED" ;
+VAL_ 264 DIR_axlePowerCalcQF 0 "INVALID" 1 "VALID" ;
+VAL_ 264 DIR_gear 0 "INVALID" 1 "P" 2 "R" 3 "N" 4 "D" 7 "SNA" ;
+VAL_ 273 RCM_longitudinalAccel 4294934528 "SNA" ;
+VAL_ 273 RCM_lateralAccel 4294934528 "SNA" ;
+VAL_ 273 RCM_verticalAccel 4294934528 "SNA" ;
+VAL_ 273 RCM_longitudinalAccelQF 0 "FAULTED" 1 "NOT_FAULTED" ;
+VAL_ 273 RCM_lateralAccelQF 0 "FAULTED" 1 "NOT_FAULTED" ;
+VAL_ 273 RCM_verticalAccelQF 0 "FAULTED" 1 "NOT_FAULTED" ;
+VAL_ 273 RCM_CGTranslationFault 0 "NOT_FAULTED" 1 "FAULTED" ;
+VAL_ 280 DI_immobilizerState 0 "INIT_SNA" 1 "REQUEST" 2 "AUTHENTICATING" 3 "DISARMED" 4 "IDLE" 5 "RESET" 6 "FAULT" ;
+VAL_ 280 DI_systemState 0 "UNAVAILABLE" 1 "IDLE" 2 "STANDBY" 3 "FAULT" 4 "ABORT" 5 "ENABLE" ;
+VAL_ 280 DI_brakePedalState 0 "OFF" 1 "ON" 2 "INVALID" ;
+VAL_ 280 DI_gear 0 "INVALID" 1 "P" 2 "R" 3 "N" 4 "D" 7 "SNA" ;
+VAL_ 280 DI_driveBlocked 0 "NONE" 1 "FRUNK" 2 "PROX" 3 "FALCON" ;
+VAL_ 280 DI_hvilSystemStatus 0 "DISABLED" 1 "OPEN" 2 "CLOSED" 3 "SNA" ;
+VAL_ 280 DI_accelPedalPos 255 "SNA" ;
+VAL_ 280 DI_tractionControlMode 0 "NORMAL" 1 "SLIP_START" 2 "DEV_MODE_1" 3 "DEV_MODE_2" 4 "ROLLS_MODE" 5 "DYNO_MODE" 6 "OFFROAD_ASSIST" ;
+VAL_ 280 DI_epbRequest 0 "NO_REQUEST" 1 "PARK" 2 "UNPARK" ;
+VAL_ 280 DI_keepDrivePowerStateRequest 0 "NO_REQUEST" 1 "KEEP_ALIVE" ;
+VAL_ 280 DI_trackModeState 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ON" ;
+VAL_ 280 DI_vehicleAcceleration 4294965248 "SNA" ;
+VAL_ 289 RCM_nearDeployRear 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 289 RCM_nearDeployRight 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 289 RCM_nearDeployLeft 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 289 RCM_nearDeployFront 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 289 RCM_nearDeployRollover 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 289 RCM_crashAlgoWakeup 0 "INACTIVE" 1 "ACTIVE" 3 "SNA" ;
+VAL_ 294 DIR_targetFluxMode 0 "OPTIMUM" 1 "FS" 2 "FW" ;
+VAL_ 294 DIR_keepAliveRequest 0 "NO_REQUEST" 1 "KEEP_ALIVE" ;
+VAL_ 297 SCCM_steeringAngleSensorStatus 0 "OK" 1 "INIT" 2 "ERROR" 3 "ERROR_INIT" ;
+VAL_ 297 SCCM_steeringAngle 16383 "SNA" ;
+VAL_ 297 SCCM_steeringAngleValidity 0 "INVALID" 1 "VALID" 2 "INIT" 3 "SNA" ;
+VAL_ 325 ESP_espModeActive 0 "00_NORMAL" 1 "01" 2 "02" 3 "03" ;
+VAL_ 325 ESP_stabilityControlSts2 0 "INIT" 1 "ON" 2 "ENGAGED" 3 "FAULTED" ;
+VAL_ 325 ESP_ebdFaultLamp 0 "OFF" 1 "ON" ;
+VAL_ 325 ESP_absFaultLamp 0 "OFF" 1 "ON" ;
+VAL_ 325 ESP_espFaultLamp 0 "OFF" 1 "ON" ;
+VAL_ 325 ESP_espLampFlash 0 "OFF" 1 "FLASH" ;
+VAL_ 325 ESP_brakeLamp 0 "OFF" 1 "ON" ;
+VAL_ 325 ESP_absBrakeEvent2 0 "NOT_ACTIVE" 1 "ACTIVE_FRONT_REAR" 2 "ACTIVE_FRONT" 3 "ACTIVE_REAR" ;
+VAL_ 325 ESP_longitudinalAccelQF 0 "UNDEFINABLE_ACCURACY" 1 "IN_SPEC" ;
+VAL_ 325 ESP_lateralAccelQF 0 "UNDEFINABLE_ACCURACY" 1 "IN_SPEC" ;
+VAL_ 325 ESP_yawRateQF 0 "UNDEFINABLE_ACCURACY" 1 "IN_SPEC" ;
+VAL_ 325 ESP_steeringAngleQF 0 "UNDEFINABLE_ACCURACY" 1 "IN_SPEC" ;
+VAL_ 325 ESP_brakeDiscWipingActive 0 "INACTIVE" 1 "ACTIVE" ;
+VAL_ 325 ESP_driverBrakeApply 0 "NotInit_orOff" 1 "Not_Applied" 2 "Driver_applying_brakes" 3 "Faulty_SNA" ;
+VAL_ 325 ESP_brakeApply 0 "INACTIVE" 1 "ACTIVE" ;
+VAL_ 325 ESP_cdpStatus 0 "CDP_IS_NOT_AVAILABLE" 1 "CDP_IS_AVAILABLE" 2 "ACTUATING_EPB_CDP" 3 "CDP_COMMAND_INVALID" ;
+VAL_ 325 ESP_ptcTargetState 0 "FAULT" 1 "BACKUP" 2 "ON" 3 "SNA" ;
+VAL_ 325 ESP_btcTargetState 0 "OFF" 1 "BACKUP" 2 "ON" 3 "SNA" ;
+VAL_ 325 ESP_ebrStandstillSkid 0 "NO_STANDSTILL_SKID" 1 "STANDSTILL_SKID_DETECTED" ;
+VAL_ 325 ESP_ebrStatus 0 "EBR_IS_NOT_AVAILABLE" 1 "EBR_IS_AVAILABLE" 2 "ACTUATING_DI_EBR" 3 "EBR_COMMAND_INVALID" ;
+VAL_ 325 ESP_brakeTorqueTarget 8191 "SNA" ;
+VAL_ 329 IBST_brakeTorqueTarget 8191 "SNA" ;
+VAL_ 341 ESP_vehicleSpeed 8191 "SNA" ;
+VAL_ 390 DIF_torqueCommand 4294963200 "SNA" ;
+VAL_ 390 DIF_axleSpeedQF 0 "NOT_QUALIFIED" 1 "QUALIFIED" ;
+VAL_ 390 DIF_torqueActual 4294963200 "SNA" ;
+VAL_ 390 DIF_axleSpeed 4294934528 "SNA" ;
+VAL_ 390 DIF_axleTorqueQF 0 "INVALID" 1 "VALID" 2 "FAULTED" ;
+VAL_ 390 DIF_axlePowerCalcQF 0 "INVALID" 1 "VALID" ;
+VAL_ 390 DIF_gear 0 "INVALID" 1 "P" 2 "R" 3 "N" 4 "D" 7 "SNA" ;
+VAL_ 421 DIF_targetFluxMode 0 "OPTIMUM" 1 "FS" 2 "FW" ;
+VAL_ 421 DIF_keepAliveRequest 0 "NO_REQUEST" 1 "KEEP_ALIVE" ;
+VAL_ 463 PM_torqueCommand 4294963200 "SNA" ;
+VAL_ 485 PM_cruiseState 0 "UNAVAILABLE" 1 "STANDBY" 2 "ENABLED" 3 "STANDSTILL" 4 "OVERRIDE" 5 "FAULT" 6 "PRE_FAULT" 7 "PRE_CANCEL" ;
+VAL_ 485 PM_autoparkState 0 "UNAVAILABLE" 1 "STANDBY" 2 "STARTED" 3 "ACTIVE" 4 "COMPLETE" 5 "PAUSED" 6 "ABORTED" 7 "RESUMED" 8 "UNPARK_COMPLETE" 9 "SELFPARK_STARTED" 15 "SNA" ;
+VAL_ 485 PM_hvilSystemStatus 0 "DISABLED" 1 "OPEN" 2 "CLOSED" 3 "SNA" ;
+VAL_ 521 DAS_gearRequest 0 "IDLE_SNA" 1 "PARK" 2 "REVERSE" 3 "NEUTRAL" 4 "DRIVE" ;
+VAL_ 521 DAS_pedalControl_accelPedalPos 255 "SNA" ;
+VAL_ 529 RCM_armStatus 0 "RCM_UNARMED" 1 "RCM_ARMED" 2 "ARMED_WITH_NOFIRE_CAL" 3 "SNA" ;
+VAL_ 529 RCM_warningIndicatorState 0 "RCM_WARNING_INDICATOR_OFF" 1 "RCM_WARNING_INDICATOR_ON" 3 "SNA" ;
+VAL_ 529 RCM_passAirbagIndicatorRequest 0 "RCM_PASSENGER_AIRBAG_INDICATOR_ON" 1 "RCM_PASSENGER_AIRBAG_INDICATOR_OFF" 3 "SNA" ;
+VAL_ 529 RCM_airbagCutoffStatus 0 "RCM_PASSENGER_AIRBAG_ENABLED" 1 "RCM_PASSENGER_AIRBAG_DISABLED" 3 "SNA" ;
+VAL_ 529 RCM_alrSwitchStatus 0 "RCM_ALR_NOT_ENGAGED" 1 "RCM_ALR_ENGAGED" 2 "RCM_ALR_FAULTED" 3 "SNA" ;
+VAL_ 529 RCM_vinLearnFlag 0 "RCM_VIN_NOT_STORED" 1 "RCM_VIN_STORED" 2 "RCM_VIN_STORED_MISMATCH" 3 "SNA" ;
+VAL_ 529 RCM_seatTrackPositionDrvr 0 "RCM_SEAT_POSITION_NEAR" 1 "RCM_SEAT_POSITION_FAR" 2 "RCM_SEAT_POSITION_FAULTED" 3 "SNA" ;
+VAL_ 529 RCM_seatTrackPositionPass 0 "RCM_SEAT_POSITION_NEAR" 1 "RCM_SEAT_POSITION_FAR" 2 "RCM_SEAT_POSITION_FAULTED" 3 "SNA" ;
+VAL_ 529 RCM_edr1State 0 "EMPTY" 1 "STORED" 2 "LOCKED" 3 "UNAVAILABLE" ;
+VAL_ 529 RCM_edr2State 0 "EMPTY" 1 "STORED" 2 "LOCKED" 3 "UNAVAILABLE" ;
+VAL_ 529 RCM_keepPowerReason 0 "NO_KEEP_POWER_REQUEST" 1 "IN_IDLE_MODE" 2 "CRASH_ALGO_ACTIVE" 3 "EDR_STORING_TO_EEPROM" 4 "EDR_UPLOADING" 5 "CANNOT_POWER_DOWN" 6 "INITIALIZATION_PHASE" 7 "INVALID_POWER_OFF_REQUEST" 8 "KEEP_POWER_REASON_SNA" ;
+VAL_ 529 RCM_imuOffsetLearnState 0 "OFFSET_LEARNING_OFF" 1 "SLOW_LEARNING_DISTANCE" 2 "FAST_LEARNING_TIME" 3 "OFFSETS_UNABLE_TO_LEARN" ;
+VAL_ 529 RCM_edr3State 0 "EMPTY" 1 "STORED" 2 "LOCKED" 3 "UNAVAILABLE" ;
+VAL_ 529 RCM_driverOrientationInitStatus 0 "RCM_DRIVER_ORIENTATION_INIT_NOT_COMPLETE" 1 "RCM_DRIVER_ORIENTATION_MATCHED_LHD" 2 "RCM_DRIVER_ORIENTATION_MATCHED_RHD" 3 "RCM_DRIVER_ORIENTATION_MISMATCH_DEFAULT_LHD" 4 "RCM_DRIVER_ORIENTATION_MISMATCH_DEFAULT_RHD" 7 "SNA" ;
+VAL_ 529 RCM_pedProEDR1State 0 "EMPTY" 1 "STORED" 2 "LOCKED" 3 "UNAVAILABLE" ;
+VAL_ 529 RCM_pedProEDR2State 0 "EMPTY" 1 "STORED" 2 "LOCKED" 3 "UNAVAILABLE" ;
+VAL_ 545 VCFRONT_LVPowerStateIndex 0 "Mux0" 1 "Mux1" ;
+VAL_ 545 VCFRONT_vehiclePowerState 0 "OFF" 1 "CONDITIONING" 2 "ACCESSORY" 3 "DRIVE" ;
+VAL_ 545 VCFRONT_parkLVState 0 "OFF" 1 "ON" 2 "GOING_DOWN" 3 "FAULT" ;
+VAL_ 545 VCFRONT_epasLVState 0 "OFF" 1 "ON" 2 "GOING_DOWN" 3 "FAULT" ;
+VAL_ 545 VCFRONT_espLVState 0 "OFF" 1 "ON" 2 "GOING_DOWN" 3 "FAULT" ;
+VAL_ 545 VCFRONT_hcmlLVState 0 "OFF" 1 "ON" 2 "GOING_DOWN" 3 "FAULT" ;
+VAL_ 545 VCFRONT_espValveLVState 0 "OFF" 1 "ON" 2 "GOING_DOWN" 3 "FAULT" ;
+VAL_ 545 VCFRONT_uiHiCurrentLVState 0 "OFF" 1 "ON" 2 "GOING_DOWN" 3 "FAULT" ;
+VAL_ 546 VCLEFT_cdpRequestState 0 "INVALID" 1 "VALID" ;
+VAL_ 546 VCLEFT_epbmSystemStatusQF 0 "VALID" 1 "INVALID" ;
+VAL_ 546 VCLEFT_epbmUnitStatus 0 "UNKNOWN" 1 "OPEN" 2 "DYNAMIC" 3 "PARK" 4 "START" 5 "SERVICE" 6 "WINCHMODE" 7 "WINCHMODE_RELEASING" 8 "PARKING" 9 "DYNAMIC_APPLYING" 10 "RELEASING" 11 "SERVICE_RELEASING" 12 "PARK_PENDING" 13 "WINCHMODE_PENDING" 14 "SUMMON" 15 "SUMMON_RELEASING" 16 "SUMMON_PARKING" 17 "EXTERNAL_DYNAMIC" 18 "RELEASING_FOR_EXTERNAL_PARK" 19 "EXTERNAL_PARKING" 20 "DYNAMIC_PARKING" 21 "FREE_ROLL_MODE" 22 "COUNT" ;
+VAL_ 598 DIR_state 0 "UNAVAILABLE" 1 "STANDBY" 2 "FAULT" 3 "ABORT" 4 "ENABLE" ;
+VAL_ 598 DIR_soptState 0 "INIT" 1 "PSTG_BRING_UP" 2 "ASC_TEST" 3 "CURRENT_TEST" 4 "TEST_PASSED" 5 "TEST_SKIPPED" 6 "TEST_FAILED" 7 "SNA" ;
+VAL_ 598 DIR_adState 0 "STARTUP" 1 "NORMAL" 2 "BACKUP" 3 "FAULTED" ;
+VAL_ 598 DIR_driveModeState 0 "NONDRIVE" 1 "DRIVE" ;
+VAL_ 598 DIR_wasteState 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ON" 3 "STATIONARY" ;
+VAL_ 598 DIR_haltRequest 0 "NONE" 1 "IMMEDIATE" 2 "GRACEFUL" ;
+VAL_ 598 DIR_adDirection 0 "BACKWARD" 1 "FORWARD" ;
+VAL_ 599 DI_uiSpeed 511 "DI_UI_SPEED_SNA" ;
+VAL_ 599 DI_uiSpeedUnits 0 "MPH" 1 "KPH" ;
+VAL_ 599 DI_vehicleSpeed 8191 "SNA" ;
+VAL_ 599 DI_velocityEstimatorState 0 "NOT_INITIALIZED" 1 "WHEELS_NORMAL" 2 "WHEELS_REDUCED" 3 "BACKUP_WHEELS_A" 4 "BACKUP_WHEELS_B" 5 "BACKUP_MOTOR" ;
+VAL_ 605 APP_tcFeatureState 0 "DISABLED" 1 "UNAVAILABLE" 2 "AVAILABLE" 3 "ACTIVE" ;
+VAL_ 605 APP_tcStateMachine 0 "DISABLED" 1 "STANDBY" 2 "AWARE" 3 "WARNING" 4 "STOPPING" 5 "STOPPED" 6 "CONTINUING" ;
+VAL_ 605 APP_tcControlSource 0 "NONE" 1 "MAP" 2 "VISION" 3 "MAP_AND_VISION" ;
+VAL_ 605 APP_tcControlType 0 "INVALID" 1 "UNKNOWN" 2 "STOP_SIGN" 3 "TRAFFIC_LIGHT" 4 "YIELD" 5 "CROSSWALK" 6 "KEEP_CLEAR_ENTER" 7 "KEEP_CLEAR_EXIT" 8 "SUICIDE_LEFT" 9 "PEDESTRIAN_CROSSING" 10 "RAMP_METER" 11 "SPEED_BUMP" 12 "SPEED_HUMP" 13 "TRAFFIC_RULE" 14 "ALL_WAY_STOP_SIGN" 15 "BIKE_MERGE_FROM_LEFT" 16 "BIKE_MERGE_FROM_RIGHT" 17 "NO_STOP" 18 "T_IMPLICIT" 19 "T_IMPLICIT_BY_NAME" 20 "T_IMPLICIT_BY_GEOM" 21 "BEV_JUNCTION" 22 "T_ARM" ;
+VAL_ 605 APP_tcControlDistance 255 "SNA" ;
+VAL_ 605 APP_tcControlLightState 0 "LIGHTSTATE_NONE" 1 "LIGHTSTATE_RED" 2 "LIGHTSTATE_GREEN" 3 "LIGHTSTATE_YELLOW" 4 "LIGHTSTATE_OFF" 5 "LIGHTSTAET_WHITE" 6 "LIGHTSTATE_OTHER" ;
+VAL_ 605 APP_tcContinuationReason 0 "NONE" 1 "GREEN_LIGHT_WITH_CIPV" 2 "USER_INPUT_ON_GREEN" 3 "USER_INPUT_ON_RED" 4 "REQUIRED_DECEL_TOO_HIGH" 5 "VISION_SIGNALS" 6 "AP_ACTIVATED_ON_HARD_STOP" 7 "ASSUMED_DRIVER_STOPPED" 8 "PASSED_STOP" 9 "INVALID_MAP_OR_VISION_CONTROL" 10 "WARNING_TIMEOUT" 11 "CLEAR_TO_GO" 12 "SUMMON_TIMEOUT" 13 "CONTROL_UNAVAILABLE" ;
+VAL_ 605 APP_tcConfirmationType 0 "NONE" 1 "STALK" 2 "PEDAL" ;
+VAL_ 605 APP_tcWarningSuppressionReason 0 "NONE" 1 "FEATURE_DISABLED" 2 "INSUFFICIENT_DATA" 3 "SLOWDOWN_PLANNED" 4 "BELOW_MIN_SPEED" 5 "DRIVER_SLOWING_DOWN" 6 "ASSUMED_YELLOW" 7 "HARD_TURN" 8 "LOCALIZATION_DEGRADED" 9 "PEDAL_OVERRIDE" 10 "CIPV_CONTINUING" 11 "LIGHT_UNASSOCIATED" 12 "WRONG_MAP_TYPE" 13 "STALE_SIGN_DETECTION" 14 "CIPV_DID_NOT_STOP" 15 "AMBIGUOUS_VISION_TYPE" 16 "NO_ASSOCIATED_VISION_LINE" 17 "NOT_SUPPORTED_BY_MEASUREMENTS" 18 "TOO_FAR_FROM_PREDICTED_JUNCTION" ;
+VAL_ 605 APP_tcUnavailableReason 0 "NONE" 1 "MCU_DISABLED" 2 "LOST_MAP_LOCALIZATION" 3 "ROAD_CLASS" 4 "CAMERA_BLINDED" 5 "SUN_GLARE" 6 "ROAD_ESTIMATOR_UNHEALTHY" 7 "GPS_DEGRADED" 8 "CAMERA_BLINDED_ON_ROAD_RESTRICTED" 9 "SUN_GLARE_ON_ROAD_RESTRICTED" ;
+VAL_ 611 VCRIGHT_cdpRequestState 0 "INVALID" 1 "VALID" ;
+VAL_ 611 VCRIGHT_epbmSystemStatusQF 0 "VALID" 1 "INVALID" ;
+VAL_ 611 VCRIGHT_epbmUnitStatus 0 "UNKNOWN" 1 "OPEN" 2 "DYNAMIC" 3 "PARK" 4 "START" 5 "SERVICE" 6 "WINCHMODE" 7 "WINCHMODE_RELEASING" 8 "PARKING" 9 "DYNAMIC_APPLYING" 10 "RELEASING" 11 "SERVICE_RELEASING" 12 "PARK_PENDING" 13 "WINCHMODE_PENDING" 14 "SUMMON" 15 "SUMMON_RELEASING" 16 "SUMMON_PARKING" 17 "EXTERNAL_DYNAMIC" 18 "RELEASING_FOR_EXTERNAL_PARK" 19 "EXTERNAL_PARKING" 20 "DYNAMIC_PARKING" 21 "FREE_ROLL_MODE" 22 "COUNT" ;
+VAL_ 615 DI_trailerDetected 0 "NOT_DETECTED" 1 "DETECTED" ;
+VAL_ 615 DI_relativeTireTreadDepth 4294967264 "SNA" ;
+VAL_ 615 DI_tireFitment 0 "SQUARE" 1 "STAGGERED" 3 "SNA" ;
+VAL_ 615 DI_massConfidence 0 "NOT_CONFIDED" 1 "CONFIDED" ;
+VAL_ 615 DI_massConfidenceRLS 0 "NOT_CONFIDED" 1 "CONFIDED" ;
+VAL_ 637 APS_eacAllow 0 "INHIBIT" 1 "ALLOW" 2 "RESERVED" 3 "SNA" ;
+VAL_ 646 DI_cruiseState 0 "UNAVAILABLE" 1 "STANDBY" 2 "ENABLED" 3 "STANDSTILL" 4 "OVERRIDE" 5 "FAULT" 6 "PRE_FAULT" 7 "PRE_CANCEL" ;
+VAL_ 646 DI_cruiseSetSpeedUnits 0 "MPH" 1 "KPH" ;
+VAL_ 646 DI_autoparkState 0 "UNAVAILABLE" 1 "STANDBY" 2 "STARTED" 3 "ACTIVE" 4 "COMPLETE" 5 "PAUSED" 6 "ABORTED" 7 "RESUMED" 8 "UNPARK_COMPLETE" 9 "SELFPARK_STARTED" 15 "SNA" ;
+VAL_ 646 DI_parkBrakeState 0 "UNAVAILABLE" 1 "RELEASED" 2 "REQUESTED" 3 "APPLIED" 4 "FAULTED" 5 "PANIC_EPB" 6 "PANIC_SKID" 7 "RELEASING" 15 "SNA" ;
+VAL_ 646 DI_aebState 0 "UNAVAILABLE" 1 "STANDBY" 2 "ENABLED" 3 "STANDSTILL" 4 "FAULT" 7 "SNA" ;
+VAL_ 646 DI_vehicleHoldState 0 "UNAVAILABLE" 1 "STANDBY" 2 "BLEND_IN" 3 "STANDSTILL" 4 "BLEND_OUT" 5 "PARK" 6 "FAULT" 7 "INIT" ;
+VAL_ 646 DI_onePedalDrivingState 0 "UNAVAILABLE" 1 "QUICK_BRAKE_RAMP" 2 "STANDBY" 3 "NOMINAL" 4 "MOTOR_BLEND_OUT_PENDING" 5 "MOTOR_BLEND_OUT_ACTIVE" 6 "NO_MOTOR" 7 "MOTOR_BLEND_IN" 8 "NUM_STATES" ;
+VAL_ 646 DI_regenBackfillState 0 "UNAVAILABLE" 1 "STANDBY" 2 "ACTIVE" ;
+VAL_ 659 UI_steeringTuneRequest 0 "COMFORT" 1 "STANDARD" 2 "SPORT" ;
+VAL_ 659 UI_tractionControlMode 0 "NORMAL_SELECTED" 1 "SLIP_START_SELECTED" 2 "DEV_MODE_1_SELECTED" 3 "DEV_MODE_2_SELECTED" 4 "ROLLS_MODE_SELECTED" 5 "DYNO_MODE_SELECTED" 6 "OFFROAD_ASSIST_SELECTED" ;
+VAL_ 659 UI_parkBrakeRequest 0 "IDLE" 1 "PRESSED" 3 "SNA" ;
+VAL_ 659 UI_winchModeRequest 0 "IDLE" 1 "ENTER" 2 "EXIT" ;
+VAL_ 659 UI_zeroSpeedConfirmed 0 "CANCELED" 1 "CONFIRMED" 2 "UNUSED" 3 "SNA" ;
+VAL_ 659 UI_trailerMode 0 "OFF" 1 "ON" ;
+VAL_ 659 UI_distanceUnits 0 "KM" 1 "MILES" ;
+VAL_ 659 UI_accOvertakeEnable 0 "ACC_OVERTAKE_OFF" 1 "ACC_OVERTAKE_ON" 3 "SNA" ;
+VAL_ 659 UI_aebEnable 0 "AEB_OFF" 1 "AEB_ON" 3 "SNA" ;
+VAL_ 659 UI_aesEnable 0 "AES_OFF" 1 "AES_ON" 3 "SNA" ;
+VAL_ 659 UI_ahlbEnable 0 "AHLB_OFF" 1 "AHLB_ON" 3 "SNA" ;
+VAL_ 659 UI_autoLaneChangeEnable 0 "OFF" 1 "ON" 3 "SNA" ;
+VAL_ 659 UI_autoParkRequest 0 "NONE" 1 "PARK_LEFT_PARALLEL" 2 "PARK_LEFT_CROSS" 3 "PARK_RIGHT_PARALLEL" 4 "PARK_RIGHT_CROSS" 5 "PARALLEL_PULL_OUT_TO_LEFT" 6 "PARALLEL_PULL_OUT_TO_RIGHT" 7 "ABORT" 8 "COMPLETE" 9 "SEARCH" 10 "PAUSE" 11 "RESUME" 12 "BEGIN_PARKING" 15 "SNA" ;
+VAL_ 659 UI_bsdEnable 0 "BSD_OFF" 1 "BSD_ON" 3 "SNA" ;
+VAL_ 659 UI_fcwEnable 0 "FCW_OFF" 1 "FCW_ON" 3 "SNA" ;
+VAL_ 659 UI_fcwSensitivity 0 "AEB_SENSITIVITY_EARLY" 1 "AEB_SENSITIVITY_AVERAGE" 2 "AEB_SENSITIVITY_LATE" 3 "SNA" ;
+VAL_ 659 UI_latControlEnable 0 "OFF" 1 "ON" 2 "UNAVAILABLE" 3 "SNA" ;
+VAL_ 659 UI_ldwEnable 0 "NO_HAPTIC" 1 "LDW_TRIGGERS_HAPTIC" 3 "SNA" ;
+VAL_ 659 UI_pedalSafetyEnable 0 "PEDAL_SAFETY_OFF" 1 "PEDAL_SAFETY_ON" 3 "SNA" ;
+VAL_ 659 UI_pedalMap_epas 0 "CHILL" 1 "SPORT" 2 "PERFORMANCE" ;
+VAL_ 659 UI_redLightStopSignEnable 0 "RLSSW_OFF" 1 "RLSSW_ON" 3 "SNA" ;
+VAL_ 659 UI_selfParkTune 15 "SNA" ;
+VAL_ 680 EPBL_systemStatus 0 "UNKNOWN" 1 "RELEASED" 2 "PARKED" 3 "DYNAMIC" 4 "PARKING" 5 "RELEASING" 6 "FAULT" 7 "FAULT_SECURE" 8 "MISMATCH" ;
+VAL_ 680 EPBL_freeRollModeStatus 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ENABLED" ;
+VAL_ 680 EPBL_telltale 0 "LAMP_OFF" 1 "LAMP_RED_ON" 2 "LAMP_AMBER_ON" 3 "LAMP_RED_FLASH" 7 "SNA" ;
+VAL_ 680 EPBL_cdpRequest 0 "NOT_REQUESTED" 1 "REQUESTED" ;
+VAL_ 680 EPBL_brakeDiscWipeRequest 0 "NONE" 1 "LIGHT" 2 "STRONG" 3 "SNA" ;
+VAL_ 697 DAS_setSpeed 4095 "SNA" ;
+VAL_ 697 DAS_accState 0 "ACC_CANCEL_GENERIC" 1 "ACC_BACKWARD" 3 "ACC_HOLD" 4 "ACC_ON" 5 "APC_BACKWARD" 6 "APC_FORWARD" 7 "APC_COMPLETE" 8 "APC_ABORT" 9 "APC_PAUSE" 10 "APC_UNPARK_COMPLETE" 11 "APC_SELFPARK_START" 13 "ACC_CANCEL_GENERIC_SILENT" 15 "FAULT_SNA" ;
+VAL_ 697 DAS_aebEvent 0 "NOT_ACTIVE" 1 "ACTIVE" 2 "FAULT" 3 "SNA" ;
+VAL_ 697 DAS_jerkMin 511 "SNA" ;
+VAL_ 697 DAS_jerkMax 255 "SNA" ;
+VAL_ 697 DAS_accelMin 511 "SNA" ;
+VAL_ 697 DAS_accelMax 511 "SNA" ;
+VAL_ 725 DIF_state 0 "UNAVAILABLE" 1 "STANDBY" 2 "FAULT" 3 "ABORT" 4 "ENABLE" ;
+VAL_ 725 DIF_soptState 0 "INIT" 1 "PSTG_BRING_UP" 2 "ASC_TEST" 3 "CURRENT_TEST" 4 "TEST_PASSED" 5 "TEST_SKIPPED" 6 "TEST_FAILED" 7 "SNA" ;
+VAL_ 725 DIF_adState 0 "STARTUP" 1 "NORMAL" 2 "BACKUP" 3 "FAULTED" ;
+VAL_ 725 DIF_driveModeState 0 "NONDRIVE" 1 "DRIVE" ;
+VAL_ 725 DIF_wasteState 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ON" 3 "STATIONARY" ;
+VAL_ 725 DIF_haltRequest 0 "NONE" 1 "IMMEDIATE" 2 "GRACEFUL" ;
+VAL_ 725 DIF_adDirection 0 "BACKWARD" 1 "FORWARD" ;
+VAL_ 744 EPBR_systemStatus 0 "UNKNOWN" 1 "RELEASED" 2 "PARKED" 3 "DYNAMIC" 4 "PARKING" 5 "RELEASING" 6 "FAULT" 7 "FAULT_SECURE" 8 "MISMATCH" ;
+VAL_ 744 EPBR_freeRollModeStatus 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ENABLED" ;
+VAL_ 744 EPBR_telltale 0 "LAMP_OFF" 1 "LAMP_RED_ON" 2 "LAMP_AMBER_ON" 3 "LAMP_RED_FLASH" 7 "SNA" ;
+VAL_ 744 EPBR_cdpRequest 0 "NOT_REQUESTED" 1 "REQUESTED" ;
+VAL_ 744 EPBR_brakeDiscWipeRequest 0 "NONE" 1 "LIGHT" 2 "STRONG" 3 "SNA" ;
+VAL_ 778 VCLEFT_frontOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "NOT_CONFIGURED" 7 "OCCUPANCY_SNA" ;
+VAL_ 778 VCLEFT_frontBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 778 VCLEFT_rearLeftOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "OCCUPANCY_SNA" ;
+VAL_ 778 VCLEFT_rearCenterOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "OCCUPANCY_SNA" ;
+VAL_ 778 VCLEFT_rearRightOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "OCCUPANCY_SNA" ;
+VAL_ 778 VCLEFT_rearLeftBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 778 VCLEFT_rearCenterBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 778 VCLEFT_seatTrackPosition 0 "FORWARD" 1 "REARWARD" 2 "NOT_CONFIGURED" 3 "FAULTED" 7 "SNA" ;
+VAL_ 785 VCFRONT_AP_driverBuckleStatus 0 "UNBUCKLED" 1 "BUCKLED" ;
+VAL_ 785 VCFRONT_AP_vehiclePowerState 0 "OFF" 1 "CONDITIONING" 2 "ACCESSORY" 3 "DRIVE" ;
+VAL_ 785 VCFRONT_AP_indicatorLeftRequest 0 "OFF" 1 "ACTIVE_LOW" 2 "ACTIVE_HIGH" ;
+VAL_ 785 VCFRONT_AP_indicatorRightRequest 0 "OFF" 1 "ACTIVE_LOW" 2 "ACTIVE_HIGH" ;
+VAL_ 785 VCFRONT_AP_wiperSpeed 0 "SNA" 1 "OFF" 2 "1" 3 "2" 4 "3" 5 "4" 6 "5" 7 "LOW" 8 "HIGH" ;
+VAL_ 785 VCFRONT_AP_wiperState 0 "SNA" 1 "SERVICE" 2 "FAULT" 3 "DELAYED_REST" 4 "PARK" 5 "WASH" 6 "MOMENTARY_WIPE" 7 "INTERMITTENT_HIGH" 8 "INTERMITTENT_LOW" 9 "CONT_FAST" 10 "CONT_SLOW" 11 "INT_AUTO_LOW" 12 "INT_AUTO_HIGH" ;
+VAL_ 785 VCFRONT_AP_radarHeaterState 0 "SNA" 1 "ON" 2 "OFF" 3 "OFF_UNAVAILABLE" 4 "FAULT" ;
+VAL_ 794 VCRIGHT_frontOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "NOT_CONFIGURED" 7 "OCCUPANCY_SNA" ;
+VAL_ 794 VCRIGHT_frontBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 794 VCRIGHT_rearCenterBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 794 VCRIGHT_rearRightBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 794 VCRIGHT_rearRightOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "OCCUPANCY_SNA" ;
+VAL_ 794 VCRIGHT_3RowLeftBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 794 VCRIGHT_3RowRightBuckleStatus 0 "UNLATCHED" 1 "LATCHED" 2 "FAULTED" 3 "SNA" ;
+VAL_ 794 VCRIGHT_3RowLeftOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "OCCUPANCY_SNA" ;
+VAL_ 794 VCRIGHT_3RowRightOccupancyStatus 0 "UNOCCUPIED" 1 "OCCUPIED" 2 "OCCUPANCY_FAULTED" 3 "OCCUPANCY_SNA" ;
+VAL_ 794 VCRIGHT_seatTrackPosition 0 "FORWARD" 1 "REARWARD" 2 "NOT_CONFIGURED" 3 "FAULTED" 7 "SNA" ;
+VAL_ 794 VCRIGHT_occupantClassification 0 "EMPTY" 1 "INHIBIT" 2 "SMALL" 3 "LARGE" 4 "INIT" 5 "NOT_CONFIGURED" 7 "SNA" ;
+VAL_ 794 VCRIGHT_occupantClassificationQF 0 "FAULTED" 1 "NOT_FAULTED" ;
+VAL_ 817 EPAS3P_infoIndex 0 "DEPRECATED_0" 1 "DEPRECATED_1" 2 "DEPRECATED_2" 3 "DEPRECATED_3" 4 "DEPRECATED_4" 5 "DEPRECATED_5" 6 "DEPRECATED_6" 7 "DEPRECATED_7" 8 "DEPRECATED_8" 9 "DEPRECATED_9" 10 "BUILD_HWID_COMPONENTID" 11 "PCBAID_ASSYID_USAGEID" 13 "APP_CRC" 14 "BOOTLOADER_SVN" 15 "BOOTLOADER_CRC" 16 "SUBCOMPONENT" 17 "APP_GITHASH" 18 "BOOTLOADER_GITHASH" 19 "VERSION_DEPRECATED" 20 "UDS_PROTOCOL_BOOTCRC" 22 "VARIANTCRC" 25 "PACKAGE_PN_1_7" 26 "PACKAGE_PN_8_14" 27 "PACKAGE_PN_15_20" 29 "PACKAGE_SN_1_7" 30 "PACKAGE_SN_8_14" 31 "SUBCOMPONENT_GITHASH" 255 "END" ;
+VAL_ 817 EPAS3P_infoBuildType 0 "UNKNOWN_BUILD" 1 "PLATFORM_BUILD" 2 "LOCAL_BUILD" 3 "TRACEABLE_CI_BUILD" 4 "MFG_BUILD" ;
+VAL_ 822 DI_sysDrivePowerRated 511 "SNA" ;
+VAL_ 822 DI_performancePackage 0 "BASE" 1 "PERFORMANCE" 3 "BASE_PLUS" 4 "BASE_2022" 5 "BASE_PLUS_2022" 6 "PERFORMANCE_2022" 7 "SNA" ;
+VAL_ 822 DI_sysRegenPowerRated 255 "SNA" ;
+VAL_ 880 EPAS3P_steeringRackForce 1022 "NOT_IN_SPEC" 1023 "SNA" ;
+VAL_ 880 EPAS3P_steeringFault 0 "NO_FAULT" 1 "FAULT" ;
+VAL_ 880 EPAS3P_steeringReduced 0 "NORMAL_ASSIST" 1 "REDUCED_ASSIST" ;
+VAL_ 880 EPAS3P_internalSASQF 0 "UNDEFINABLE_ACCURACY" 1 "IN_SPEC" ;
+VAL_ 880 EPAS3P_currentTuneMode 0 "DM_COMFORT" 1 "DM_STANDARD" 2 "DM_SPORT" 3 "RWD_COMFORT" 4 "RWD_STANDARD" 5 "RWD_SPORT" ;
+VAL_ 880 EPAS3P_torsionBarTorque 4094 "UNDEFINABLE_DATA" 4095 "SNA" ;
+VAL_ 880 EPAS3P_eacErrorCode 0 "EAC_ERROR_IDLE" 1 "EAC_ERROR_MIN_SPEED" 2 "EAC_ERROR_MAX_SPEED" 3 "EAC_ERROR_HANDS_ON" 4 "EAC_ERROR_TMP_FAULT" 5 "EAR_ERROR_MAX_STEER_DELTA" 6 "EAC_ERROR_HIGH_ANGLE_REQ" 7 "EAC_ERROR_HIGH_ANGLE_RATE_REQ" 8 "EAC_ERROR_HIGH_ANGLE_SAFETY" 9 "EAC_ERROR_HIGH_ANGLE_RATE_SAFETY" 10 "EAC_ERROR_HIGH_MMOT_SAFETY" 11 "EAC_ERROR_HIGH_TORSION_SAFETY" 12 "EAC_ERROR_LOW_ASSIST" 13 "EAC_ERROR_PINION_VEL_DIFF" 14 "EAC_EXTERNAL_MONITOR_INHIBIT" 15 "SNA" ;
+VAL_ 880 EPAS3P_handsOnLevel 0 "0" 1 "1" 2 "2" 3 "3" ;
+VAL_ 880 EPAS3P_eacStatus 0 "INHIBITED" 1 "AVAILABLE" 2 "ACTIVE" 3 "FAULT" 4 "LKA_ELK_AVAILABLE" 5 "LKA_ACTIVE" 6 "ELK_AVAILABLE" 7 "ELK_ACTIVE" ;
+VAL_ 905 DAS_accSpeedLimit 0 "NONE" 1023 "SNA" ;
+VAL_ 905 DAS_pmmObstacleSeverity 0 "NONE" 1 "IMMINENT_REAR" 2 "IMMINENT_FRONT" 3 "BRAKE_REQUEST" 4 "CRASH_REAR" 5 "CRASH_FRONT" 6 "ACCEL_LIMIT" 7 "SNA" ;
+VAL_ 905 DAS_pmmLoggingRequest 0 "FALSE" 1 "TRUE" ;
+VAL_ 905 DAS_activationFailureStatus 0 "IDLE" 1 "FAILED_1" 2 "FAILED_2" ;
+VAL_ 905 DAS_pmmUltrasonicsFaultReason 0 "NO_FAULT" 1 "BLOCKED_FRONT" 2 "BLOCKED_REAR" 3 "BLOCKED_BOTH" 4 "INVALID_MIA" ;
+VAL_ 905 DAS_pmmRadarFaultReason 0 "NO_FAULT" 1 "BLOCKED_FRONT" 2 "INVALID_MIA" ;
+VAL_ 905 DAS_pmmSysFaultReason 0 "NONE" 1 "DAS_DISABLED" 2 "SPEED" 3 "DI_FAULT" 4 "STEERING_ANGLE_RATE" 5 "DISABLED_BY_USER" 6 "ROAD_TYPE" 7 "BRAKE_PEDAL_INHIBIT" ;
+VAL_ 905 DAS_pmmCameraFaultReason 0 "NO_FAULT" 1 "BLOCKED_FRONT" 2 "INVALID_MIA" ;
+VAL_ 905 DAS_ACC_report 0 "TARGET_NONE" 1 "TARGET_CIPV" 2 "TARGET_IN_FRONT_OF_CIPV" 3 "TARGET_MCVL" 4 "TARGET_MCVR" 5 "TARGET_CUTIN" 6 "TARGET_TYPE_STOP_SIGN" 7 "TARGET_TYPE_TRAFFIC_LIGHT" 8 "TARGET_TYPE_IPSO" 9 "TARGET_TYPE_FAULT" 10 "CSA" 11 "LC_HANDS_ON_REQD_STRUCK_OUT" 12 "LC_EXTERNAL_STATE_ABORTING" 13 "LC_EXTERNAL_STATE_ABORTED" 14 "LC_EXTERNAL_STATE_ACTIVE_RESTRICTED" 15 "RADAR_OBJ_ONE" 16 "RADAR_OBJ_TWO" 17 "TARGET_MCP" 18 "FLEET_SPEEDS" 19 "MCVLR_DPP" 20 "MCVLR_IN_PATH" 21 "CIPV_CUTTING_OUT" 22 "RADAR_OBJ_FIVE" 23 "CAMERA_ONLY" 24 "BEHAVIOR_REPORT" ;
+VAL_ 905 DAS_csaState 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ENABLE" 3 "HOLD" ;
+VAL_ 905 DAS_radarTelemetry 0 "IDLE" 1 "NORMAL" 2 "URGENT" ;
+VAL_ 905 DAS_robState 0 "INHIBITED" 1 "MEASURE" 2 "ACTIVE" 3 "MAPLESS" ;
+VAL_ 905 DAS_driverInteractionLevel 0 "DRIVER_INTERACTING" 1 "DRIVER_NOT_INTERACTING" 2 "CONTINUED_DRIVER_NOT_INTERACTING" ;
+VAL_ 905 DAS_ppOffsetDesiredRamp 128 "PP_NO_OFFSET" ;
+VAL_ 905 DAS_longCollisionWarning 0 "NONE" 1 "VEHICLE_UNKNOWN" 2 "PEDESTRIAN" 3 "IPSO" 4 "STOPSIGN_STOPLINE" 5 "TFL_STOPLINE" 6 "VEHICLE_CIPV" 7 "VEHICLE_CUTIN" 8 "VEHICLE_MCVL" 9 "VEHICLE_MCVL2" 10 "VEHICLE_MCVR" 11 "VEHICLE_MCVR2" 12 "VEHICLE_CIPV2" 15 "SNA" ;
+VAL_ 909 ESP_absActive 0 "NOT_ACTIVE" 1 "ACTIVE" ;
+VAL_ 909 ESP_brakeMasterCylPress 1023 "SNA" ;
+VAL_ 909 ESP_brakeMasterCylPressQF 0 "NOT_INITIALIZED" 1 "NORMAL" 2 "FAULTED" 3 "FAULTED2" ;
+VAL_ 914 EPAS3P_matrixIndex 0 "AlertMatrix0" 1 "AlertMatrix1" 2 "AlertMatrix2" ;
+VAL_ 923 DAS_autopilotState 0 "DISABLED" 1 "UNAVAILABLE" 2 "AVAILABLE" 3 "ACTIVE_NOMINAL" 4 "ACTIVE_RESTRICTED" 5 "ACTIVE_NAV" 6 "ACTIVE_FSD" 8 "ABORTING" 9 "ABORTED" 14 "FAULT" 15 "SNA" ;
+VAL_ 923 DAS_blindSpotRearLeft 0 "NO_WARNING" 1 "WARNING_LEVEL_1" 2 "WARNING_LEVEL_2" 3 "SNA" ;
+VAL_ 923 DAS_blindSpotRearRight 0 "NO_WARNING" 1 "WARNING_LEVEL_1" 2 "WARNING_LEVEL_2" 3 "SNA" ;
+VAL_ 923 DAS_fusedSpeedLimit 0 "UNKNOWN_SNA" 31 "NONE" ;
+VAL_ 923 DAS_suppressSpeedWarning 0 "Do_Not_Suppress" 1 "Suppress_Speed_Warning" ;
+VAL_ 923 DAS_visionOnlySpeedLimit 0 "UNKNOWN_SNA" 31 "NONE" ;
+VAL_ 923 DAS_heaterState 0 "OFF_SNA" 1 "ON" ;
+VAL_ 923 DAS_forwardCollisionWarning 0 "NONE" 1 "FORWARD_COLLISION_WARNING" 3 "SNA" ;
+VAL_ 923 DAS_autoparkReady 0 "UNAVAILABLE" 1 "READY" ;
+VAL_ 923 DAS_lssState 0 "FAULT" 1 "LDW" 2 "LKA" 3 "ELK" 4 "MONITOR" 5 "BLINDSPOT" 6 "ABORT" 7 "OFF" ;
+VAL_ 923 DAS_sideCollisionAvoid 0 "NONE" 1 "AVOID_LEFT" 2 "AVOID_RIGHT" 3 "SNA" ;
+VAL_ 923 DAS_sideCollisionWarning 0 "NONE" 1 "WARN_LEFT" 2 "WARN_RIGHT" 3 "WARN_LEFT_RIGHT" ;
+VAL_ 923 DAS_sideCollisionInhibit 0 "NO_INHIBIT" 1 "INHIBIT" ;
+VAL_ 923 DAS_laneDepartureWarning 0 "NONE" 1 "LEFT_WARNING" 2 "RIGHT_WARNING" 3 "LEFT_WARNING_SEVERE" 4 "RIGHT_WARNING_SEVERE" 5 "SNA" ;
+VAL_ 923 DAS_fleetSpeedState 0 "UNAVAILABLE" 1 "AVAILABLE" 2 "ACTIVE" 3 "HOLD" ;
+VAL_ 923 DAS_autopilotHandsOnState 0 "NOT_REQD" 1 "REQD_DETECTED" 2 "REQD_NOT_DETECTED" 3 "REQD_VISUAL" 4 "REQD_CHIME_1" 5 "REQD_CHIME_2" 6 "REQD_SLOWING" 7 "REQD_STRUCK_OUT" 8 "SUSPENDED" 9 "REQD_ESCALATED_CHIME_1" 10 "REQD_ESCALATED_CHIME_2" 15 "SNA" ;
+VAL_ 923 DAS_autoLaneChangeState 0 "UNAVAILABLE_DISABLED" 1 "UNAVAILABLE_NO_LANES" 2 "UNAVAILABLE_SONICS_INVALID" 3 "UNAVAILABLE_TP_FOLLOW" 4 "UNAVAILABLE_EXITING_HIGHWAY" 5 "UNAVAILABLE_VEHICLE_SPEED" 6 "AVAILABLE_ONLY_L" 7 "AVAILABLE_ONLY_R" 8 "AVAILABLE_BOTH" 9 "IN_PROGRESS_L" 10 "IN_PROGRESS_R" 11 "WAITING_FOR_SIDE_OBST_TO_PASS_L" 12 "WAITING_FOR_SIDE_OBST_TO_PASS_R" 13 "WAITING_FOR_FWD_OBST_TO_PASS_L" 14 "WAITING_FOR_FWD_OBST_TO_PASS_R" 15 "ABORT_SIDE_OBSTACLE_PRESENT_L" 16 "ABORT_SIDE_OBSTACLE_PRESENT_R" 17 "ABORT_POOR_VIEW_RANGE" 18 "ABORT_LC_HEALTH_BAD" 19 "ABORT_BLINKER_TURNED_OFF" 20 "ABORT_OTHER_REASON" 21 "UNAVAILABLE_SOLID_LANE_LINE" 22 "BLOCKED_VEH_TTC_L" 23 "BLOCKED_VEH_TTC_AND_USS_L" 24 "BLOCKED_VEH_TTC_R" 25 "BLOCKED_VEH_TTC_AND_USS_R" 26 "BLOCKED_LANE_TYPE_L" 27 "BLOCKED_LANE_TYPE_R" 28 "WAITING_HANDS_ON" 29 "ABORT_TIMEOUT" 30 "ABORT_MISSION_PLAN_INVALID" 31 "SNA" ;
+VAL_ 925 IBST_iBoosterStatus 0 "OFF" 1 "INIT" 2 "FAILURE" 3 "DIAGNOSTIC" 4 "ACTIVE_GOOD_CHECK" 5 "READY" 6 "ACTUATION" ;
+VAL_ 925 IBST_driverBrakeApply 0 "NOT_INIT_OR_OFF" 1 "BRAKES_NOT_APPLIED" 2 "DRIVER_APPLYING_BRAKES" 3 "FAULT" ;
+VAL_ 925 IBST_internalState 0 "NO_MODE_ACTIVE" 1 "PRE_DRIVE_CHECK" 2 "LOCAL_BRAKE_REQUEST" 3 "EXTERNAL_BRAKE_REQUEST" 4 "DIAGNOSTIC" 5 "TRANSITION_TO_IDLE" 6 "POST_DRIVE_CHECK" ;
+VAL_ 977 EPAS3P_resyncStatus 0 "PENDING" 1 "COMPLETE" ;
+VAL_ 1057 VCFRONT_tempCoolantBatInlet 1023 "SNA" ;
+VAL_ 1057 VCFRONT_tempCoolantPTInlet 2047 "SNA" ;
+VAL_ 1057 VCFRONT_coolantLevel 0 "NOT_OK" 1 "FILLED" ;
+VAL_ 1057 VCFRONT_brakeFluidLevel 0 "SNA" 1 "LOW" 2 "NORMAL" ;
+VAL_ 1057 VCFRONT_tempAmbient 0 "SNA" ;
+VAL_ 1057 VCFRONT_washerFluidLevel 0 "SNA" 1 "LOW" 2 "NORMAL" ;
+VAL_ 1057 VCFRONT_tempAmbientFiltered 0 "SNA" ;
+VAL_ 1265 VCFRONT_AP_glassHeaterState 0 "SNA" 1 "ON" 2 "OFF" 3 "OFF_UNAVAILABLE" 4 "FAULT" ;
+VAL_ 1265 VCFRONT_AP_tempAmbientFiltered 0 "SNA" ;
+VAL_ 1265 VCFRONT_AP_thsTemperature 4294967168 "SNA" ;
+VAL_ 1265 VCFRONT_AP_coolantLevel 0 "NOT_OK" 1 "FILLED" ;
+VAL_ 1265 VCFRONT_AP_highBeamLeftStatus 0 "OFF" 1 "ON" 2 "FAULT" 3 "SNA" ;
+VAL_ 1265 VCFRONT_AP_highBeamRightStatus 0 "OFF" 1 "ON" 2 "FAULT" 3 "SNA" ;
+VAL_ 1265 VCFRONT_AP_lowBeamLeftStatus 0 "OFF" 1 "ON" 2 "FAULT" 3 "SNA" ;
+VAL_ 1265 VCFRONT_AP_lowBeamRightStatus 0 "OFF" 1 "ON" 2 "FAULT" 3 "SNA" ;
+VAL_ 1265 VCFRONT_AP_washerFluidLevel 0 "SNA" 1 "LOW" 2 "NORMAL" ;
+VAL_ 1270 DI_doublePedalState 0 "IDLE" 1 "DRIVING" 2 "BRKPRESS_RAMPDOWN" 3 "BRKPRESS_RAMPUP" 4 "BRKPRESS_PREOVR" 5 "BRKOVR_RAMPDOWN" 6 "BRKOVR_RAMPUP" 7 "BRKSTAND_ARMED1" 8 "BRKSTAND_ARMED2" 9 "BRKSTAND_INIT_TRQ_RAMPUP" 10 "BRKSTAND_TRQ_HOLD" 11 "BRKSTAND_LAUNCH" ;
+VAL_ 1270 DI_autopilotRequest 0 "IDLE" 1 "ACTIVATE" ;
+VAL_ 1270 DI_rollPreventionState 0 "UNAVAILABLE" 1 "STANDBY" 2 "READY" 3 "BUILD" 4 "HOLD" 5 "PARK" 6 "FAULT" 7 "INIT" ;
+VAL_ 1426 EPAS3P_alertID 0 "ALERT_DO_NOT_USE_ZERO" 1 "a001_DriverDoorOpen" 2 "a002_DoorOpen" 3 "a003_TrunkOpen" 4 "a004_FrunkOpen" 5 "a005_HeadlightsOnDoorOpen" 6 "a006_RemoteServiceAlert" 7 "a007_SoftPackConfigMismatch" 8 "a008_TouchScreenError" 9 "a009_SquashfsError" 10 "a010_MapsMissing" 11 "a011_IncorrectMap" 12 "a012_NotOnPrivateProperty" 13 "a013_TPMSHardWarning" 14 "a014_TPMSSoftWarning" 15 "a015_TPMSOverPressureWarning" 16 "a016_TPMSTemperatureWarning" 17 "a017_TPMSSystemFault" 18 "a018_SlipStartOn" 19 "a019_ParkBrakeFault" 20 "a020_SteeringReduced" 21 "a021_RearSeatbeltUnbuckled" 22 "a022_ApeFusesEtc" 23 "a023_CellInternetCheckFailed" 24 "a024_WifiInternetCheckFailed" 25 "a025_WifiOnlineCheckFailed" 26 "a026_ModemResetLoopDetected" 27 "a027_AutoSteerMIA" 28 "a028_FrontTrunkPopupClosed" 29 "a029_ModemMIA" 30 "a030_ModemVMCrash" 31 "a031_BrakeFluidLow" 32 "a032_CellModemRecoveryResets" 33 "a033_ApTrialExpired" 34 "a034_WakeupProblem" 35 "a035_AudioWatchdogKernelError" 36 "a036_AudioWatchdogHfpError" 37 "a037_AudioWatchdogXrunStormError" 38 "a038_AudioWatchdogA2bI2cLockupError" 39 "a039_AudioA2bNeedRediscovery" 40 "a040_HomelinkTransmit" 41 "a041_AudioDmesgXrun" 42 "a042_AudioDmesgRtThrottling" 43 "a043_InvalidMapDataOverride" 44 "a044_AudioDmesgDspException" 45 "a045_ECallNeedsService" 46 "a046_BackupCameraStreamError" 47 "a047_CellRoamingDisallowed" 48 "a048_AudioPremiumAmpCheckFailed" 49 "a049_BrakeShiftRequired" 50 "a050_BackupCameraIPUTimeout" 51 "a051_BackupCameraFrameTimeout" 52 "a052_KernelPanicReported" 53 "a053_QtCarExitError" 54 "a054_AudioBoostPowerBad" 55 "a055_ManualECallDisabled" 56 "a056_ManualECallButtonDisconnected" 57 "a057_CellAntennaDisconnected" 58 "a058_GPSAntennaDisconnected" 59 "a059_ECallSpeakerDisconnected" 60 "a060_ECallMicDisconnected" 61 "a061_SIMTestFailed" 62 "a062_ENSTestFailed" 63 "a063_CellularTestFailed" 64 "a064_ModemFirmwareTestFailed" 65 "a065_WiFiRecoveryReset" 66 "a066_GpuHangDetected" 67 "a067_WarnOnI915" 68 "a068_VideoUnexpectedExit" 69 "a069_VideoUDPTimeout" 70 "a070_VideoPipelineWarning" 71 "a071_VideoPipelineError" 72 "a072_ECallAnalogMicFailed" 73 "a073_ECallDigitalMicFailed" 74 "a074_EMMCHangDetected" 75 "a075_BackupCameraInitError" 76 "a076_NumFalseManualECalls" 77 "a077_AudioA2bMicChannelSwap" 78 "a078_DashcamUsbDriveUnmountable" 79 "a079_DashcamUsbDriveFull" 80 "a080_DashcamUsbDriveSlow" 81 "a081_CellModemSearchExpired" 82 "a082_NumModemRebootStuckInECall" 83 "a083_ECallProxyWatchdogTriggered" 84 "a084_SerializerError" 85 "a085_DeserializerError" 86 "a086_TouchEnumerationError" 87 "a087_BmpReset" 88 "a088_CellRemovableSimMissing" 89 "a089_RadioSoftResetError" 90 "a090_RadioPingFailError" 91 "a091_VehicleLinkStall" 92 "a092_updateStarted" 93 "a093_updateEnded" 94 "a094_ModemPowerOnFailure" 95 "a095_CidStorageRunningLow" 96 "a096_VideodPipelineIssueDetected" 97 "a097_AudiodRestarted" 98 "a098_DiskCheckFailure" 99 "a099_eMMCStatusError" 100 "a100_eMMCFTLError" 101 "a101_wifiStackProblem" 102 "a102_A2bDiscoveryFailed" 103 "a103_UsbHubNotEnumerating" 104 "a104_DashcamUsbDriveMissing" 105 "a105_firmwareReinstallRequested" 106 "a106_rebootBackstopTriggered" 107 "a107_DashcamUsbDriveTooBigForVfatFsck" 108 "a108_DashcamUsbDriveGettingFull" 109 "a109_DashcamUsbDriveTooSmall" 110 "a110_DashcamUsbDriveCorrupt" 111 "a111_DashcamUsbDriveWrongPort" 112 "a112_badUSBDevice" 113 "a113_DashcamHasOnboardSentryClips" ;
+VAL_ 1426 EPAS3P_alertState 0 "CLEARED" 1 "SET" ;
+VAL_ 1426 EPAS3P_a148_vehicleSpeed 8191 "SNA" ;
+VAL_ 1426 EPAS3P_a154_vehicleSpeed 8191 "SNA" ;
+VAL_ 1426 EPAS3P_a155_vehicleSpeed 8191 "SNA" ;
+VAL_ 1426 EPAS3P_a156_vehicleSpeed 8191 "SNA" ;
+VAL_ 1618 VCBATT0_infoIndex 0 "DEPRECATED_0" 1 "DEPRECATED_1" 2 "DEPRECATED_2" 3 "DEPRECATED_3" 4 "DEPRECATED_4" 5 "DEPRECATED_5" 6 "DEPRECATED_6" 7 "DEPRECATED_7" 8 "DEPRECATED_8" 9 "DEPRECATED_9" 10 "BUILD_HWID_COMPONENTID" 11 "PCBAID_ASSYID_USAGEID" 13 "APP_CRC" 14 "BOOTLOADER_SVN" 15 "BOOTLOADER_CRC" 16 "SUBCOMPONENT" 17 "APP_GITHASH" 18 "BOOTLOADER_GITHASH" 19 "VERSION_DEPRECATED" 20 "UDS_PROTOCOL_BOOTCRC" 22 "VARIANTCRC" 25 "PACKAGE_PN_1_7" 26 "PACKAGE_PN_8_14" 27 "PACKAGE_PN_15_20" 29 "PACKAGE_SN_1_7" 30 "PACKAGE_SN_8_14" 31 "SUBCOMPONENT_GITHASH" 255 "END" ;
+VAL_ 1618 VCBATT0_infoBuildType 0 "UNKNOWN_BUILD" 1 "PLATFORM_BUILD" 2 "LOCAL_BUILD" 3 "TRACEABLE_CI_BUILD" 4 "MFG_BUILD" ;
+VAL_ 1618 VCBATT0_infoAssemblyId 1 "ASSEMBLY1" 255 "ASSEMBLY_SNA" ;
+VAL_ 1861 DI_counterSteerTarget 0 "INACTIVE" 1 "ACTIVE" 2 "EXPIRED" ;
+VAL_ 1861 DI_turnDirection 0 "RIGHT" 1 "LEFT" ;
+VAL_ 1861 DI_oppositeBuildDirFrontAxle 0 "FALSE" 1 "TRUE" ;
+VAL_ 1861 DI_oppositeBuildDirRearAxle 0 "FALSE" 1 "TRUE" ;
+VAL_ 1861 DI_saturatedEffectiveness 0 "FALSE" 1 "TRUE" ;
+VAL_ 1861 DI_preControlOpposingTurnDir 0 "FALSE" 1 "TRUE" ;
+VAL_ 1869 DI_kTireEstRe 31 "SNA" ;
+VAL_ 2015 UDS_functionalRequestData_0 0 "0" 1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8" 9 "9" 10 "10" 11 "11" 12 "12" 13 "13" 14 "14" 15 "15" 16 "16" 17 "17" 18 "18" 19 "19" 20 "20" 21 "21" 22 "22" 23 "23" 24 "24" 25 "25" 26 "26" 27 "27" 28 "28" 29 "29" 30 "30" 31 "31" ;
+VAL_ 2038 PM_VDCT_turnDirection 0 "RIGHT" 1 "LEFT" ;
+VAL_ 2047 GTW_deliveryStatus 0 "NOT_DELIVERED" 1 "DELIVERED" ;
+VAL_ 2047 GTW_exteriorTrimType 0 "STANDARD_CHROME" 1 "SATIN_BLACK" ;
+VAL_ 2047 GTW_gloveboxUSBType 1 "TSC_USB3_A" ;
+VAL_ 2047 GTW_mapRegion 0 "US" 1 "EU" 2 "NONE" 3 "CN" 4 "AU" 5 "JP" 6 "TW" 7 "KR" 8 "ME" 9 "HK" 10 "MO" 11 "SE" ;
+VAL_ 2047 GTW_frontSeatHeaters 0 "NONE" 1 "KONGSBERG_LOW_POWER" ;
+VAL_ 2047 GTW_cabinPTCHeaterType 1 "NONE" ;
+VAL_ 2047 GTW_coolantPumpType 3 "SM6PHAN_OFFBOARD4PSAN" 5 "DUAL_MIX" ;
+VAL_ 2047 GTW_rearSeatHeaters 0 "NONE" 1 "KONGSBERG_LOW_POWER" ;
+VAL_ 2047 GTW_rightHandDrive 0 "LEFT" 1 "RIGHT" ;
+VAL_ 2047 GTW_eCallAntennaHW 0 "BACKUP_OR_MAIN_ANT" 1 "MAIN_ANT_ONLY" ;
+VAL_ 2047 GTW_performancePackage 0 "BASE" ;
+VAL_ 2047 GTW_rearLightType 0 "NA" 2 "GLOBAL" ;
+VAL_ 2047 GTW_compressorType 2 "41CC_11K" 4 "11K_COP1_ENABLED" ;
+VAL_ 2047 GTW_epblHwType 6 "MANDO_P2" ;
+VAL_ 2047 GTW_homelinkType 0 "NONE" 1 "HOMELINK_V_OPT_2" ;
+VAL_ 2047 GTW_powerSteeringColumn 0 "NOT_INSTALLED" 1 "TK" ;
+VAL_ 2047 GTW_headlamps 1 "PREMIUM" 2 "GLOBAL" ;
+VAL_ 2047 GTW_vdcType 0 "BOSCH_VDC" 1 "TESLA_VDC" ;
+VAL_ 2047 GTW_epbrHwType 6 "MANDO_P2" ;
+VAL_ 2047 GTW_memoryMirrors 0 "NOT_INSTALLED" 1 "SMR" ;
+VAL_ 2047 GTW_twelveVBatteryType 2 "CATL_LI_ION" ;
+VAL_ 2047 GTW_chassisType 0 "S_CHASSIS" 1 "X_CHASSIS" ;
+VAL_ 2047 GTW_powerLiftgateType 0 "NOT_INSTALLED" 1 "TESLA_REV1" ;
+VAL_ 2047 GTW_lumbarECUType 0 "NONE" 1 "ALFMEIER" ;
+VAL_ 2047 GTW_blowerMotorType 0 "SHINANO" 1 "DELTA" ;
+VAL_ 2047 GTW_airSuspension 2 "TESLA_ADAPTIVE" ;
+VAL_ 2047 GTW_immersiveAudio 2 "PREMIUM" ;
+VAL_ 2047 GTW_autopilotCameraType 0 "RCCB_CAMERAS" ;
+VAL_ 2047 GTW_auxParkLamps 1 "NA_PREMIUM" 2 "EU" ;
+VAL_ 2047 GTW_passengerOccupancySensorType 2 "IEE_OCS" ;
+VAL_ 2047 GTW_connectivityPackage 0 "BASE" 1 "PREMIUM" ;
+VAL_ 2047 GTW_frontUsbHubType 0 "2" 4 "NO_DATA" ;
+VAL_ 2047 GTW_plcSupportType 0 "NONE" 1 "ONBOARD_ADAPTER" 2 "NATIVE_CHARGE_PORT" ;
+VAL_ 2047 GTW_gloveboxActuatorType 0 "SOLENOID" 1 "SMA" ;
+VAL_ 2047 GTW_hvacPanelVaneType 0 "PARALLEL_V1" 1 "CONVERGENT_V1" ;
+VAL_ 2047 GTW_badgingVersion 0 "0" 1 "1" ;
+VAL_ 2047 GTW_superManifoldType 0 "TYPE0" 1 "TYPE1" 2 "TYPE2" ;
+VAL_ 2047 GTW_eBuckConfig 0 "NONE" 1 "DEV_BUCK" ;
+VAL_ 2047 GTW_epasType 1 "MANDO_VGR66_GEN3" ;
+VAL_ 2047 GTW_packEnergy 3 "P2" ;
+VAL_ 2047 GTW_tireType 0 "UNKNOWN" 1 "MICHELIN_ALL_SEASON_18" 2 "MICHELIN_SUMMER_18" 3 "HANKOOK_SUMMER_19" 4 "CONTI_ALL_SEASON_19" 5 "MICHELIN_SUMMER_20" 17 "GOODYEAR_ALL_SEASON_20" 18 "PIRELLI_SUMMER_21" 19 "MICHELIN_ALL_SEASON_21" 20 "PIRELLI_SUMMER_19" 21 "PIRELLI_SUMMER_20" 22 "MICHELIN_SUMMER_21" 23 "CONTI_ALL_SEASON_20" 24 "CONTI_SUMMER_22" 25 "PIRELLI_ALL_SEASON_22" 26 "HANKOOK_ALL_SEASON_18" ;
+VAL_ 2047 GTW_steeringHeaterEnabled 0 "DISABLED" 1 "ENABLED" ;
+VAL_ 2047 GTW_activeHighBeam 0 "NOT_ACTIVE" 1 "ACTIVE" ;
+VAL_ 2047 GTW_airbagCutoffSwitch 0 "DISABLED" 1 "ENABLED" ;
+VAL_ 2047 GTW_frontFogLamps 0 "NOT_INSTALLED" 1 "INSTALLED" ;
+VAL_ 2047 GTW_intrusionSensorType 0 "NOT_INSTALLED" 1 "VODAFONE" ;
+VAL_ 2047 GTW_audioType 1 "PREMIUM" ;
+VAL_ 2047 GTW_frontSeatReclinerHardware 0 "STANDARD_RANGE" 1 "RIGHT_SEAT_REDUCED_RANGE" 2 "LEFT_SEAT_REDUCED_RANGE" 3 "LEFT_RIGHT_SEAT_REDUCED_RANGE" ;
+VAL_ 2047 GTW_spoilerType 0 "NOT_INSTALLED" 1 "PASSIVE" ;
+VAL_ 2047 GTW_hornType 0 "TRUMPET" 1 "EXT_SPEAKER_V2" ;
+VAL_ 2047 GTW_roofGlassType 0 "TSA3_PET" 1 "TSA5_NOPET" ;
+VAL_ 2047 GTW_brakeLineSwitchType 0 "DI_VC_SHARED" 1 "VC_ONLY" ;
+VAL_ 2047 GTW_interiorCameraType 1 "VD6763" ;
+VAL_ 2047 GTW_rearFogLamps 0 "NOT_INSTALLED" 1 "INSTALLED" ;
+VAL_ 2047 GTW_dasHw 3 "PARKER_PASCAL_2_5" 4 "TESLA_AP3" ;
+VAL_ 2047 GTW_eCallEnabled 0 "DISABLED" 1 "ENABLED_OHC_SOS" 2 "ENABLED_UI_SOS" ;
+VAL_ 2047 GTW_espValveType 0 "UNKNOWN" 1 "VALVE_TYPE_1" 2 "VALVE_TYPE_2" ;
+VAL_ 2047 GTW_roofType 1 "FIXED_GLASS" ;
+VAL_ 2047 GTW_autopilot 0 "NONE" 1 "HIGHWAY" 2 "ENHANCED" 3 "SELF_DRIVING" 4 "BASIC" ;
+VAL_ 2047 GTW_parkAssistECUType 0 "VALEO" 1 "TESLA" ;
+VAL_ 2047 GTW_softRange 0 "STANDARD" ;
+VAL_ 2047 GTW_steeringColumnMotorType 0 "BOSCH" 1 "JE" ;
+VAL_ 2047 GTW_brakeHWType 4 "D380_MANDO1_43_D365" 5 "D395_MANDO1_43_D365" ;
+VAL_ 2047 GTW_passengerAirbagType 0 "FULL_SUPPRESSION" 1 "SAFETY_VENT" 2 "EUROW" ;
+VAL_ 2047 GTW_interiorCamFanType 1 "SLEEVE" 2 "FDB" ;
+VAL_ 2047 GTW_refrigerantType 0 "Default" 1 "R134A" 2 "R1234YF" ;
+VAL_ 2047 GTW_superchargingAccess 0 "NOT_ALLOWED" 1 "ALLOWED" 2 "PAY_AS_YOU_GO" ;
+VAL_ 2047 GTW_forwardRadarHw 0 "CONTI_ARS410" 2 "NONE" ;
+VAL_ 2047 GTW_exteriorColor 0 "RED_MULTICOAT" 1 "SOLID_BLACK" 3 "MIDNIGHT_SILVER" 5 "DEEP_BLUE" 6 "PEARL_WHITE" ;
+VAL_ 2047 GTW_frontSeatType 0 "BASE_TESLA" 1 "PREMIUM_TESLA" 2 "PREMIUM_L_YANFENG_R_TESLA" 3 "PREMIUM_L_TESLA_R_YANFENG" 4 "PREMIUM_YANFENG" ;
+VAL_ 2047 GTW_refrigACLineType 0 "UNLIMITED" 1 "SAAA_LIMITED" 2 "CONTI_LIMITED" ;
+VAL_ 2047 GTW_restraintsHardwareType 101 "MXP2" 104 "MXP2_YOKE" 171 "MSP2" 174 "MSP2_YOKE" ;
+VAL_ 2047 GTW_wheelType 25 "CARDENIO_19" 26 "NEW_TURBINE_22_BLACK" 28 "CYBERSTREAM_20" 29 "ARACHNID_21" ;
+VAL_ 2047 GTW_efficiencyPackage 0 "DEFAULT" ;
+VAL_ 2047 GTW_tpmsType 1 "TESLA_BLE" ;
+VAL_ 2047 GTW_refrigFilterType 0 "UNBLOCKED" 1 "BLOCKED_V1" ;
+VAL_ 2047 GTW_diBurnInType 0 "NONE" 1 "ENABLED_V1" ;
+VAL_ 2047 GTW_pedestrianWarningSound 0 "NONE" 1 "SPEAKER" 2 "EXT_SPEAKER_V2" ;
+VAL_ 2047 GTW_wirelessPhoneChargerType 2 "FRONT_AND_REAR_LIN" ;
+VAL_ 2047 GTW_ethernetTunerType 0 "HARMAN" 1 "NONE" ;
+VAL_ 2047 GTW_steeringColumnUJointType 0 "B_SAMPLE_PHASING" 1 "C_SAMPLE_PHASING" ;
+VAL_ 2047 GTW_bPillarNFCParam 0 "3" 1 "Y" ;
+VAL_ 2047 GTW_drivetrainType 1 "AWD" 2 "AWD_DUAL_REAR" ;
+VAL_ 2047 GTW_interiorLighting 0 "BASE" 1 "PREMIUM" ;
+VAL_ 2047 GTW_towPackage 0 "NONE" 1 "TESLA_REV1" ;
+VAL_ 2047 GTW_headlightLevelerType 0 "NONE" 1 "GEN1" 2 "VIRTUAL_PITCH_SENSOR" ;
+VAL_ 2047 GTW_interiorTrimType 0 "BLACK" 1 "WHITE" 4 "WALNUT_CREAM" 5 "WALNUT_WHITE" 6 "EBONY_BLACK" 7 "CARBON_CREAM" 8 "CARBON_WHITE" 9 "CARBON_BLACK" ;
+VAL_ 2047 GTW_radarHeaterType 0 "NONE" 3 "MODELS_BACKER_THIN_3M" 4 "MODELX_BACKER_THIN_3M" ;
+VAL_ 2047 GTW_steeringHeaterType 0 "NONE" 4 "ZF_ROUND" 5 "ZF_YOKE" ;
+VAL_ 2047 GTW_numberHVILNodes 0 "0" 2 "2" 3 "3" ;
