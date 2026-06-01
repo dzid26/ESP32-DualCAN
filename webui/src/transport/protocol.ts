@@ -275,10 +275,7 @@ export class Protocol {
           continue;
         }
         const p = this.pending.get(resp.id);
-        if (!p) {
-          console.warn('Unsolicited response', resp);
-          continue;
-        }
+        if (!p) continue;
         this.pending.delete(resp.id);
         if (resp.ok) p.resolve(resp.result ?? null);
         else p.reject(new Error(resp.error || 'Request failed'));
