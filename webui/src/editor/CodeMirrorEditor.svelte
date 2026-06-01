@@ -10,7 +10,7 @@
   /* Bound value uses Svelte 5 $bindable() so the parent can write the editor
    * contents (e.g. when loading a script from the device or an example) and
    * also receive every keystroke. */
-  let { value = $bindable(''), language = 'berry', height = '380px', onSave, scrollTop = $bindable(0), readOnly = false, gotoLine = $bindable<number | null>(null), autoFocus = false }: {
+  let { value = $bindable(''), language = 'berry', height = '380px', onSave, scrollTop = $bindable(0), readOnly = false, gotoLine = $bindable<number | null>(null), autoFocus = false, cursorLine = $bindable(0) }: {
     value: string;
     language?: string;
     height?: string;
@@ -23,6 +23,9 @@
     gotoLine?: number | null;
     /** Focus the editor when this is true. Useful for auto-focusing after toggle. */
     autoFocus?: boolean;
+    /** Two-way: reports the 1-based cursor line on user interaction; setting it
+     *  moves the cursor to that line without scrolling. */
+    cursorLine?: number;
   } = $props();
 
   let host: HTMLDivElement | undefined = $state();
@@ -54,13 +57,17 @@
             ...searchKeymap,
           ]),
           EditorView.updateListener.of(update => {
-            if (!update.docChanged) return;
-            if (suppressNextChange) {
-              suppressNextChange = false;
-              return;
+            if (update.docChanged) {
+              if (suppressNextChange) {
+                suppressNextChange = false;
+                return;
+              }
+              const next = update.state.doc.toString();
+              if (next !== value) value = next;
             }
-            const next = update.state.doc.toString();
-            if (next !== value) value = next;
+            if (update.selectionSet) {
+              cursorLine = update.state.doc.lineAt(update.state.selection.main.from).number;
+            }
           }),
         ],
       }),
@@ -126,6 +133,18 @@
     void viewReady;
     if (!view || !autoFocus) return;
     view.focus();
+  });
+
+  /* Move cursor to cursorLine when the parent sets it (no scroll). */
+  $effect(() => {
+    void viewReady;
+    if (!view || cursorLine === 0) return;
+    const cur = view.state.doc.lineAt(view.state.selection.main.from).number;
+    if (cursorLine === cur) return;
+    const line = view.state.doc.line(Math.min(cursorLine, view.state.doc.lines));
+    view.dispatch({
+      selection: EditorSelection.single(line.to),
+    });
   });
 
   onDestroy(() => {

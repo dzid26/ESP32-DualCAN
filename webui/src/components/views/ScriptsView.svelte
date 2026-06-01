@@ -38,6 +38,8 @@
   let editorPanelEl: HTMLElement | undefined;
   let gotoLine = $state<number | null>(null);
   let preprocessedGotoLine = $state<number | null>(null);
+  let sourceCursorLine = $state(0);
+  let preprocessedCursorLine = $state(0);
 
   $effect(() => {
     const mq = window.matchMedia('(max-width: 720px)');
@@ -306,6 +308,15 @@
     }
   });
 
+  /* Sync cursor line between .be and .bep editors on toggle (no scroll). */
+  $effect(() => {
+    if (showPreprocessed) {
+      if (sourceCursorLine > 0) preprocessedCursorLine = sourceCursorLine;
+    } else {
+      if (preprocessedCursorLine > 0) sourceCursorLine = preprocessedCursorLine;
+    }
+  });
+
   function normalizeScriptFilename(filename: string): string {
     if (!filename.includes('.')) return filename + '.be';
     return filename;
@@ -474,10 +485,10 @@
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
         <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;display:flex">
-          <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} />
+          <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
         </div>
         <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;display:flex">
-          <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} />
+          <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} bind:cursorLine={sourceCursorLine} />
         </div>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
