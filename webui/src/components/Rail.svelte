@@ -54,6 +54,7 @@
         <button
           class={'railItem' + (app.view === item.id ? ' railItem--active' : '')}
           onclick={() => app.setView(item.id)}
+          title={item.label}
         >
           <Icon name={item.icon} size={20} />
           <span class="railItem__label">{item.label}</span>
