@@ -41,6 +41,8 @@ const VALID_VIEWS = new Set<string>([
 
 function loadView(): ViewId {
   try {
+    const hash = location.hash.slice(1);
+    if (hash && VALID_VIEWS.has(hash)) return hash as ViewId;
     const v = localStorage.getItem('dc-view');
     if (v === 'dashboard') return 'events'; // renamed
     if (v && VALID_VIEWS.has(v)) return v as ViewId;
@@ -49,7 +51,10 @@ function loadView(): ViewId {
 }
 
 function saveView(v: ViewId): void {
-  try { localStorage.setItem('dc-view', v); } catch { /* ignore */ }
+  try {
+    localStorage.setItem('dc-view', v);
+    if (location.hash !== '#' + v) history.replaceState(null, '', '#' + v);
+  } catch { /* ignore */ }
 }
 
 function loadLastScriptFilename(): string | null {
@@ -273,6 +278,10 @@ class AppState {
       window.addEventListener('appinstalled', () => {
         this.installPrompt = null;
         this.isInstalled = true;
+      });
+      window.addEventListener('hashchange', () => {
+        const hash = location.hash.slice(1);
+        if (hash && VALID_VIEWS.has(hash)) this.view = hash as ViewId;
       });
     }
   }
