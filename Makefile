@@ -7,9 +7,13 @@
 #   make test-device   flash + smoke the connected ESP32-C6 (panic capture)
 #   make test-all      everything except test-device
 
-.PHONY: test test-fw test-ui test-device test-all
+.PHONY: test test-fw test-ui check-ui test-device test-all
 
 test: test-fw test-ui
+
+check-ui:
+	@echo "==> webui type check"
+	cd webui && npm run check
 
 test-fw:
 	@echo "==> firmware native tests"

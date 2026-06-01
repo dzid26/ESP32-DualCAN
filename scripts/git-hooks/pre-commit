@@ -42,6 +42,12 @@ if [ "$run_fw" = 1 ]; then
 fi
 
 if [ "$run_ui" = 1 ]; then
+  echo "pre-commit: running webui type check…"
+  if ! make -s check-ui; then
+    echo
+    echo "pre-commit: webui type check failed — aborting commit. (use --no-verify to override)"
+    exit 1
+  fi
   echo "pre-commit: running webui tests…"
   if ! make -s test-ui; then
     echo
