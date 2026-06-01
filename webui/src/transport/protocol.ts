@@ -103,6 +103,15 @@ export class Protocol {
     transport.onReceive((data) => this.onRx(data));
   }
 
+  /** Clear all state after a disconnect. Rejects all pending requests. */
+  reset(): void {
+    this.rxBuf = new Uint8Array(0);
+    for (const [id, p] of this.pending) {
+      this.pending.delete(id);
+      p.reject(new Error('Disconnected'));
+    }
+  }
+
   /** Build a 4-byte little-endian length+type header. */
   private buildHeader(payloadLen: number, type: number): Uint8Array {
     if ((payloadLen & 0x0fffffff) !== payloadLen) {

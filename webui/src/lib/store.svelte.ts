@@ -315,6 +315,7 @@ class AppState {
     this.connecting = false;
     this.deviceName = c ? this.ble.deviceName : null;
     if (!c) {
+      this.proto.reset();
       this.fwVersion = null;
       this.protoMismatch = null;
       this.simulation = false;
