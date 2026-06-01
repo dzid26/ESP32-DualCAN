@@ -116,25 +116,33 @@
 
   async function enable(filename: string): Promise<void> {
     busy = true;
+    scripts = scripts.map(s => s.filename === filename
+      ? { ...s, enabled: true } : s);
     try {
       await app.proto.enableScript(filename);
       scripts = scripts.map(s => s.filename === filename
         ? { ...s, enabled: true, errored: false } : s);
       app.pushLog(`scripts: enabled ${filename}`, 'info', 'scripts');
     } catch (e) {
-      app.pushLog(`scripts: enable failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
+      const msg = e instanceof Error ? e.message : String(e);
+      app.pushLog(`scripts: enable failed — ${msg}`, 'error', 'scripts');
+      scripts = scripts.map(s => s.filename === filename
+        ? { ...s, enabled: false, errored: true, error: msg } : s);
     } finally { busy = false; }
   }
 
   async function disable(filename: string): Promise<void> {
     busy = true;
+    scripts = scripts.map(s => s.filename === filename
+      ? { ...s, enabled: false } : s);
     try {
       await app.proto.disableScript(filename);
-      scripts = scripts.map(s => s.filename === filename
-        ? { ...s, enabled: false } : s);
       app.pushLog(`scripts: disabled ${filename}`, 'info', 'scripts');
     } catch (e) {
-      app.pushLog(`scripts: disable failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
+      const msg = e instanceof Error ? e.message : String(e);
+      app.pushLog(`scripts: disable failed — ${msg}`, 'error', 'scripts');
+      scripts = scripts.map(s => s.filename === filename
+        ? { ...s, enabled: true, errored: false } : s);
     } finally { busy = false; }
   }
 

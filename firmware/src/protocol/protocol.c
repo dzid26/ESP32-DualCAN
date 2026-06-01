@@ -369,6 +369,14 @@ static void handle_script_write(int id, cJSON *req)
         script_loader_disable(s_loader, idx);
     }
     int n = script_loader_scan(s_loader, s_loader->vm);
+    /* Clear stale error state — the code just changed, any previous error
+     * is no longer meaningful.  The next enable attempt will produce a fresh
+     * result. */
+    int new_idx = find_script_idx(fn->valuestring);
+    if (new_idx >= 0) {
+        s_loader->scripts[new_idx].errored = false;
+        s_loader->scripts[new_idx].error[0] = '\0';
+    }
     ESP_LOGI(TAG, "script.write %s: %d scripts total", fn->valuestring, n);
     send_ok(id, NULL);
 }
