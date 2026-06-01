@@ -390,8 +390,12 @@ class AppState {
       const r = await this.proto.getSecret('anthropic');
       if (r.value) this.setAiKey(r.value);
     } catch { /* key not set or firmware too old */ }
-    /* Apply persisted log level; firmware boots at its compile-time default. */
-    this.proto.setLogLevel(this.logLevel).catch(() => { /* firmware too old or busy */ });
+    /* Sync the log level dropdown to the firmware's actual level, then
+     * re-apply any stored preference from a previous session. */
+    const storedLevel = this.logLevel;
+    try { const r = await this.proto.getLogLevel(); this.logLevel = r.level; }
+    catch { /* firmware too old — keep stored default */ }
+    // this.setLogLevel(storedLevel);
     this.refreshWifiIp();
   }
 

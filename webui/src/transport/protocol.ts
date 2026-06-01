@@ -379,6 +379,11 @@ export class Protocol {
     return this.call('sim.set', params);
   }
 
+  /** Read the firmware's current runtime log level for tag "*". */
+  getLogLevel(): Promise<{ level: LogLevel }> {
+    return this.call('log.get_level');
+  }
+
   /** Set runtime log level. Tag "*" (default) applies to every tag.
    * Levels above firmware's CONFIG_LOG_MAXIMUM_LEVEL are accepted but
    * have nothing to emit (those strings are compile-time stripped). */

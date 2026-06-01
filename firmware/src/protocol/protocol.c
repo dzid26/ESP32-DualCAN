@@ -803,12 +803,25 @@ static void handle_log_set_level(int id, cJSON *req)
     const cJSON *tag_j = cJSON_GetObjectItem(req, "tag");
     const char *tag = (cJSON_IsString(tag_j) && tag_j->valuestring[0]) ? tag_j->valuestring : "*";
     esp_log_level_set(tag, level);
-    /* esp_log_level_set("*", …) clears all per-tag overrides in ESP-IDF v5.
-     * Re-apply suppressions for components that log from within their own
-     * send/notify path; without this they flood the hook and overflow the stack. */
     if (strcmp(tag, "*") == 0)
-        esp_log_level_set("NimBLE", ESP_LOG_WARN);
+        // keep ble logs below debug to avoid recursion / flooding the transport
+        esp_log_level_set("ble", ESP_LOG_WARN);
     send_ok(id, NULL);
+}
+
+static void handle_log_get_level(int id)
+{
+    esp_log_level_t level = esp_log_level_get("*");
+    const char *lvl_str =
+        level <= ESP_LOG_NONE    ? "none"    :
+        level == ESP_LOG_ERROR   ? "error"   :
+        level == ESP_LOG_WARN    ? "warn"    :
+        level == ESP_LOG_INFO    ? "info"    :
+        level == ESP_LOG_DEBUG   ? "debug"   :
+        level >= ESP_LOG_VERBOSE ? "verbose" : "info";
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddStringToObject(result, "level", lvl_str);
+    send_ok(id, result);
 }
 
 static void handle_sim_set(int id, cJSON *req)
@@ -903,7 +916,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     }
 
     const char *op_s = op->valuestring;
-    ESP_LOGI(TAG, "op=%s id=%d", op_s, id);
+    ESP_LOGD(TAG, "op=%s id=%d", op_s, id);
 
     if (strcmp(op_s, "ping") == 0)                handle_ping(id);
     else if (strcmp(op_s, "system.info") == 0)    handle_system_info(id);
@@ -923,6 +936,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "bus.set_bitrate") == 0) handle_bus_set_bitrate(id, req);
     else if (strcmp(op_s, "sim.set") == 0)         handle_sim_set(id, req);
     else if (strcmp(op_s, "log.set_level") == 0)   handle_log_set_level(id, req);
+    else if (strcmp(op_s, "log.get_level") == 0)   handle_log_get_level(id);
     else if (strcmp(op_s, "tesla.status") == 0)        handle_tesla_status(id);
     else if (strcmp(op_s, "tesla.gen_key") == 0)       handle_tesla_gen_key(id);
     else if (strcmp(op_s, "tesla.reset") == 0)         handle_tesla_reset(id);

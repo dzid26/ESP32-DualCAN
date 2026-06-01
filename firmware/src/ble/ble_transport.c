@@ -246,6 +246,11 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
                 } else {
                     ESP_LOGI(TAG, "connected (handle=%d) — authorized", new_h);
                     s_conn_authorized = true;
+                    /* Clip the transport's own ESP_LOGD gap-event traces while
+                     * a BLE client is connected — they serve no purpose over
+                     * the link and just pollute the log hook / push frame queue.
+                     * The set_level handler re-applies this on tag="*" changes. */
+                    esp_log_level_set("ble", ESP_LOG_WARN);
                     if (s_pairing_open) {
                         /* Trigger OS pairing dialog on the central (Android bonds properly;
                          * BlueZ/Chrome ignores it gracefully — connection still works). */
@@ -403,9 +408,6 @@ int dorky_ble_init(ble_request_cb_t on_request, void *ctx)
     }
 
     ble_store_config_init();
-
-    /* NimBLE logs a line per GATT notify at DEBUG level — too noisy in normal use. */
-    esp_log_level_set("NimBLE", ESP_LOG_WARN);
 
     ble_hs_cfg.reset_cb = on_reset;
     ble_hs_cfg.sync_cb  = on_sync;
