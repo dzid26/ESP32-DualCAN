@@ -12,6 +12,7 @@
   let busy = $state(false);
   let openMessages = $state(new Set<number>());
   let busDbc = $state.raw<Record<number, { messages: Message[]; loadedFrom: string }>>({});
+  let loadedByPicker = $state(new Set<number>());
 
   function publishSignals(): void {
     const flat: { name: string; message: string; msgId: number; sigIndex: number }[] = [];
@@ -97,6 +98,7 @@
       const next = { ...busDbc };
       for (const r of results) next[r.bus] = { messages: r.messages, loadedFrom: r.label };
       busDbc = next;
+      loadedByPicker = new Set([...loadedByPicker, ...results.map(r => r.bus)]);
       publishSignals();
       bus = Math.min(...Object.keys(entry).map(Number));
     } catch (e) {
@@ -144,6 +146,18 @@
     if (allLoaded) return;
     if (busy) return;
     void loadCustomDbc(entry);
+  });
+
+  /** Unload picker-loaded DBC when car selection is cleared. */
+  $effect(() => {
+    if (app.car !== null) return;
+    if (loadedByPicker.size === 0) return;
+    const next = { ...busDbc };
+    for (const b of loadedByPicker) delete next[b];
+    busDbc = next;
+    loadedByPicker = new Set();
+    publishSignals();
+    status = 'No DBC loaded';
   });
 
   function hex3(n: number): string {
