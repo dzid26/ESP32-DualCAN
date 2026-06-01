@@ -101,9 +101,7 @@
     } catch { /* ignore */ }
   }
 
-  $effect(() => {
-    if (dbcStore.lastUploadedBus >= 0) busInput = dbcStore.lastUploadedBus;
-  });
+  busInput = 0;
 
   async function seedValue(name: string, bus: number): Promise<void> {
     try {

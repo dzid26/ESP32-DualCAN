@@ -267,7 +267,7 @@ function findDbcCall(text: string): DbcCallInfo | null {
   }
   const argIndex = commaCount;
 
-  return { fnName, argIndex, argValues, bus: dbcStore.lastUploadedBus };
+  return { fnName, argIndex, argValues, bus: 0 };
 }
 
 export function completeBerry(context: CompletionContext): CompletionResult | null {
@@ -281,8 +281,7 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
 
   if (ctx === 'comment') {
     if (wordEmpty && !context.explicit) return null;
-    const bus = dbcStore.lastUploadedBus;
-    const busHint = bus >= 0 ? `bus ${bus}` : '';
+    const busHint = `bus 0`;
     const prefix = textBefore.slice(word.from);
     const opts: Completion[] = [
       ...dbcSigCompletions(prefix, true, busHint),
@@ -313,8 +312,7 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
 
   if (atStart) {
     opts.push(...berryCompletions, ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
-    const bus = dbcStore.lastUploadedBus;
-    const busHint = bus >= 0 ? `bus ${bus}` : '';
+    const busHint = `bus 0`;
     const prefix = textBefore.slice(word.from);
     opts.push(...dbcSigCompletions(prefix, true, busHint).map(o => ({ ...o, boost: 5 })));
     opts.push(...dbcMsgCompletions(prefix, true, busHint).map(o => ({ ...o, boost: 5 })));

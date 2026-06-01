@@ -26,7 +26,7 @@
     if (!app.connected || !dbcStore.signals.length) return;
     snapBusy = true;
     snapError = null;
-    const bus = dbcStore.lastUploadedBus >= 0 ? dbcStore.lastUploadedBus : 0;
+    const bus = 0;
     try {
       const results = await Promise.all(
         dbcStore.signals.map(async (s) => {
@@ -73,7 +73,7 @@
     capturing = false;
     captureStatus = `armed — waiting for ${trigSignal} ${trigCond} ${trigValue}`;
     captureBuffer = [];
-    const bus = dbcStore.lastUploadedBus >= 0 ? dbcStore.lastUploadedBus : 0;
+    const bus = 0;
 
     pollTimer = setInterval(async () => {
       if (!app.connected) { disarm(); return; }

@@ -291,13 +291,14 @@
     const isBep = target.filename.endsWith('.bep');
     const fn = target.filename.replace(/\.bep$/, '.be');
 
+    const targetLine = target.line;
     function doScroll() {
       if (isBep) {
         showPreprocessed = true;
-        setTimeout(() => { preprocessedGotoLine = target.line; }, 0);
+        setTimeout(() => { preprocessedGotoLine = targetLine; }, 0);
       } else {
         showPreprocessed = false;
-        gotoLine = target.line;
+        gotoLine = targetLine;
       }
     }
 
@@ -470,7 +471,7 @@
             onclick={() => { showPreprocessed = !showPreprocessed; }}
             disabled={selFn === null || dirty}
             title="Toggle between source and preprocessed view">
-            <Icon name="eye" size={13} />Toggle
+            <Icon name="search" size={13} />Toggle
           </button>
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save & process
