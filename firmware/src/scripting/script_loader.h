@@ -29,7 +29,8 @@ typedef struct {
  * Does NOT load or run any scripts. */
 int script_loader_scan(script_loader_t *loader, bvm *vm);
 
-/* Enable a script by index: reads the file, executes it (which defines
+/* Enable a script by index: reads the preprocessed runtime file when present,
+ * otherwise the source file, executes it (which defines
  * functions), then calls setup() if it exists. */
 int script_loader_enable(script_loader_t *loader, int idx);
 
@@ -37,8 +38,15 @@ int script_loader_enable(script_loader_t *loader, int idx);
  * clears the script's registrations. */
 int script_loader_disable(script_loader_t *loader, int idx);
 
-/* Write a script file to SCRIPT_DIR. Creates the file if it doesn't exist. */
+/* Write a script source file to SCRIPT_DIR. Creates the file if it doesn't exist. */
 int script_loader_write(const char *filename, const char *code, size_t len);
+
+/* Write the preprocessed runtime source for a script. */
+int script_loader_write_runtime(const char *filename, const char *code, size_t len);
+
+/* Delete the preprocessed runtime file (.bep) for a script, if it exists.
+ * The source file (.be) is left untouched. */
+void script_loader_delete_runtime(const char *filename);
 
 /* Read a script file from SCRIPT_DIR into a caller-provided buffer.
  * Returns the number of bytes read, or -1 on error. */

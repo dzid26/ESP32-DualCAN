@@ -1,25 +1,33 @@
 /**
  * Reactive store for the currently parsed DBC, shared between the DBC view
- * (which loads it) and the Dashboard view (which autocompletes signals from
- * it). Holds the parsed signal list along with the bus the user last
- * uploaded it to, so Signal Watch can default to the right bus.
+ * (which loads it) and the Dashboard / Scripts views that use it for
+ * autocomplete and preprocessing.
  */
+
+import type { Message } from './dbc/parser';
 
 interface DbcSignalRef {
   name: string;
   message: string;     // owning message name, used for grouping
   msgId: number;
+  sigIndex: number;    // index within the owning message
+}
+
+interface DbcMessageRef {
+  name: string;
+  id: number;
 }
 
 class DbcStore {
-  signals = $state<DbcSignalRef[]>([]);
-  /** Bus the most recent compile-and-upload targeted (-1 if never uploaded). */
-  lastUploadedBus = $state<number>(-1);
-
+  signals = $state.raw<DbcSignalRef[]>([]);
+  messages = $state.raw<DbcMessageRef[]>([]);
+  /** Full parsed messages per bus, including signal metadata (startBit, bitLength, etc.). */
+  fullMessages = $state.raw<Record<number, Message[]>>({});
   setSignals(signals: DbcSignalRef[]) { this.signals = signals; }
-  setLastBus(bus: number)             { this.lastUploadedBus = bus; }
-  clear() { this.signals = []; this.lastUploadedBus = -1; }
+  setMessages(messages: DbcMessageRef[]) { this.messages = messages; }
+  setFullMessages(busMessages: Record<number, Message[]>) { this.fullMessages = busMessages; }
+  clear() { this.signals = []; this.messages = []; this.fullMessages = {}; }
 }
 
 export const dbcStore = new DbcStore();
-export type { DbcSignalRef };
+export type { DbcMessageRef, DbcSignalRef };

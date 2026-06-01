@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "can/can.h"
-#include "can/can_driver.h"
+#include "can/msg_codec.h"
 #include "led/led_rgb.h"
 #include "storage/state.h"
 #include "esp_log.h"
@@ -13,7 +13,6 @@
 static const char *TAG_BB = "berry";
 
 /* ---- Limits ---- */
-#define MAX_BERRY_CBS 16    /* max on_can_signal subscriptions */
 #define MAX_TIMERS    16    /* max concurrent timer.after/every */
 #define MAX_ACTIONS   32    /* max actions registered at once */
 #define ACTION_NAME_MAX 40  /* max length of action name */
@@ -57,14 +56,10 @@ static can_t *get_bus(int bus)
     return s_bus[bus];
 }
 
-/* ---- Berry function ref storage (list at global ".refs") ----
- * Each registered callback (on_can_signal, timer, action) stores its function in
- * the .refs list and remembers the index. To revoke, we nil out the slot
- * (the list grows monotonically; we don't compact it). */
+/* ---- Berry function ref storage (list at global ".refs") ---- */
 
 static int refs_alloc(bvm *vm, int fn_index)
 {
-    /* Resolve negative index before we change the stack. */
     if (fn_index < 0) fn_index = be_top(vm) + fn_index + 1;
 
     be_getglobal(vm, ".refs");
@@ -87,10 +82,10 @@ static void refs_free(bvm *vm, int ref)
     if (ref < 0) return;
     be_getglobal(vm, ".refs");
     if (be_isnil(vm, -1)) { be_pop(vm, 1); return; }
-    be_pushint(vm, ref);       /* key: slot index */
-    be_pushnil(vm);            /* value: nil to free the slot */
-    be_setindex(vm, -3);       /* .refs[ref] = nil */
-    be_pop(vm, 3);             /* pop value, key, and .refs */
+    be_pushint(vm, ref);
+    be_pushnil(vm);
+    be_setindex(vm, -3);
+    be_pop(vm, 3);
 }
 
 static bool refs_push(bvm *vm, int ref)
@@ -98,13 +93,12 @@ static bool refs_push(bvm *vm, int ref)
     be_getglobal(vm, ".refs");
     if (be_isnil(vm, -1)) { be_pop(vm, 1); return false; }
     be_pushint(vm, ref);
-    be_getindex(vm, -2);          /* stack: [.refs, ref, fn] */
-    be_remove(vm, -2);            /* Removes 'ref', leaving [.refs, fn] */
+    be_getindex(vm, -2);
+    be_remove(vm, -2);
     if (!be_isfunction(vm, -1)) {
         be_pop(vm, 2);
         return false;
     }
-    /* leave [.refs, fn] on stack — caller will use fn and pop both */
     return true;
 }
 
@@ -130,7 +124,7 @@ void berry_release_ref(bvm *vm, int ref)
 int berry_call_ref(bvm *vm, int ref)
 {
     if (ref < 0) return -1;
-    if (!refs_push(vm, ref)) return -1;     /* stack: [.refs, fn] */
+    if (!refs_push(vm, ref)) return -1;
     if (be_pcall(vm, 0) != 0) {
         ESP_LOGE(TAG_BB, "ref %d call error: %s", ref, be_tostring(vm, -1));
         be_pop(vm, 2);
@@ -138,107 +132,6 @@ int berry_call_ref(bvm *vm, int ref)
     }
     be_pop(vm, 2);
     return 0;
-}
-
-/* ---- on_can_signal callbacks ---- */
-
-typedef struct {
-    bool in_use;
-    int  ref;
-    int  bus;
-    int  sig_idx;
-    int  script_id;
-} cb_entry_t;
-
-static cb_entry_t s_can_cbs[MAX_BERRY_CBS];
-
-static void can_on_trampoline(int sig_idx, float value, float prev, void *ctx)
-{
-    if (!s_vm) return;
-    int ref = (int)(intptr_t)ctx;
-
-    /* Save base depth so we can restore the stack exactly, regardless of
-     * whether be_pcall succeeds or fails (on failure vm_state_restore puts
-     * exception values on top of where the args were, so a fixed pop count
-     * is wrong and causes a stack-growth leak that eventually corrupts .refs). */
-    int base = be_top(s_vm);
-
-    if (!refs_push(s_vm, ref)) return;     /* +2: [.refs, fn] */
-
-    /* Build the signal map argument — mirrors the map returned by can_signal_get
-     * so callers can use either API with the same field names. */
-    be_newobject(s_vm, "map");             /* +3: [.refs, fn, map] */
-    be_pushstring(s_vm, "value");
-    be_pushreal(s_vm, (breal)value);
-    be_data_insert(s_vm, -3);
-    be_pop(s_vm, 2);
-    be_pushstring(s_vm, "prev");
-    be_pushreal(s_vm, (breal)prev);
-    be_data_insert(s_vm, -3);
-    be_pop(s_vm, 2);
-    be_pushstring(s_vm, "changed");
-    be_pushbool(s_vm, btrue);              /* always true — only fires on change */
-    be_data_insert(s_vm, -3);
-    be_pop(s_vm, 2);
-
-    if (be_pcall(s_vm, 1) != 0) {
-        ESP_LOGE(TAG_BB, "on_can_signal callback error: %s", be_tostring(s_vm, -1));
-    }
-    /* Restore to base: be_pcall with argc=1 leaves the map arg on the stack
-     * after the call (Berry restores vm->top to cf->top which was saved before
-     * the call, including the map), so a fixed pop of 2 under-pops by 1.
-     * On exception vm_state_restore adds extra values, so over/under-pop varies.
-     * Restoring to base handles both cases cleanly. */
-    be_pop(s_vm, be_top(s_vm) - base);
-}
-
-/* on_can_signal(msg:str, sig:str, fn:function [, bus:int]) -> nil
- *
- * Invoke fn(sig_map) every time the named signal changes. Scoped by message
- * because DBC signal names are unique only within a message.
- */
-static int l_on_can_signal(bvm *vm)
-{
-    CHECK_ARITY(vm, 3);
-    CHECK_TYPE(vm, 1, be_isstring(vm, 1), "string");
-    CHECK_TYPE(vm, 2, be_isstring(vm, 2), "string");
-    CHECK_TYPE(vm, 3, be_isfunction(vm, 3), "function");
-    const char *msg_name = be_tostring(vm, 1);
-    const char *sig_name = be_tostring(vm, 2);
-    int bus = (be_top(vm) >= 4 && be_isint(vm, 4)) ? be_toint(vm, 4) : 0;
-    can_t *eng = get_bus(bus);
-    if (!eng) be_return_nil(vm);
-
-    int slot = -1;
-    for (int i = 0; i < MAX_BERRY_CBS; i++) {
-        if (!s_can_cbs[i].in_use) { slot = i; break; }
-    }
-    if (slot < 0) {
-        ESP_LOGE(TAG_BB, "on_can_signal registry full");
-        be_return_nil(vm);
-    }
-
-    int ref = refs_alloc(vm, 3);
-    int rv = can_on_change_scoped(eng, msg_name, sig_name, can_on_trampoline,
-                                   (void *)(intptr_t)ref, s_current_script_id);
-    if (rv != 0) {
-        refs_free(vm, ref);
-        if (rv == CAN_ERR_FULL) {
-            ESP_LOGE(TAG_BB, "on_can_signal callback registry full");
-            be_return_nil(vm);
-        }
-        int si = dbc_find_signal_by_msg_name(&eng->dbc, msg_name, sig_name);
-        if (si == DBC_ERR_NO_MSG) be_raise(vm, "key_error", be_pushfstring(vm, "on_can_signal: message '%s' not found", msg_name));
-        if (si == DBC_ERR_NO_SIG) be_raise(vm, "key_error", be_pushfstring(vm, "on_can_signal: signal '%s' not found in message '%s'", sig_name, msg_name));
-        be_return_nil(vm);
-    }
-
-    s_can_cbs[slot] = (cb_entry_t){
-        .in_use = true, .ref = ref, .bus = bus,
-        .sig_idx = -1,
-        .script_id = s_current_script_id,
-    };
-    be_return_nil(vm);
 }
 
 /* ---- timer.* (polled from main loop via berry_timer_tick) ---- */
@@ -318,21 +211,18 @@ static int l_timer_cancel(bvm *vm)
     be_return_nil(vm);
 }
 
-void berry_timer_tick(uint32_t now_ms);    /* fwd decl */
-
 void berry_timer_tick(uint32_t now_ms)
 {
     if (!s_vm) return;
     for (int i = 0; i < MAX_TIMERS; i++) {
         timer_entry_t *t = &s_timers[i];
         if (!t->in_use) continue;
-        /* unsigned comparison handles wrap */
         if ((int32_t)(now_ms - t->next_fire_ms) < 0) continue;
 
         int ref = t->ref;
         bool one_shot = (t->period_ms == 0);
         if (one_shot) {
-            t->in_use = false;       /* free slot before firing */
+            t->in_use = false;
         } else {
             t->next_fire_ms = now_ms + t->period_ms;
         }
@@ -341,7 +231,7 @@ void berry_timer_tick(uint32_t now_ms)
             if (be_pcall(s_vm, 0) != 0) {
                 ESP_LOGE(TAG_BB, "timer callback error: %s", be_tostring(s_vm, -1));
             }
-            be_pop(s_vm, 2);   /* pop result + .refs */
+            be_pop(s_vm, 2);
         }
 
         if (one_shot) refs_free(s_vm, ref);
@@ -367,7 +257,6 @@ static int find_action(const char *name)
     return -1;
 }
 
-/* actions.register(name:str, fn:function) -> nil */
 static int l_action_register(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -375,7 +264,6 @@ static int l_action_register(bvm *vm)
     CHECK_TYPE(vm, 2, be_isfunction(vm, 2), "function");
     const char *name = be_tostring(vm, 1);
 
-    /* Replace existing same-name action (re-registration). */
     int existing = find_action(name);
     if (existing >= 0) {
         refs_free(vm, s_actions[existing].ref);
@@ -402,7 +290,6 @@ static int l_action_register(bvm *vm)
     be_return_nil(vm);
 }
 
-/* actions.invoke(name:str) -> nil (calls action's fn, no args) */
 static int l_action_invoke(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -411,7 +298,6 @@ static int l_action_invoke(bvm *vm)
     be_return_nil(vm);
 }
 
-/* actions.list() -> [name, …] */
 static int l_action_list(bvm *vm)
 {
     be_newlist(vm);
@@ -455,7 +341,7 @@ int berry_action_invoke(const char *name)
 
 void berry_cleanup_script(int script_id)
 {
-    if (script_id == 0) return;   /* never auto-clean unscripted (C) refs */
+    if (script_id == 0) return;
 
     /* Cancel timers */
     for (int i = 0; i < MAX_TIMERS; i++) {
@@ -463,18 +349,6 @@ void berry_cleanup_script(int script_id)
             refs_free(s_vm, s_timers[i].ref);
             s_timers[i].in_use = false;
         }
-    }
-
-    /* Drop on_can_signal callbacks */
-    for (int i = 0; i < MAX_BERRY_CBS; i++) {
-        if (s_can_cbs[i].in_use && s_can_cbs[i].script_id == script_id) {
-            refs_free(s_vm, s_can_cbs[i].ref);
-            s_can_cbs[i].in_use = false;
-        }
-    }
-    /* Tell each can_t to drop matching tags */
-    for (int b = 0; b < 2; b++) {
-        if (s_bus[b]) can_off_by_tag(s_bus[b], script_id);
     }
 
     /* Drop actions */
@@ -486,10 +360,9 @@ void berry_cleanup_script(int script_id)
     }
 }
 
-/* ---- CAN: raw frames, signal reads, message drafts ---- */
+/* ---- CAN: raw frames, message drafts ---- */
 
-/* can_send_raw(bus:int, id:int, data:bytes) -> nil
- * Transmit a raw CAN frame. Bypasses DBC encoding and rate limiting. */
+/* can_send_raw(bus:int, id:int, data:bytes) -> nil */
 static int l_can_send_raw(bvm *vm)
 {
     CHECK_ARITY(vm, 3);
@@ -512,7 +385,7 @@ static int l_can_send_raw(bvm *vm)
         snprintf(msg, sizeof(msg), "SIM tx bus%d 0x%03X [%d] %s", bus, (unsigned)id, (int)len, hex);
         berry_log_push(msg);
     } else {
-        can_bus_send(bus, id, data, (uint8_t)len, 50);
+        can_send(c, id, data, (uint8_t)len);
     }
     be_return_nil(vm);
 }
@@ -527,7 +400,6 @@ static int l_can_recv_raw(bvm *vm)
     if (!c) be_return_nil(vm);
     twai_message_t rx;
     if (can_rx_pop(c, &rx)) {
-        // https://berry.readthedocs.io/en/latest/source/en/FFI-Example.html#instantiate-a-list-object-in-a-native-function
         be_getglobal(vm, "list");
         be_newlist(vm);
         be_pushint(vm, (bint)rx.identifier);
@@ -537,79 +409,25 @@ static int l_can_recv_raw(bvm *vm)
         be_data_push(vm, -2);
         be_pop(vm, 1);
         be_call(vm, 1);
-        be_pop(vm, 1); /* pop the arguments */
+        be_pop(vm, 1);
         be_return(vm);
     }
     be_return_nil(vm);
 }
 
-/* can_signal_get(msg:str, sig:str [, bus:int]) -> {value, prev, changed} | nil
- * Read the latest decoded value of a signal. Scoped by message. */
-static int l_can_signal_get(bvm *vm)
-{
-    CHECK_ARITY(vm, 2);
-    CHECK_TYPE(vm, 1, be_isstring(vm, 1), "string");
-    CHECK_TYPE(vm, 2, be_isstring(vm, 2), "string");
-    const char *msg_name = be_tostring(vm, 1);
-    const char *sig_name = be_tostring(vm, 2);
-    int bus = (be_top(vm) >= 3 && be_isint(vm, 3)) ? be_toint(vm, 3) : 0;
-    can_t *eng = get_bus(bus);
-    if (!eng) be_return_nil(vm);
-
-    int si = dbc_find_signal_by_msg_name(&eng->dbc, msg_name, sig_name);
-    if (si >= 0) {
-        const signal_state_t *e = &eng->signals[si];
-        be_newobject(vm, "map");
-        be_pushstring(vm, "value");
-        be_pushreal(vm, (breal)e->value);
-        be_data_insert(vm, -3);
-        be_pop(vm, 2);
-        be_pushstring(vm, "prev");
-        be_pushreal(vm, (breal)e->prev);
-        be_data_insert(vm, -3);
-        be_pop(vm, 2);
-        be_pushstring(vm, "changed");
-        be_pushbool(vm, e->changed);
-        be_data_insert(vm, -3);
-        be_pop(vm, 2);
-        be_return(vm);
-    }
-    if (si == DBC_ERR_NO_MSG) be_raise(vm, "key_error", be_pushfstring(vm, "can_signal_get: message '%s' not found", msg_name));
-    if (si == DBC_ERR_NO_SIG) be_raise(vm, "key_error", be_pushfstring(vm, "can_signal_get: signal '%s' not found in message '%s'", sig_name, msg_name));
-    be_return_nil(vm);
-}
-
-/* can_msg_get(id:int | name:string [, bus:int]) -> draft
+/* can_msg_get(msg_id:int [, bus:int]) -> draft
  * Returns the latest received frame as a draft you can edit and send. */
 static int l_can_msg_get(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
-    CHECK_TYPE(vm, 1, be_isint(vm, 1) || be_isstring(vm, 1), "int or string");
-    uint32_t msg_id = 0;
-    int bus = 0;
-    can_t *eng = NULL;
-
-    if (be_isint(vm, 1)) {
-        msg_id = (uint32_t)be_toint(vm, 1);
-        bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
-    } else {
-        const char *msg_name = be_tostring(vm, 1);
-        bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
-        eng = get_bus(bus);
-        if (!eng) be_return_nil(vm);
-        const dbc_msg_t *m = dbc_find_msg_by_name(&eng->dbc, msg_name);
-        if (!m) be_raise(vm, "key_error", be_pushfstring(vm, "can_msg_get: message '%s' not found", msg_name));
-        msg_id = m->id;
-    }
-
-    if (!eng) {
-        eng = get_bus(bus);
-        if (!eng) be_return_nil(vm);
-    }
+    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int");
+    uint32_t msg_id = (uint32_t)be_toint(vm, 1);
+    int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
+    can_t *eng = get_bus(bus);
+    if (!eng) be_return_nil(vm);
 
     uint8_t data[8], dlc;
-    int idx = can_read(eng, msg_id, data, &dlc);
-    if (idx < 0) be_return_nil(vm);
+    if (can_read(eng, msg_id, data, &dlc) < 0) be_return_nil(vm);
 
     be_newobject(vm, "map");
     be_pushstring(vm, "id");      be_pushint(vm, (bint)msg_id);
@@ -620,59 +438,13 @@ static int l_can_msg_get(bvm *vm)
     be_data_insert(vm, -3); be_pop(vm, 2);
     be_pushstring(vm, "dlc");     be_pushint(vm, dlc);
     be_data_insert(vm, -3); be_pop(vm, 2);
-    be_pushstring(vm, "_idx");    be_pushint(vm, idx);
-    be_data_insert(vm, -3); be_pop(vm, 2);
     be_return(vm);
 }
 
-static int l_can_msg_set(bvm *vm)
-{
-    CHECK_ARITY(vm, 3);
-    CHECK_TYPE(vm, 2, be_isstring(vm, 2), "string");
-    CHECK_TYPE(vm, 3, be_isreal(vm, 3) || be_isint(vm, 3), "number");
-    if (!be_isinstance(vm, 1)) {
-        ESP_LOGW(TAG_BB, "can_msg_set: trying to set signal '%s' but base message is empty", be_tostring(vm, 2));
-        be_return_nil(vm);
-    }
-
-    be_getmember(vm, 1, "bus");
-    int bus = be_toint(vm, -1);
-    be_pop(vm, 1);
-
-    can_t *eng = get_bus(bus);
-    if (!eng) be_return_nil(vm);
-
-    /* Scope signal lookup to this draft's message (id) — DBC signal names
-     * aren't unique across messages and the global lookup would pick the
-     * wrong one. */
-    be_getmember(vm, 1, "id");
-    uint32_t msg_id = (uint32_t)be_toint(vm, -1);
-    be_pop(vm, 1);
-
-    const char *sig_name = be_tostring(vm, 2);
-    float val = be_isreal(vm, 3) ? (float)be_toreal(vm, 3) : (float)be_toint(vm, 3);
-
-    const dbc_msg_t *m = dbc_find_msg(&eng->dbc, msg_id);
-    if (!m) be_raise(vm, "key_error", be_pushfstring(vm, "can_msg_set: message id 0x%03x not found in DBC", (unsigned)msg_id));
-    int si = dbc_find_signal_in_msg(&eng->dbc, m, sig_name);
-    if (si < 0) be_raise(vm, "key_error", be_pushfstring(vm, "can_msg_set: signal '%s' not found in message id 0x%03x", sig_name, (unsigned)msg_id));
-
-    be_getmember(vm, 1, "data");
-    size_t len = 0;
-    const uint8_t *old_data = be_tobytes(vm, -1, &len);
-    uint8_t data[8];
-    memcpy(data, old_data, len > 8 ? 8 : len);
-    be_pop(vm, 1);
-
-    can_encode(eng, si, data, val);
-
-    be_pushstring(vm, "data");
-    be_pushbytes(vm, data, len > 8 ? 8 : len);
-    be_setindex(vm, 1);
-    be_pop(vm, 2);
-    be_return_nil(vm);
-}
-
+/* can_msg_send(draft) -> nil
+ * Transmit a message draft. The draft must contain id, bus, data, dlc.
+ * Signal encoding and counter/checksum update must be done in Berry
+ * before calling this function. */
 static int l_can_msg_send(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -680,12 +452,13 @@ static int l_can_msg_send(bvm *vm)
         ESP_LOGW(TAG_BB, "can_msg_send: trying to send empty message");
         be_return_nil(vm);
     }
+
     be_getmember(vm, 1, "bus");
     int bus = be_toint(vm, -1);
     be_pop(vm, 1);
 
-    be_getmember(vm, 1, "_idx");
-    int idx = be_toint(vm, -1);
+    be_getmember(vm, 1, "id");
+    uint32_t id = (uint32_t)be_toint(vm, -1);
     be_pop(vm, 1);
 
     be_getmember(vm, 1, "dlc");
@@ -702,9 +475,95 @@ static int l_can_msg_send(bvm *vm)
     memcpy(data, draft_data, len > 8 ? 8 : len);
     be_pop(vm, 1);
 
-    can_send(eng, idx, data, (uint8_t)dlc);
+    can_send(eng, id, data, (uint8_t)dlc);
     be_return_nil(vm);
 }
+
+/* ---- CAN utility functions (pure computation, no DBC) ---- */
+
+/* bit_extract(data:bytes, start_bit:int, bit_length:int, big_endian:bool) -> int */
+static int l_bit_extract(bvm *vm)
+{
+    CHECK_ARITY(vm, 4);
+    CHECK_TYPE(vm, 1, be_isbytes(vm, 1), "bytes");
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int");
+    CHECK_TYPE(vm, 3, be_isint(vm, 3), "int");
+    CHECK_TYPE(vm, 4, be_isbool(vm, 4), "bool");
+    size_t len = 0;
+    const uint8_t *data = be_tobytes(vm, 1, &len);
+    uint8_t start_bit = (uint8_t)be_toint(vm, 2);
+    uint8_t bit_length = (uint8_t)be_toint(vm, 3);
+    bool big_endian = be_tobool(vm, 4);
+    uint64_t raw = bit_extract(data, start_bit, bit_length, big_endian);
+    be_pushint(vm, (bint)raw);
+    be_return(vm);
+}
+
+/* bit_insert(data:bytes, start_bit:int, bit_length:int, big_endian:bool, raw:int) -> bytes
+ * Returns a new bytes object with the bits inserted (data is immutable in Berry). */
+static int l_bit_insert(bvm *vm)
+{
+    CHECK_ARITY(vm, 5);
+    CHECK_TYPE(vm, 1, be_isbytes(vm, 1), "bytes");
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int");
+    CHECK_TYPE(vm, 3, be_isint(vm, 3), "int");
+    CHECK_TYPE(vm, 4, be_isbool(vm, 4), "bool");
+    CHECK_TYPE(vm, 5, be_isint(vm, 5), "int");
+    size_t len = 0;
+    const uint8_t *src = be_tobytes(vm, 1, &len);
+    uint8_t start_bit = (uint8_t)be_toint(vm, 2);
+    uint8_t bit_length = (uint8_t)be_toint(vm, 3);
+    bool big_endian = be_tobool(vm, 4);
+    uint64_t raw = (uint64_t)(unsigned)be_toint(vm, 5);
+    uint8_t buf[8];
+    memcpy(buf, src, len > 8 ? 8 : len);
+    bit_insert(buf, start_bit, bit_length, big_endian, raw);
+    be_pushbytes(vm, buf, len > 8 ? 8 : len);
+    be_return(vm);
+}
+
+/* signal_decode(data:bytes, start_bit:int, bit_length:int, big_endian:bool,
+ *               is_signed:bool, scale:real, offset:real) -> real */
+static int l_signal_decode(bvm *vm)
+{
+    CHECK_ARITY(vm, 7);
+    CHECK_TYPE(vm, 1, be_isbytes(vm, 1), "bytes");
+    size_t len = 0;
+    const uint8_t *data = be_tobytes(vm, 1, &len);
+    uint8_t start_bit = (uint8_t)be_toint(vm, 2);
+    uint8_t bit_length = (uint8_t)be_toint(vm, 3);
+    bool big_endian = be_tobool(vm, 4);
+    bool is_signed = be_tobool(vm, 5);
+    float scale = (float)be_toreal(vm, 6);
+    float offset = (float)be_toreal(vm, 7);
+    float val = signal_decode(data, start_bit, bit_length, big_endian, is_signed, scale, offset);
+    be_pushreal(vm, (breal)val);
+    be_return(vm);
+}
+
+/* signal_encode(data:bytes, start_bit:int, bit_length:int, big_endian:bool,
+ *               is_signed:bool, scale:real, offset:real, value:real) -> bytes */
+static int l_signal_encode(bvm *vm)
+{
+    CHECK_ARITY(vm, 8);
+    CHECK_TYPE(vm, 1, be_isbytes(vm, 1), "bytes");
+    size_t len = 0;
+    const uint8_t *src = be_tobytes(vm, 1, &len);
+    uint8_t start_bit = (uint8_t)be_toint(vm, 2);
+    uint8_t bit_length = (uint8_t)be_toint(vm, 3);
+    bool big_endian = be_tobool(vm, 4);
+    bool is_signed = be_tobool(vm, 5);
+    float scale = (float)be_toreal(vm, 6);
+    float offset = (float)be_toreal(vm, 7);
+    float value = (float)be_toreal(vm, 8);
+    uint8_t buf[8];
+    memcpy(buf, src, len > 8 ? 8 : len);
+    signal_encode(buf, start_bit, bit_length, big_endian, is_signed, scale, offset, value);
+    be_pushbytes(vm, buf, len > 8 ? 8 : len);
+    be_return(vm);
+}
+
+/* ---- LED ---- */
 
 static int l_led_set(bvm *vm)
 {
@@ -761,10 +620,6 @@ static int l_state_remove(bvm *vm)
     be_return_nil(vm);
 }
 
-/* berry_set_log_handler() and berry_log_push() live in the Berry port
- * (components/berry/port/be_port.c) so they can intercept Berry's built-in
- * print(), which routes through be_writebuffer there. */
-
 /* ---- millis() helper ---- */
 
 static int l_millis(bvm *vm)
@@ -779,19 +634,17 @@ void berry_register_bindings(bvm *vm)
 {
     s_vm = vm;
 
-    /* CAN API — naming hierarchy is can_<level>_<verb>:
-     *   raw frame:  can_send_raw, can_recv_raw
-     *   message:    can_msg_get, can_msg_set, can_msg_send
-     *   signal:     can_signal_get, on_can_signal
-     * Signal-level ops require a message name as well, since DBC signal
-     * names are unique only inside a message. */
+    /* Raw CAN I/O */
     be_regfunc(vm, "can_send_raw",   l_can_send_raw);
     be_regfunc(vm, "can_recv_raw",   l_can_recv_raw);
-    be_regfunc(vm, "can_signal_get", l_can_signal_get);
-    be_regfunc(vm, "on_can_signal",  l_on_can_signal);
     be_regfunc(vm, "can_msg_get",    l_can_msg_get);
-    be_regfunc(vm, "can_msg_set",    l_can_msg_set);
     be_regfunc(vm, "can_msg_send",   l_can_msg_send);
+
+    /* CAN utility functions (signal encode/decode without DBC) */
+    be_regfunc(vm, "bit_extract",    l_bit_extract);
+    be_regfunc(vm, "bit_insert",     l_bit_insert);
+    be_regfunc(vm, "signal_decode",  l_signal_decode);
+    be_regfunc(vm, "signal_encode",  l_signal_encode);
 
     be_regfunc(vm, "led_set", l_led_set);
     be_regfunc(vm, "led_off", l_led_off);

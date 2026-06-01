@@ -1,8 +1,11 @@
 <script lang="ts">
   import { Switch, AlertDialog } from 'bits-ui';
   import { app } from '../../lib/store.svelte';
+  import { dbcStore } from '../../dbcStore.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
   import { examples } from '../../examples';
+  import { preprocessScript } from '../../lib/preprocessor';
+  import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
@@ -29,8 +32,12 @@
   let scrollPositions = new Map<string, number>();
 
   let isMobile = $state(false);
+  let showPreprocessed = $state(false);
+  let preprocessedCode = $state<string>('');
   let editorPanelHeight = $state<number | null>(null);
   let editorPanelEl: HTMLElement | undefined;
+  let gotoLine = $state<number | null>(null);
+  let preprocessedGotoLine = $state<number | null>(null);
 
   $effect(() => {
     const mq = window.matchMedia('(max-width: 720px)');
@@ -73,8 +80,8 @@
     }
   }
 
-  async function loadScript(filename: string): Promise<void> {
-    if (dirty && !confirm('Discard unsaved changes?')) return;
+  async function loadScript(filename: string): Promise<boolean> {
+    if (dirty && !confirm('Discard unsaved changes?')) return false;
     if (selFn) scrollPositions.set(selFn, editorScrollTop);
     selFn = filename;
     editorFilename = filename;
@@ -85,23 +92,45 @@
       savedCode = r.code;
     } catch (e) {
       app.pushLog(`scripts: read failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
-      return;
+      return false;
     }
-    editorScrollTop = scrollPositions.get(filename) ?? 0;
+    const saved = scrollPositions.get(filename);
+    if (saved !== undefined) editorScrollTop = saved;
+    return true;
+  }
+
+  /** Collect full Message[] from all loaded buses for preprocessing. */
+  function getFullMessages(): Message[] {
+    return Object.values(dbcStore.fullMessages).flat();
   }
 
   async function save(): Promise<void> {
-    const fn = (selFn ?? editorFilename).trim();
+    const fn = normalizeScriptFilename((selFn ?? editorFilename).trim());
     if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
     busy = true;
     try {
-      await app.proto.writeScript(fn, code);
+      // Upload .be immediately so the save feels fast.
+      await app.proto.writeScript(fn, code, undefined);
       savedCode = code;
       selFn = fn;
       editorFilename = fn;
       app.setLastScriptFilename(fn);
       app.pushLog(`scripts: saved ${fn}`, 'info', 'scripts');
       await refresh();
+      busy = false;
+
+      // Then preprocess and upload .bep in the background if needed.
+      const result = preprocessScript(code, getFullMessages());
+      if (result.errors.length > 0) {
+        const errMsg = result.errors.join('; ');
+        app.pushLog(`scripts: preprocessing warnings — ${errMsg}`, 'warn', 'scripts');
+      }
+      if (result.code !== code) {
+        await app.proto.writeScript(fn, code, result.code);
+        if (result.errors.length === 0) {
+          app.pushLog(`scripts: preprocessed runtime updated`, 'info', 'scripts');
+        }
+      }
     } catch (e) {
       app.pushLog(`scripts: upload failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally {
@@ -179,12 +208,12 @@
     sel.value = '';
     if (!fn) return;
     if (dirty && !confirm('Discard unsaved changes?')) return;
-    const ex = examples.find(x => x.filename === fn);
+    const ex = findExample(fn);
     if (!ex) return;
     code = ex.code;
     savedCode = ex.code;
     selFn = null;
-    editorFilename = ex.filename;
+    editorFilename = ex.filename.replace(/\.be$/, '');
   }
 
   function revert(): void {
@@ -200,7 +229,7 @@
     reader.onload = () => {
       code = reader.result as string;
       savedCode = code;
-      editorFilename = file.name;
+      editorFilename = normalizeScriptFilename(file.name);
       selFn = null;
       app.pushLog(`scripts: imported ${file.name}`, 'info', 'scripts');
     };
@@ -212,6 +241,19 @@
     void app.connected; void app.scriptsVersion;
     if (app.connected) { refresh(); refreshWifiIp(); }
     else { scripts = []; }
+  });
+
+  // Update preprocessed code display when script or DBC changes
+  $effect(() => {
+    void code; // Reactivity: code changed
+    void dbcStore.fullMessages; // Reactivity: DBC changed
+    const messages = getFullMessages();
+    if (messages.length > 0) {
+      const result = preprocessScript(code, messages);
+      preprocessedCode = result.code;
+    } else {
+      preprocessedCode = '(no DBC loaded - pick your car)';
+    }
   });
 
   $effect(() => {
@@ -229,14 +271,54 @@
     if (!fn) return;
     app.pendingExample = null;
     if (dirty && !confirm('Discard unsaved changes and load the example?')) return;
-    const ex = examples.find(x => x.filename === fn);
+    const ex = findExample(fn);
     if (ex) {
       code = ex.code;
       savedCode = '';
       selFn = null;
-      editorFilename = ex.filename;
+    editorFilename = ex.filename;
     }
   });
+
+  // Navigate editor to a specific line from a log click.
+  $effect(() => {
+    const target = app.gotoEditorLine;
+    if (!target) return;
+    app.gotoEditorLine = null;
+
+    const isBep = target.filename.endsWith('.bep');
+    const fn = target.filename.replace(/\.bep$/, '.be');
+
+    function doScroll() {
+      if (isBep) {
+        showPreprocessed = true;
+        setTimeout(() => { preprocessedGotoLine = target.line; }, 0);
+      } else {
+        showPreprocessed = false;
+        gotoLine = target.line;
+      }
+    }
+
+    if (fn !== selFn) {
+      loadScript(fn).then(ok => ok && doScroll()).catch(() => {});
+    } else {
+      doScroll();
+    }
+  });
+
+  function normalizeScriptFilename(filename: string): string {
+    if (!filename.includes('.')) return filename + '.be';
+    return filename;
+  }
+
+  function stripExt(name: string): string {
+    return name.endsWith('.be') ? name.slice(0, -3) : name;
+  }
+
+  function findExample(filename: string) {
+    const normalized = normalizeScriptFilename(filename);
+    return examples.find(x => x.filename === normalized);
+  }
 </script>
 
 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">
@@ -327,18 +409,18 @@
             >
               <Switch.Thumb class="tog__knob" />
             </Switch.Root>
-            <div style="min-width: 0">
-              <div style="font-size: 12px; color: var(--dc-text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
-                {s.filename}
-              </div>
+              <div style="min-width: 0">
+                <div style="font-size: 12px; color: var(--dc-text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
+                  {stripExt(s.filename)}
+                </div>
               <div class="mono" style:font-size="10px" style:color={s.errored ? 'var(--dc-err-text)' : 'var(--dc-text-fade)'} title={s.error ?? ''}>
                 {s.errored ? 'error' : s.enabled ? 'running' : 'disabled'}
               </div>
             </div>
             <button
               class="btn btn--sm btn--ghost btn--icon"
-              title={`Uninstall ${s.filename}`}
-              aria-label={`Uninstall ${s.filename}`}
+              title={`Uninstall ${stripExt(s.filename)}`}
+              aria-label={`Uninstall ${stripExt(s.filename)}`}
               onclick={(e) => { e.stopPropagation(); confirmRemove = s.filename; }}
             >
               <Icon name="trash" size={14} />
@@ -359,8 +441,9 @@
         <span class="row-flex" style="gap: 6px; min-width: 0">
           <input
             class="inp"
-            bind:value={editorFilename}
-            placeholder="filename.be"
+            value={showPreprocessed ? editorFilename.replace(/\.be$/, '.bep') : editorFilename}
+            oninput={(e) => { editorFilename = (e.currentTarget as HTMLInputElement).value.replace(/\.bep$/, '.be'); }}
+            placeholder={showPreprocessed ? 'filename.bep' : 'filename.be'}
             style="width: 220px; min-width: 0; max-width: 280px; height: 22px; font-size: 12px"
           />
           {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px; white-space: nowrap">● unsaved</span>{/if}
@@ -371,8 +454,15 @@
             title="Send this script to the AI assistant for editing">
             <Icon name="sparkle" size={16} /> AI edit
           </button>
-          <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy || !dirty} title="Save without changing enable state">
-            <Icon name="up" size={13} />Save
+          <button class="btn btn--sm" 
+            class:btn--info={showPreprocessed}
+            onclick={() => { showPreprocessed = !showPreprocessed; }}
+            disabled={selFn === null || dirty}
+            title="Toggle between source and preprocessed view">
+            <Icon name="eye" size={13} />Toggle
+          </button>
+          <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
+            <Icon name="up" size={13} />Save & process
           </button>
           <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
             <Icon name="up" size={13} />Save & enable
@@ -383,7 +473,12 @@
 
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
-        <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} />
+        <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;display:flex">
+          <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} />
+        </div>
+        <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;display:flex">
+          <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} />
+        </div>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
         <div
           class="resize-corner-editor"
@@ -467,6 +562,7 @@
     background: linear-gradient(135deg, transparent 50%, var(--dc-border-hi) 50%);
   }
 
+  .ce-hide { display: none !important; }
   :global(.ad-overlay) {
     position: fixed; inset: 0; background: rgba(10, 8, 4, 0.55); z-index: 200;
   }

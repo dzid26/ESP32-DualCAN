@@ -8,6 +8,24 @@
   let logContainer: HTMLDivElement | null = null;
   let isAtBottom = $state(true);
 
+  /** Pattern: filename.extension:line: (e.g. "my_script.be:42:") */
+  const LINK_RE = /([\w. -]+\.(?:be|bep)):(\d+):/g;
+
+  function linkify(msg: string): string {
+    return msg.replace(LINK_RE,
+      '<span class="log-link" data-fn="$1" data-line="$2">$1:$2:</span>');
+  }
+
+  function handleLogClick(e: MouseEvent) {
+    const btn = (e.target as HTMLElement).closest('.log-link') as HTMLElement | null;
+    if (!btn) return;
+    const fn = btn.dataset.fn;
+    const line = parseInt(btn.dataset.line ?? '', 10);
+    if (!fn || isNaN(line)) return;
+    app.gotoEditorLine = { filename: fn, line };
+    app.setView('scripts');
+  }
+
   function levelColor(level: string): string {
     switch (level) {
       case 'warn':  return 'var(--dc-warn)';
@@ -74,13 +92,14 @@
       </button>
     </span>
   </div>
-  <div class="logpane__body mono" bind:this={logContainer} onscroll={handleScroll}>
+  <div class="logpane__body mono" bind:this={logContainer} onscroll={handleScroll} onclick={handleLogClick}>
     {#each app.logs as l}
       <div class="logpane__row">
         <span style="color: var(--dc-text-ghost)">{l.ts}</span>
         <span style={`text-transform: uppercase; font-size: 10px; color: ${levelColor(l.level)}`}>{l.level}</span>
         <span style="color: var(--dc-text-fade)">{l.src}</span>
-        <span style="color: var(--dc-text-dim); white-space: pre-wrap">{l.msg}</span>
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <span style="color: var(--dc-text-dim); white-space: pre-wrap">{@html linkify(l.msg)}</span>
       </div>
     {/each}
   </div>
@@ -114,5 +133,21 @@
     border-radius: 3px;
     font-size: 11px;
     padding: 1px 4px;
+  }
+  .log-link {
+    background: none;
+    border: none;
+    color: var(--dc-accent);
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    display: inline;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+  }
+  .log-link:hover {
+    color: var(--dc-accent-hi);
+    text-decoration-style: solid;
   }
 </style>

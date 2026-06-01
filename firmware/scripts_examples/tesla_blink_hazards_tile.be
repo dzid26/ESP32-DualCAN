@@ -43,6 +43,6 @@ def hazards_on()
 end
 
 def setup()
-  action_register("hazards_on", /-> hazards_on())
+  action_register("blink hazards", /-> hazards_on())
   print("Tesla hazards tile loaded")
 end

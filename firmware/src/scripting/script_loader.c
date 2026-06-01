@@ -2,6 +2,7 @@
 #include "scripting/berry_bindings.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -9,9 +10,31 @@
 #include "esp_log.h"
 
 static const char *TAG = "scripts";
+
+/* Strip SCRIPT_DIR prefix from a path for user-facing error messages. */
+static const char *strip_script_dir(const char *err) {
+    if (!err) return err;
+    size_t dlen = strlen(SCRIPT_DIR);
+    if (strncmp(err, SCRIPT_DIR, dlen) == 0 && err[dlen] == '/')
+        return err + dlen + 1;
+    return err;
+}
 #define ENABLED_FILE SCRIPT_DIR "/.enabled"
 static script_entry_t s_scan_existing[SCRIPT_MAX_COUNT];
 static int            s_next_script_id = 1;   /* 0 reserved for "no context" */
+
+static bool source_to_runtime_path(const char *filename, char *path, size_t path_size)
+{
+    size_t nlen = filename ? strlen(filename) : 0;
+    if (nlen < 4 || strcmp(filename + nlen - 3, ".be") != 0) return false;
+    int n = snprintf(path, path_size, "%s/%s", SCRIPT_DIR, filename);
+    if (n < 0 || (size_t)n >= path_size) return false;
+    size_t len = strlen(path);
+    if (len < 3 || len + 1 >= path_size) return false;
+    path[len] = 'p'; /* .be -> .bep */
+    path[len + 1] = '\0';
+    return true;
+}
 
 static const script_entry_t *find_existing_script(
     const script_entry_t *scripts, int count, const char *filename)
@@ -77,7 +100,17 @@ int script_loader_enable(script_loader_t *loader, int idx)
     if (s->loaded) return 0;
 
     char path[128];
-    snprintf(path, sizeof(path), "%s/%s", SCRIPT_DIR, s->filename);
+    bool has_runtime = false;
+    if (source_to_runtime_path(s->filename, path, sizeof(path))) {
+        FILE *rf = fopen(path, "r");
+        if (rf) {
+            has_runtime = true;
+            fclose(rf);
+        }
+    }
+    if (!has_runtime) {
+        snprintf(path, sizeof(path), "%s/%s", SCRIPT_DIR, s->filename);
+    }
 
     char *code = NULL;
     FILE *f = fopen(path, "r");
@@ -111,12 +144,13 @@ int script_loader_enable(script_loader_t *loader, int idx)
     berry_set_current_script(s->script_id);
 
     /* Execute the script (defines its functions). */
-    if (be_loadstring(vm, code) != 0 || be_pcall(vm, 0) != 0) {
+    if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
         snprintf(s->error, sizeof(s->error), "%.*s",
-                 (int)(sizeof(s->error) - 1), be_tostring(vm, -1));
+                 (int)(sizeof(s->error) - 1),
+                 strip_script_dir(be_tostring(vm, -1)));
         be_pop(vm, 1);
         s->errored = true;
-        ESP_LOGE(TAG, "%s load error: %s", s->filename, s->error);
+        ESP_LOGE(TAG, "%s", s->error);
         berry_set_current_script(0);
         berry_cleanup_script(s->script_id);
         free(code);
@@ -150,7 +184,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
     if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref) == -2) {
         snprintf(s->error, sizeof(s->error), "setup() raised");
         s->errored = true;
-        ESP_LOGE(TAG, "%s setup() error", s->filename);
+        ESP_LOGE(TAG, "%s setup() error", path);
         berry_set_current_script(0);
         berry_release_ref(vm, s->setup_ref);
         berry_release_ref(vm, s->teardown_ref);
@@ -211,6 +245,11 @@ int script_loader_delete(script_loader_t *loader, const char *filename)
         return -1;
     }
     ESP_LOGI(TAG, "Deleted: %s", path);
+    if (source_to_runtime_path(filename, path, sizeof(path))) {
+        if (remove(path) == 0) {
+            ESP_LOGI(TAG, "Deleted: %s", path);
+        }
+    }
     script_loader_scan(loader, loader->vm);
     return 0;
 }
@@ -225,6 +264,27 @@ int script_loader_write(const char *filename, const char *code, size_t len)
     fclose(f);
     ESP_LOGI(TAG, "Wrote %zu bytes to %s", len, path);
     return 0;
+}
+
+int script_loader_write_runtime(const char *filename, const char *code, size_t len)
+{
+    char path[128];
+    if (!source_to_runtime_path(filename, path, sizeof(path))) return -1;
+    FILE *f = fopen(path, "w");
+    if (!f) return -1;
+    fwrite(code, 1, len, f);
+    fclose(f);
+    ESP_LOGI(TAG, "Wrote %zu bytes to %s", len, path);
+    return 0;
+}
+
+void script_loader_delete_runtime(const char *filename)
+{
+    char path[128];
+    if (!source_to_runtime_path(filename, path, sizeof(path))) return;
+    if (remove(path) == 0) {
+        ESP_LOGI(TAG, "Deleted: %s", path);
+    }
 }
 
 int script_loader_read(const char *filename, char *buf, size_t buf_size)

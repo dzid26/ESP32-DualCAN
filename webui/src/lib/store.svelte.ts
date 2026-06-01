@@ -128,13 +128,18 @@ class AppState {
    * this bus id. TraceView consumes + clears on mount. */
   tracePendingBus = $state<number | null>(null);
 
+  /** Cross-view hand-off: LogPane → Scripts. Carries a script filename + line
+   * number so ScriptsView loads the script and scrolls the editor to that line.
+   * Consumed + cleared by ScriptsView. */
+  gotoEditorLine = $state<{ filename: string; line: number } | null>(null);
+
   /** Cross-view hand-off: Scripts → AI. Carries the current editor content
    * so AIView can pre-attach it as context. AIView consumes + clears. */
   pendingAiScript = $state<{ filename: string; code: string } | null>(null);
 
   /** Last-loaded DBC name per bus, indexed by bus id. Status pips link
    * to the DBC view + bus tab when a slot is populated. */
-  loadedDbc = $state<Record<number, string | null>>({ 0: null, 1: null });
+
 
   /** WiFi IP address (or null if not connected). Read by any view that needs
    * to construct the file server URL. Updated by refreshWifiIp(). */

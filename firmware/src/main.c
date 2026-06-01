@@ -12,11 +12,9 @@
 #include "berry.h"
 #include "can/can.h"
 #include "can/can_driver.h"
-#include "can/tesla.h"
 #include "led/led_rgb.h"
 #include "scripting/berry_bindings.h"
 #include "ble/ble_transport.h"
-#include "dbc/vehicle_dbc_embedded.h"
 #include "storage/fs.h"
 #include "storage/state.h"
 #include "scripting/script_loader.h"
@@ -80,8 +78,8 @@ static void hw_init(void)
     ESP_ERROR_CHECK(can_bus_install(&c0));
     ESP_ERROR_CHECK(can_bus_install(&c1));
 
-    can_init(&bus0, 0, vehicle_dbc_bin, vehicle_dbc_bin_len, tesla_finalize_tx);
-    can_init(&bus1, 1, NULL, 0, NULL);
+    can_init(&bus0, 0);
+    can_init(&bus1, 1);
 
     fs_init();
     wifi_init();

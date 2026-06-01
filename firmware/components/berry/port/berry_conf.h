@@ -42,8 +42,8 @@
 #define BE_USE_FILE_SYSTEM              0
 
 #define BE_USE_SCRIPT_COMPILER          1
-#define BE_USE_BYTECODE_SAVER           0
-#define BE_USE_BYTECODE_LOADER          0
+#define BE_USE_BYTECODE_SAVER           1
+#define BE_USE_BYTECODE_LOADER          1
 #define BE_USE_SHARED_LIB               0
 #define BE_USE_OVERLOAD_HASH            1
 

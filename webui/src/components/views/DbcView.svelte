@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
-  import { parseDbcInWorker, compileDbc, type Message } from '../../dbc/parser';
+  import { parseDbcInWorker, type Message } from '../../dbc/parser';
   import { dbcStore } from '../../dbcStore.svelte';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
@@ -106,32 +106,8 @@
     }
   }
 
-  async function upload(busId: number): Promise<void> {
-    const d = busDbc[busId];
-    if (!d || d.messages.length === 0) return;
-    busy = true;
-    try {
-      const binary = compileDbc(d.messages, busId);
-      status = `Compiled ${binary.length} bytes for bus ${busId} (${d.loadedFrom})`;
-      if (app.ble.connected) {
-        await app.ble.send(binary);
-        status += ' — uploaded';
-        dbcStore.setLastBus(busId);
-        app.loadedDbc = { ...app.loadedDbc, [busId]: d.loadedFrom };
-        app.pushLog(`DBC uploaded to bus ${busId} (${binary.length} bytes)`, 'info', 'dbc');
-      } else {
-        status += ' — not connected (compile-only)';
-      }
-    } catch (e) {
-      status = `upload failed: ${e instanceof Error ? e.message : e}`;
-    } finally {
-      busy = false;
-    }
-  }
-
   /** Cross-view hand-off from Gallery: fetch URL, parse, switch to that
-   * bus tab, upload if connected. Clears the flag so a re-mount doesn't
-   * replay it. */
+   * bus tab. Clears the flag so a re-mount doesn't replay it. */
   $effect(() => {
     const p = app.pendingDbc;
     if (!p) return;
@@ -144,7 +120,6 @@
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const text = await resp.text();
         await loadText(text, p.name, p.busId, p.url);
-        if (app.ble.connected) await upload(p.busId);
       } catch (e) {
         status = `gallery load failed: ${e instanceof Error ? e.message : e}`;
       }
@@ -202,12 +177,6 @@
         </button>
       {/each}
     </div>
-
-    {#if messages.length > 0}
-      <button class="btn btn--sm btn--primary" onclick={() => upload(bus)} disabled={busy}>
-        <Icon name="up" size={13} /> Compile & upload to bus {bus}
-      </button>
-    {/if}
 
     <span class="spacer"></span>
     <span class="mono ghost" style="font-size: 11px">{status}</span>

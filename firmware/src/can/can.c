@@ -34,56 +34,29 @@ uint16_t can_bus_rx_rate(int bus_id)
     return s_rx_rate[bus_id];
 }
 
-int can_init(can_t *c, int bus_id, const uint8_t *dbc_blob, size_t dbc_len,
-             tx_finalize_fn_t finalize)
+static int cache_idx(uint32_t id)
+{
+    return (int)(id % CAN_FRAME_CACHE);
+}
+
+int can_init(can_t *c, int bus_id)
 {
     memset(c, 0, sizeof(*c));
     c->bus_id = bus_id;
-    c->finalize_fn = finalize;
-
-    if (!dbc_blob || dbc_len == 0) {
-        c->loaded = false;
-        return 0;
-    }
-
-    if (dbc_load(&c->dbc, dbc_blob, dbc_len) != 0) {
-        ESP_LOGE(TAG, "bus%d: DBC load failed", bus_id);
-        return -1;
-    }
-
-    c->signals = calloc(c->dbc.hdr->sig_count, sizeof(signal_state_t));
-    c->messages = calloc(c->dbc.hdr->msg_count, sizeof(can_msg_state_t));
-    if (!c->signals || !c->messages) {
-        free(c->signals);
-        free(c->messages);
-        return -1;
-    }
-
     rate_limiter_init(&c->rate_limiter, RATE_LIMIT_DEFAULT_HZ);
-
     c->loaded = true;
-    ESP_LOGI(TAG, "bus%d: %d messages, %d signals",
-             bus_id, c->dbc.hdr->msg_count, c->dbc.hdr->sig_count);
+    ESP_LOGI(TAG, "bus%d: initialized (no DBC — scripts handle signal processing)", bus_id);
     return 0;
 }
 
 void can_free(can_t *c)
 {
-    free(c->signals);
-    free(c->messages);
     memset(c, 0, sizeof(*c));
-}
-
-static int msg_index(const can_t *c, uint32_t id)
-{
-    const dbc_msg_t *m = dbc_find_msg(&c->dbc, id);
-    return m ? (int)(m - c->dbc.msgs) : -1;
 }
 
 static void rx_buf_push(can_t *c, const twai_message_t *frame)
 {
     if (c->rx_count >= CAN_RX_BUF) {
-        /* Buffer full — drop oldest to make room. */
         c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
         c->rx_count--;
     }
@@ -94,7 +67,7 @@ static void rx_buf_push(can_t *c, const twai_message_t *frame)
 
 bool can_rx_pop(can_t *c, twai_message_t *out)
 {
-    if (c->rx_count == 0) return false; // not thread safe
+    if (c->rx_count == 0) return false;
     *out = c->rx_buf[c->rx_head];
     c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
     c->rx_count--;
@@ -112,38 +85,16 @@ int can_poll(can_t *c, uint32_t now_ms)
         s_last_rx_ms[c->bus_id] = now_ms;
         rx_buf_push(c, &rx);
         if (s_raw_observer) s_raw_observer(c->bus_id, &rx, now_ms);
-        if (!c->loaded) continue;
 
-        int mi = msg_index(c, rx.identifier);
-        if (mi >= 0) {
-            can_msg_state_t *ms = &c->messages[mi];
-            memcpy(ms->data, rx.data, rx.data_length_code);
-            ms->dlc = rx.data_length_code;
-            ms->received = true;
-        }
-
-        const dbc_msg_t *msg = dbc_find_msg(&c->dbc, rx.identifier);
-        if (msg) {
-            msg_decode_frame(&c->dbc, msg, rx.data, c->signals, now_ms);
-
-            for (int i = 0; i < msg->sig_count; i++) {
-                uint16_t si = msg->sig_start + i;
-                signal_state_t *s = &c->signals[si];
-                if (s->changed) {
-                    for (int cb = 0; cb < c->cb_count; cb++) {
-                        if (c->callbacks[cb].sig_idx == si) {
-                            c->callbacks[cb].cb(si, s->value, s->prev,
-                                                c->callbacks[cb].ctx);
-                        }
-                    }
-                }
-            }
-        }
+        /* Update frame cache */
+        int i = cache_idx(rx.identifier);
+        c->frames[i].id = rx.identifier;
+        memcpy(c->frames[i].data, rx.data, rx.data_length_code);
+        c->frames[i].dlc = rx.data_length_code;
+        c->frames[i].received = true;
     }
 
-    /* Roll the rate window: lazy-init on first call so we don't divide by tiny
-     * elapsed times right after boot. Once a full window elapses, snapshot the
-     * frames/sec and reset. An idle bus naturally rolls to 0. */
+    /* Roll the rate window */
     if (s_rate_window_start[c->bus_id] == 0) {
         s_rate_window_start[c->bus_id] = now_ms;
     } else {
@@ -158,88 +109,23 @@ int can_poll(can_t *c, uint32_t now_ms)
     return rx_count;
 }
 
-// todo: function description
-int can_on_change(can_t *c, const char *sig_name, can_signal_cb_t cb, void *ctx, int tag)
-{
-    if (!c->loaded) return CAN_DBC_ERR;
-    int si = dbc_find_signal(&c->dbc, sig_name);
-    if (si < 0) return CAN_DBC_ERR;
-    if (c->cb_count >= CAN_MAX_CALLBACKS) return CAN_ERR_FULL;
-    c->callbacks[c->cb_count++] = (typeof(c->callbacks[0])){
-        .sig_idx = si, .cb = cb, .ctx = ctx, .tag = tag
-    };
-    return 0;
-}
-
-int can_on_change_scoped(can_t *c, const char *msg_name, const char *sig_name,
-                          can_signal_cb_t cb, void *ctx, int tag)
-{
-    if (!c->loaded) return CAN_DBC_ERR;
-    int si = dbc_find_signal_by_msg_name(&c->dbc, msg_name, sig_name);
-    if (si < 0) return CAN_DBC_ERR;
-    if (c->cb_count >= CAN_MAX_CALLBACKS) return CAN_ERR_FULL;
-    c->callbacks[c->cb_count++] = (typeof(c->callbacks[0])){
-        .sig_idx = si, .cb = cb, .ctx = ctx, .tag = tag
-    };
-    return 0;
-}
-// todo explain tag and can_off_by_tag
-void can_off_by_tag(can_t *c, int tag)
-{
-    int w = 0;
-    for (int r = 0; r < c->cb_count; r++) {
-        if (c->callbacks[r].tag != tag) {
-            c->callbacks[w++] = c->callbacks[r];
-        }
-    }
-    c->cb_count = w;
-}
-
-const signal_state_t *can_signal(const can_t *c, const char *name)
-{
-    if (!c->loaded) return NULL;
-    int si = dbc_find_signal(&c->dbc, name);
-    return (si >= 0) ? &c->signals[si] : NULL;
-}
-
-const signal_state_t *can_signal_scoped(const can_t *c, const char *msg_name, const char *sig_name)
-{
-    if (!c->loaded) return NULL;
-    int si = dbc_find_signal_by_msg_name(&c->dbc, msg_name, sig_name);
-    return (si >= 0) ? &c->signals[si] : NULL;
-}
-
 int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
 {
-    if (!c->loaded) return -1;
-    int mi = msg_index(c, msg_id);
-    if (mi < 0) return -1;
-    const can_msg_state_t *ms = &c->messages[mi];
-    if (!ms->received) return -1;
-    memcpy(out_data, ms->data, 8);
-    *out_dlc = ms->dlc;
-    return mi;
+    int i = cache_idx(msg_id);
+    cached_frame_t *f = &c->frames[i];
+    if (!f->received || f->id != msg_id) return -1;
+    memcpy(out_data, f->data, 8);
+    *out_dlc = f->dlc;
+    return i;
 }
 
-void can_encode(const can_t *c, int sig_idx, uint8_t *data, float value)
+int can_send(can_t *c, uint32_t id, uint8_t *data, uint8_t dlc)
 {
-    if (!c->loaded || sig_idx < 0 || sig_idx >= c->dbc.hdr->sig_count) return;
-    msg_encode_signal(&c->dbc.sigs[sig_idx], data, value);
-}
-
-int can_send(can_t *c, int msg_idx, uint8_t *data, uint8_t dlc)
-{
-    if (!c->loaded) return -1;
-
-    uint32_t id = c->dbc.msgs[msg_idx].id;
     uint32_t now_us = (uint32_t)(esp_timer_get_time());
     if (!rate_limiter_allow(&c->rate_limiter, id, now_us)) {
         ESP_LOGD(TAG, "bus%d: rate-limited id=0x%03" PRIx32, c->bus_id, id);
         return -1;
     }
-
-    msg_finalize_tx(&c->dbc, msg_idx, &c->messages[msg_idx].counter,
-                    data, c->finalize_fn);
 
     if (c->sim_mode) {
         ESP_LOGI(TAG, "SIM bus%d tx id=0x%03" PRIx32 " dlc=%d", c->bus_id, id, dlc);

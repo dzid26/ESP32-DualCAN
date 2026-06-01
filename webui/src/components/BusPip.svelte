@@ -1,11 +1,14 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
+  import { dbcStore } from '../dbcStore.svelte';
   import type { BusStatus } from '../transport/protocol';
 
   let { id, name, status, rate }:
     { id: number; name: string; status: BusStatus; rate: number } = $props();
 
-  const dbcName = $derived(app.loadedDbc[id]);
+  const dbcName = $derived(dbcStore.fullMessages[id]?.length
+    ? `${dbcStore.fullMessages[id].length} msgs`
+    : null);
 
   const dotClass = $derived(
     status === 'good' ? 'pip__dot--ok' :

@@ -1,6 +1,8 @@
 # Dorky Commander — Berry Scripting Reference
 
-Scripts are `.be` files stored on LittleFS under `/scripts/`. Each file can carry
+Scripts are `.be` files stored on LittleFS under `/scripts/`. Saving can also
+write a `.bep` preprocessed runtime file with DBC names linked to numeric refs.
+Each source file can carry
 metadata comments at the top and must define a `setup()` function.
 
 ## Script structure

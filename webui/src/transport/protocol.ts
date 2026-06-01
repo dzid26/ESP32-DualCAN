@@ -283,8 +283,10 @@ export class Protocol {
     return this.call('script.list');
   }
 
-  writeScript(filename: string, code: string): Promise<void> {
-    return this.call('script.write', { filename, code });
+  writeScript(filename: string, code: string, runtime?: string): Promise<void> {
+    const params: Record<string, unknown> = { filename, code };
+    if (runtime !== undefined) params.runtime = runtime;
+    return this.call('script.write', params);
   }
 
   readScript(filename: string): Promise<{ code: string }> {

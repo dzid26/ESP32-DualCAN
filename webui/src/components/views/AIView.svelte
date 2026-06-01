@@ -81,7 +81,7 @@ ${SCRIPTING_MD}
 
 ## Device context
 ${app.connected ? '✓ Connected' : '⚠ Not connected'}
-${Object.entries(app.loadedDbc).filter(([,v])=>v).map(([k,v])=>`Bus ${k}: ${v}`).join('\n') || 'No DBC loaded'}
+${Object.entries(dbcStore.fullMessages).filter(([,v])=>v.length).map(([k,v])=>`Bus ${k}: ${v.length} msgs`).join('\n') || 'No DBC loaded - use car picker'}
 ${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_name) — use message_name as first arg and signal_name as second arg to on_can_signal().\n\n${signals}` : ''}
 
 ## Instructions

@@ -22,12 +22,13 @@ static const char *mime_type(const char *path)
 {
     const char *dot = strrchr(path, '.');
     if (!dot) return "application/octet-stream";
+    if (strcmp(dot, ".be") == 0)    return "text/plain";
+    if (strcmp(dot, ".bep") == 0)   return "text/plain";
+    if (strcmp(dot, ".txt") == 0)   return "text/plain";
     if (strcmp(dot, ".html") == 0)  return "text/html";
     if (strcmp(dot, ".css") == 0)   return "text/css";
     if (strcmp(dot, ".js") == 0)    return "application/javascript";
     if (strcmp(dot, ".json") == 0)  return "application/json";
-    if (strcmp(dot, ".txt") == 0)   return "text/plain";
-    if (strcmp(dot, ".be") == 0)    return "text/plain";
     if (strcmp(dot, ".png") == 0)   return "image/png";
     if (strcmp(dot, ".jpg") == 0
         || strcmp(dot, ".jpeg") == 0) return "image/jpeg";
