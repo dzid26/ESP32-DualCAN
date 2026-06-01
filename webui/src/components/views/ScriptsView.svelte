@@ -238,11 +238,11 @@
     reader.readAsText(file);
   }
 
-  // Re-list on mount, reconnect, or kill switch.
+  // Re-list on mount, reconnect, enter view, or kill switch.
   $effect(() => {
-    void app.connected; void app.scriptsVersion;
-    if (app.connected) { refresh(); refreshWifiIp(); }
-    else { scripts = []; }
+    void app.connected; void app.scriptsVersion; void app.view;
+    if (app.connected && app.view === 'scripts') { refresh(); refreshWifiIp(); }
+    else if (!app.connected) { scripts = []; }
   });
 
   // Update preprocessed code display when script or DBC changes
