@@ -158,6 +158,47 @@ class AppState {
   otaDone = $state(false);
   rebootAfterUpdate = $state(true);
   suppressUnexpectedDisconnect = false;
+  /** Guards against concurrent transport recovery attempts. */
+  private recovering = false;
+
+  /** Attempt to recover a stalled BLE notification stream.
+   *  Tries restarting notifications first (gentle), then full reconnect.
+   *  Fires at most once per stall episode. */
+  private async recoverStalledTransport(): Promise<void> {
+    if (this.recovering || !this.connected) return;
+    this.recovering = true;
+    this.pushLog('BLE notification stream stalled — recovering', 'warn', 'ble');
+
+    // Level 1: re-subscribe to TX notifications without disconnecting.
+    try {
+      await this.ble.restartNotifications();
+      this.pushLog('restarted BLE notifications', 'info', 'ble');
+      // Verify with a ping. If it succeeds we're done.
+      try {
+        await this.proto.ping();
+        this.pushLog('BLE transport recovered', 'info', 'ble');
+        return;
+      } catch {
+        // ping still failed — notifications not actually flowing
+      }
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      this.pushLog(`restartNotifications failed: ${m}`, 'warn', 'ble');
+    }
+
+    // Level 2: full reconnect.
+    this.pushLog('reconnecting BLE transport', 'warn', 'ble');
+    this.proto.reset();
+    try {
+      await this.ble.reconnect();
+      // onConnChange(true) handles re-initialising protocol state
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.pushLog(`BLE reconnect failed: ${msg}`, 'error', 'ble');
+    } finally {
+      this.recovering = false;
+    }
+  }
 
   // ---- AI assistant ----
   aiKey = $state<string>((() => { try { return localStorage.getItem('dc-ai-key') ?? ''; } catch { return ''; } })());
@@ -222,6 +263,7 @@ class AppState {
       }
     });
     this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status, u.rate));
+    this.proto.onStall(() => this.recoverStalledTransport());
 
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeinstallprompt', (e) => {

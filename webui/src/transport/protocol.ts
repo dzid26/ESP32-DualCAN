@@ -97,15 +97,31 @@ export class Protocol {
   private readonly CHUNK = 180;
 
   private txMutex = Promise.resolve();
+  /** Timestamp of the last byte received via onRx. 0 if nothing received yet. */
+  private lastRxTimestamp = 0;
+  /** Fired once per stall episode when call() detects the notification stream
+   *  is likely dead (no data received for > 10 s while connected). */
+  private stallCb: (() => void) | null = null;
+  /** Guards against firing stallCb repeatedly for the same episode. */
+  private stallReported = false;
 
   constructor(transport: Transport) {
     this.transport = transport;
     transport.onReceive((data) => this.onRx(data));
   }
 
+  /** Register a callback that fires when the notification stream appears
+   *  stalled (no incoming data for > 10 s despite apparently being connected).
+   *  Fires at most once per stall episode; resets when data arrives. */
+  onStall(cb: () => void): void {
+    this.stallCb = cb;
+  }
+
   /** Clear all state after a disconnect. Rejects all pending requests. */
   reset(): void {
     this.rxBuf = new Uint8Array(0);
+    this.lastRxTimestamp = 0;
+    this.stallReported = false;
     for (const [id, p] of this.pending) {
       this.pending.delete(id);
       p.reject(new Error('Disconnected'));
@@ -161,6 +177,15 @@ export class Protocol {
       setTimeout(() => {
         if (this.pending.delete(id)) {
           reject(new Error(`Timeout waiting for response to ${op}`));
+          // No data received for > 10 s while connected → notification stream
+          // likely stalled. Fire stall callback once per episode.
+          if (!this.stallReported && this.stallCb &&
+              this.transport.connected &&
+              this.lastRxTimestamp > 0 &&
+              Date.now() - this.lastRxTimestamp > 10_000) {
+            this.stallReported = true;
+            this.stallCb();
+          }
         }
       }, timeoutMs);
     });
@@ -199,6 +224,8 @@ export class Protocol {
   }
 
   private onRx(data: Uint8Array) {
+    this.lastRxTimestamp = Date.now();
+    this.stallReported = false;       // data is flowing again
     const merged = new Uint8Array(this.rxBuf.length + data.length);
     merged.set(this.rxBuf);
     merged.set(data, this.rxBuf.length);

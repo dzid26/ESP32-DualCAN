@@ -130,6 +130,31 @@ export class BleTransport implements Transport {
     console.log('BLE connected to', device.name);
   }
 
+  /** Try setupDevice with up to 5 retries. gatt.connect can fail right after
+   *  disconnect on Windows — the short delay lets the stack settle. */
+  private async setupWithRetry(device: BluetoothDevice): Promise<void> {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await this.setupDevice(device);
+        return;
+      } catch (err) {
+        if (this.server?.connected) {
+          try { this.server.disconnect(); } catch { /* ignore */ }
+        }
+        device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+        this.server = null;
+        this.rxChar = null;
+        this.txChar = null;
+        this.device = null;
+        this.connectedAt = 0;
+        this.disconnectHandled = false;
+        this.setConnected(false);
+        if (attempt >= 4) throw err;
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+  }
+
   async connect(): Promise<void> {
     if (!navigator.bluetooth) {
       throw new Error(
@@ -142,29 +167,7 @@ export class BleTransport implements Transport {
       optionalServices: [SERVICE_UUID],
     });
 
-    // On Windows, gatt.connect can fail right after disconnect. Retry with a
-    // small delay so the user sees "Connecting…" instead of "Connect failed".
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        await this.setupDevice(device);
-        return;
-      } catch (err) {
-        if (this.server?.connected) {
-          try { this.server.disconnect(); } catch {}
-        }
-        device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-        this.server = null;
-        this.rxChar = null;
-        this.txChar = null;
-        this.device = null;
-        this.connectedAt = 0;
-        this.disconnectHandled = false;
-        this.setConnected(false);
-
-        if (attempt >= 4) throw err;
-        await new Promise(r => setTimeout(r, 50));
-      }
-    }
+    await this.setupWithRetry(device);
   }
 
   async disconnect(): Promise<void> {
@@ -189,6 +192,35 @@ export class BleTransport implements Transport {
     if (!this.rxChar) throw new Error('Not connected');
     // @ts-expect-error TS 5.x ArrayBufferLike vs ArrayBuffer mismatch — runtime is fine
     await this.rxChar.writeValueWithoutResponse(data);
+  }
+
+  /** Re-subscribe to TX characteristic notifications.
+   *  Call when the notification stream appears stalled (no incoming data
+   *  despite the GATT connection being up). Returns immediately if the
+   *  characteristic is gone. */
+  async restartNotifications(): Promise<void> {
+    if (!this.txChar) throw new Error('Not connected');
+    await this.txChar.startNotifications();
+  }
+
+  /** Disconnect and reconnect to the same device without showing the
+   *  Bluetooth picker. Useful for recovering a wedged transport. */
+  async reconnect(): Promise<void> {
+    const device = this.device;
+    if (!device) throw new Error('No device to reconnect to');
+
+    // Tear down the current session.
+    this.userInitiatedDisconnect = true;
+    try { this.server?.disconnect(); } catch { /* ignore */ }
+    device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
+    this.server = null;
+    this.rxChar = null;
+    this.txChar = null;
+    this.connectedAt = 0;
+    this.disconnectHandled = false;
+    this.setConnected(false);
+
+    await this.setupWithRetry(device);
   }
 
   onReceive(cb: (data: Uint8Array) => void): void {
