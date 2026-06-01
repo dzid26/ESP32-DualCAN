@@ -26,6 +26,7 @@
   import SettingsView from './components/views/SettingsView.svelte';
   import TeslaView from './components/views/TeslaView.svelte';
   import EngineView from './components/views/EngineView.svelte';
+  import RadioView from './components/views/RadioView.svelte';
 
   function tabStyle(v: ViewId): string {
     return app.view === v ? 'flex: 1; display: flex; flex-direction: column; min-height: 0;' : 'display: none;';
@@ -45,6 +46,7 @@
     <div style={tabStyle('settings')}><SettingsView /></div>
     <div style={tabStyle('tesla')}><TeslaView /></div>
     <div style={tabStyle('engine')}><EngineView /></div>
+    <div style={tabStyle('radio')}><RadioView /></div>
   {/snippet}
 </Shell>
 

@@ -20,4 +20,5 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'settings',  label: 'Settings',      icon: 'settings', group: 'Device' },
   { id: 'tesla',     label: 'Tesla-BLE',     icon: 'tesla',    group: 'Device' },
   { id: 'engine',    label: 'Engine sound',  icon: 'engine',   group: 'Fun' },
+  { id: 'radio',     label: 'Radio',         icon: 'radio',    group: 'Fun' },
 ];

@@ -33,10 +33,10 @@ export type ViewId =
   | 'signals' | 'dbc'
   | 'trace' | 'capture'
   | 'settings' | 'tesla'
-  | 'engine';
+  | 'engine' | 'radio';
 
 const VALID_VIEWS = new Set<string>([
-  'events','scripts','ai','gallery','signals','dbc','trace','capture','settings','tesla','engine'
+  'events','scripts','ai','gallery','signals','dbc','trace','capture','settings','tesla','engine','radio'
 ]);
 
 function loadView(): ViewId {
