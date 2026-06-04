@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { app } from '../../lib/store.svelte';
   import { parseDbcInWorker, type Message } from '../../dbc/parser';
   import { dbcStore } from '../../dbcStore.svelte';
@@ -10,8 +11,46 @@
   let loadedFrom = $state<string | null>(null);
   let status = $state('No DBC loaded');
   let busy = $state(false);
+  let filterInput = $state('');
+  let signalFilter = $state('');
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  $effect(() => {
+    const val = filterInput;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { signalFilter = val; }, 120);
+    return () => clearTimeout(debounceTimer);
+  });
+
+  const filterPattern = $derived(signalFilter.trim().toLowerCase());
   let openMessages = $state(new Set<number>());
   let busDbc = $state.raw<Record<number, { messages: Message[]; loadedFrom: string }>>({});
+
+  function signalVisible(sig: Signal): boolean {
+    return !filterPattern || sig.name.toLowerCase().includes(filterPattern);
+  }
+
+  const visibleMessages = $derived.by(() => {
+    if (!filterPattern) return messages;
+    return messages.filter(m =>
+      m.name.toLowerCase().includes(filterPattern) ||
+      m.signals.some(s => s.name.toLowerCase().includes(filterPattern))
+    );
+  });
+
+  $effect(() => {
+    const f = filterPattern;
+    const count = visibleMessages.length;
+    if (!f) {
+      const prev = untrack(() => openMessages);
+      if (prev.size > 0) openMessages = new Set();
+    } else if (count < 20 && count > 0) {
+      const prev = untrack(() => openMessages);
+      const next = new Set(prev);
+      for (const m of visibleMessages) next.add(m.id);
+      if (next.size !== prev.size) openMessages = next;
+    }
+  });
   let loadedByPicker = $state(new Set<number>());
 
   function publishSignals(): void {
@@ -201,22 +240,53 @@
       No DBC loaded. Select a compatible car in the car picker, or <strong>Upload .dbc</strong> above.
     </div>
   {:else}
+    <div class="row-flex" style="gap: 6px; background: var(--dc-bg); border: 1px solid var(--dc-border-2); border-radius: 4px; padding: 0 10px; height: var(--dc-btn-h)">
+      <Icon name="search" size={13} />
+      <input
+        bind:value={filterInput}
+        placeholder="Search messages &amp; signals…"
+        class="mono"
+        style="background: transparent; border: none; outline: none; color: var(--dc-text); flex: 1; font-size: 12px"
+      />
+      {#if filterInput}
+        <button class="btn btn--sm btn--ghost" onclick={() => { filterInput = ''; signalFilter = ''; }}>
+          <Icon name="x" size={13} />
+        </button>
+      {/if}
+    </div>
+    {#if visibleMessages.length === 0}
+      <div class="empty">
+        No matches for &ldquo;<strong>{filterInput}</strong>&rdquo;
+      </div>
+    {:else}
     <div class="dtable" style="flex: 1">
       <div class="dtable__head" style="grid-template-columns: 80px 1fr 90px">
         <span>ID</span><span>Message</span><span>Signals</span>
       </div>
       <div class="dtable__body">
-        {#each messages as m (m.id)}
-          <details style="border-bottom: 1px solid var(--dc-border)" ontoggle={(e) => toggleMessage(e, m.id)}>
+        {#each visibleMessages as m (m.id)}
+          <details style="border-bottom: 1px solid var(--dc-border)" ontoggle={(e) => toggleMessage(e, m.id)} open={openMessages.has(m.id)}>
             <summary class="mono" style="display: grid; grid-template-columns: 80px 1fr 90px; gap: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px; align-items: center">
               <span>{hex3(m.id)}</span>
               <span style="font-family: var(--dc-font-sans); color: var(--dc-text)">{m.name}</span>
-              <span class="muted">{m.signals.length} signals</span>
+              <span class="muted">{m.signals.filter(signalVisible).length} signals</span>
             </summary>
             {#if openMessages.has(m.id)}
               <ul class="mono" style="margin: 0; padding: 4px 10px 8px 28px; font-size: 11px; color: var(--dc-text-fade); list-style: square">
-                {#each m.signals as sig}
-                  <li>{sig.name} <span class="ghost">[{sig.startBit}|{sig.bitLength}] scale={sig.scale} offset={sig.offset}</span></li>
+                {#each m.signals.filter(signalVisible) as sig}
+                  <li>
+                    {#if filterPattern}
+                      {@const idx = sig.name.toLowerCase().indexOf(filterPattern)}
+                      {#if idx !== -1}
+                        {sig.name.slice(0, idx)}<strong style="color: var(--dc-ok)">{sig.name.slice(idx, idx + filterPattern.length)}</strong>{sig.name.slice(idx + filterPattern.length)}
+                      {:else}
+                        {sig.name}
+                      {/if}
+                    {:else}
+                      {sig.name}
+                    {/if}
+                    <span class="ghost"> [{sig.startBit}|{sig.bitLength}] scale={sig.scale} offset={sig.offset}</span>
+                  </li>
                 {/each}
               </ul>
             {/if}
@@ -224,9 +294,10 @@
         {/each}
       </div>
       <div style="padding: 4px 10px; border-top: 1px solid var(--dc-border); font-size: 11px; color: var(--dc-text-fade); display: flex; justify-content: space-between">
-        <span>{messages.length} messages · {messages.reduce((n, m) => n + m.signals.length, 0)} signals</span>
+        <span>{visibleMessages.length} messages · {visibleMessages.reduce((n, m) => n + m.signals.filter(signalVisible).length, 0)} signals{filterPattern ? ' match' : ''}</span>
         <span class="mono">{loadedFrom ?? ''}</span>
       </div>
     </div>
+    {/if}
   {/if}
 </div>
