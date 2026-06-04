@@ -161,6 +161,7 @@
     height: 100%;
     border: 1px solid #333;
     border-radius: 4px;
-    overflow: auto;
+    /* CM's .cm-scroller handles all scrolling internally — don't intercept it */
+    overflow: hidden;
   }
 </style>

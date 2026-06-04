@@ -65,10 +65,13 @@ const warmTheme = EditorView.theme({
     fontFamily: "'Fira Code', 'Cascadia Code', monospace",
     fontSize: '13px',
     lineHeight: '1.5',
+    overflow: 'auto',
   },
   '.cm-content': {
     caretColor: '#e07b1f',
     padding: '8px 0',
+    /* No line wrapping — long lines trigger horizontal scrollbar on .cm-scroller */
+    whiteSpace: 'pre',
   },
   '.cm-line': {
     padding: '0 10px',

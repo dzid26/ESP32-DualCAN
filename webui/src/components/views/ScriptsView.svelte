@@ -333,7 +333,7 @@
   }
 </script>
 
-<div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">
+<div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px" style:overflow-y={isMobile ? 'auto' : 'visible'} style:overflow-x={isMobile ? 'hidden' : 'visible'}>
   <SectionHead
     title="Automations"
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
@@ -378,12 +378,14 @@
     style:gap="10px"
     style:flex="1"
     style:min-height="0"
-    style:overflow="auto"
+    style:overflow={isMobile ? 'visible' : 'auto'}
     style:grid-template-columns={isMobile ? '1fr' : 'minmax(180px, 240px) 1fr'}
   >
     <div
       class="frame"
-      style="display: flex; flex-direction: column; overflow: hidden; min-height: 130px"
+      style="display: flex; flex-direction: column; overflow: hidden"
+      style:min-height={isMobile ? '0' : '130px'}
+      style:max-height={isMobile ? '35vh' : 'none'}
     >
       <div class="frame__head">
         Installed <span class="ghost mono">{scripts.length}</span>
@@ -447,7 +449,7 @@
       style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
       bind:this={editorPanelEl}
       style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
-      style:min-height={isMobile ? '300px' : '0'}
+      style:min-height={isMobile ? 'calc(100dvh - 120px)' : '0'}
     >
       <div class="frame__head" style="flex-wrap: wrap-reverse; gap: 6px">
         <span class="row-flex" style="gap: 6px; min-width: 0">
