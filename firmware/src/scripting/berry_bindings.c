@@ -420,7 +420,7 @@ static int l_can_recv_raw(bvm *vm)
 static int l_can_msg_get(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
-    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int");
+    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int"); //msg_id
     uint32_t msg_id = (uint32_t)be_toint(vm, 1);
     int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
     can_t *eng = get_bus(bus);
@@ -429,7 +429,9 @@ static int l_can_msg_get(bvm *vm)
     uint8_t data[8], dlc;
     if (can_read(eng, msg_id, data, &dlc) < 0) be_return_nil(vm);
 
-    be_newobject(vm, "map");
+    // https://berry.readthedocs.io/en/latest/source/en/FFI-Example.html#instantiate-a-list-object-in-a-native-function
+    be_getglobal(vm, "map");
+    be_newmap(vm);
     be_pushstring(vm, "id");      be_pushint(vm, (bint)msg_id);
     be_data_insert(vm, -3); be_pop(vm, 2);
     be_pushstring(vm, "bus");     be_pushint(vm, bus);
@@ -438,6 +440,10 @@ static int l_can_msg_get(bvm *vm)
     be_data_insert(vm, -3); be_pop(vm, 2);
     be_pushstring(vm, "dlc");     be_pushint(vm, dlc);
     be_data_insert(vm, -3); be_pop(vm, 2);
+    be_call(vm, 1);
+    be_pop(vm, 1); // pop the arguments
+    be_return(vm);
+}
     be_return(vm);
 }
 
