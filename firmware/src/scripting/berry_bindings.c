@@ -298,21 +298,6 @@ static int l_action_invoke(bvm *vm)
     be_return_nil(vm);
 }
 
-static int l_action_list(bvm *vm)
-{
-    be_getglobal(vm, "list");
-    be_newlist(vm);
-    for (int i = 0; i < MAX_ACTIONS; i++) {
-        if (!s_actions[i].in_use) continue;
-        be_pushstring(vm, s_actions[i].name);
-        be_data_push(vm, -2);
-        be_pop(vm, 1);
-    }
-    be_call(vm, 1);
-    be_pop(vm, 1);
-    be_return(vm);
-}
-
 int berry_actions_snapshot(const char **out_names, int max)
 {
     int n = 0, found = 0;
@@ -668,7 +653,6 @@ void berry_register_bindings(bvm *vm)
 
     be_regfunc(vm, "action_register", l_action_register);
     be_regfunc(vm, "action_invoke",   l_action_invoke);
-    be_regfunc(vm, "action_list",     l_action_list);
 
     be_regfunc(vm, "millis", l_millis);
 }

@@ -26,7 +26,7 @@ static const char *BINDING_NAMES[] = {
     "led_set", "led_off",
     "state_set", "state_get", "state_remove",
     "timer_after", "timer_every", "timer_cancel",
-    "action_register", "action_invoke", "action_list",
+    "action_register", "action_invoke",
     "millis",
     /* `print` is built into Berry; we only override it on-device. */
     NULL,
