@@ -42,9 +42,13 @@ const API: BindingDoc[] = [
     detail: 'on_can_signal(msg:str, sig:str, fn(sig) [, bus:int])',
     documentation: 'Invoke fn(sig) whenever the signal changes. sig is {value, prev, sig_idx}. Scoped by message — DBC signal names collide across messages.',
     snippet: 'on_can_signal("${msg}", "${sig}", def(s)\n  ${body}\nend)' },
+  { label: 'can_msg_new',
+    detail: 'can_msg_new(name:str [, bus:int]) | can_msg_new(id:int, bus:int, dlc:int) -> draft',
+    documentation: 'Create a fresh zeroed message draft. Name form auto-fills DLC from DBC. Use with can_msg_set, then can_msg_send.',
+    snippet: 'can_msg_new("${msg}")' },
   { label: 'can_msg_get',
-    detail: 'can_msg_get(id:int | name:str [, bus:int]) -> draft',
-    documentation: 'Take a draft of the latest rx for this message id or DBC message name. Edit signals with can_msg_set, then can_msg_send to transmit.',
+    detail: 'can_msg_get(id:int | name:str [, bus:int]) -> draft | nil',
+    documentation: 'Take a draft of the latest rx for this message id or DBC message name. Returns nil if no frame received — use can_msg_new for a fresh draft.',
     snippet: 'can_msg_get("${msg}")' },
   { label: 'can_msg_set',
     detail: 'can_msg_set(draft, sig:str, value)',
@@ -115,7 +119,7 @@ export const BUILTINS = new Set(API.map(b => b.label));
 export const KEYWORD_SET = new Set(KEYWORDS);
 
 /* Functions that expect a DBC message name as the first string argument. */
-const DBC_MSG_FUNCS = new Set(['can_signal_get', 'on_can_signal', 'can_msg_get']);
+const DBC_MSG_FUNCS = new Set(['can_signal_get', 'on_can_signal', 'can_msg_get', 'can_msg_new']);
 /* Functions that also expect a DBC signal name as the second string argument. */
 const DBC_SIG_FUNCS = new Set(['can_signal_get', 'on_can_signal']);
 

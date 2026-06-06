@@ -19,10 +19,8 @@ def mirror_request(value, label)
 
   var msg = can_msg_get("UI_vehicleControl", 0)
   if msg == nil
-    print("Mirror " .. label .. " skipped: UI_vehicleControl not available")
-    return
+    msg = can_msg_new("UI_vehicleControl", 0)
   end
-
   can_msg_set(msg, "UI_mirrorFoldRequest", value)
   can_msg_send(msg)
   print("Mirror " .. label .. " requested")

@@ -432,6 +432,34 @@ static int l_can_msg_get(bvm *vm)
     be_pop(vm, 1); // pop the arguments
     be_return(vm);
 }
+
+/* can_msg_new(id:int, bus:int, dlc:int) -> draft
+ * Creates a zeroed message draft for encoding and transmission. */
+static int l_can_msg_new(bvm *vm)
+{
+    CHECK_ARITY(vm, 3);
+    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int"); //msg_id
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int"); //bus
+    CHECK_TYPE(vm, 3, be_isint(vm, 3), "int"); //dlc
+    uint32_t msg_id = (uint32_t)be_toint(vm, 1);
+    int bus = be_toint(vm, 2);
+    int dlc = be_toint(vm, 3);
+    if (dlc <= 0 || dlc > 8) dlc = 8;
+
+    uint8_t zeros[8] = {0};
+
+    be_getglobal(vm, "map");
+    be_newmap(vm);
+    be_pushstring(vm, "id");      be_pushint(vm, (bint)msg_id);
+    be_data_insert(vm, -3); be_pop(vm, 2);
+    be_pushstring(vm, "bus");     be_pushint(vm, bus);
+    be_data_insert(vm, -3); be_pop(vm, 2);
+    be_pushstring(vm, "data");    be_pushbytes(vm, zeros, dlc);
+    be_data_insert(vm, -3); be_pop(vm, 2);
+    be_pushstring(vm, "dlc");     be_pushint(vm, dlc);
+    be_data_insert(vm, -3); be_pop(vm, 2);
+    be_call(vm, 1);
+    be_pop(vm, 1);
     be_return(vm);
 }
 
@@ -632,6 +660,7 @@ void berry_register_bindings(bvm *vm)
     be_regfunc(vm, "can_send_raw",   l_can_send_raw);
     be_regfunc(vm, "can_recv_raw",   l_can_recv_raw);
     be_regfunc(vm, "can_msg_get",    l_can_msg_get);
+    be_regfunc(vm, "can_msg_new",    l_can_msg_new);
     be_regfunc(vm, "can_msg_send",   l_can_msg_send);
 
     /* CAN utility functions (signal encode/decode without DBC) */

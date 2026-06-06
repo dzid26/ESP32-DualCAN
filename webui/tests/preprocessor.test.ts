@@ -76,6 +76,34 @@ test('reports error for unknown signal in can_msg_set', () => {
   assert(result.errors[0].includes('GHOST_SIG'));
 });
 
+test('preprocesses can_msg_new with string message name', () => {
+  const code = `var msg = can_msg_new("DAS_bodyControls", 0)`;
+  const result = preprocessScript(code, mockMessages);
+  assert(result.code.includes('can_msg_new(0x3e9, 0, 8)'));
+  assert.equal(result.errors.length, 0);
+});
+
+test('preprocesses can_msg_new with default bus', () => {
+  const code = `var msg = can_msg_new("VCLEFT_doorStatus")`;
+  const result = preprocessScript(code, mockMessages);
+  assert(result.code.includes('can_msg_new(0x102, 0, 8)'));
+  assert.equal(result.errors.length, 0);
+});
+
+test('passes can_msg_new with numeric id through unchanged', () => {
+  const code = `var msg = can_msg_new(0x3E9, 0, 8)`;
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.code, code);
+  assert.equal(result.errors.length, 0);
+});
+
+test('reports error for unknown message in can_msg_new', () => {
+  const code = `can_msg_new("UNKNOWN_MSG")`;
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.length > 0);
+  assert(result.errors[0].includes('UNKNOWN_MSG'));
+});
+
 test('handles multiple replacements in one script', () => {
   const code = [
     'on_can_signal("DAS_bodyControls", "DAS_hazardLightRequest", fn)',

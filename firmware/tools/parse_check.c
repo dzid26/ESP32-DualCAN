@@ -16,7 +16,7 @@
 
 static const char *BINDING_NAMES[] = {
     "can_send_raw", "can_recv_raw",
-    "can_msg_get", "can_msg_send",
+    "can_msg_get", "can_msg_new", "can_msg_send",
     /* Signal encode/decode utilities (no DBC dependency) */
     "bit_extract", "bit_insert",
     "signal_decode", "signal_encode",

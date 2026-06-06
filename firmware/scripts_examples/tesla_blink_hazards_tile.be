@@ -17,10 +17,8 @@ end
 def hazards_off()
   var msg = can_msg_get("DAS_bodyControls", 0)
   if msg == nil
-    print("Hazards skipped: DAS_bodyControls not available")
-    return
+    msg = can_msg_new("DAS_bodyControls", 0)
   end
-
   can_msg_set(msg, "DAS_hazardLightRequest", 0)
   can_msg_send(msg)
   print("Hazards off requested")
@@ -31,10 +29,8 @@ def hazards_on()
 
   var msg = can_msg_get("DAS_bodyControls", 0)
   if msg == nil
-    print("Hazards skipped: DAS_bodyControls not available")
-    return
+    msg = can_msg_new("DAS_bodyControls", 0)
   end
-
   can_msg_set(msg, "DAS_hazardLightRequest", 1)
   can_msg_send(msg)
   print("Hazards on requested")

@@ -27,22 +27,7 @@ def run_test()
 
   # ---- Phase 1: Build ----
   print("1: Build message")
-  var msg = can_msg_get("DAS_bodyControls", 0)
-  if msg == nil
-    msg = {}
-    var z = bytes()
-    for i: 0..7 z.add(0) end
-    msg["id"] = 0x3E9
-    msg["bus"] = 0
-    msg["data"] = z
-    msg["dlc"] = 8
-    print("   fresh draft (no frame on bus)")
-  else
-    var z = bytes()
-    for i: 0..7 z.add(0) end
-    msg["data"] = z
-    print("   zeroed frame from cache")
-  end
+  var msg = can_msg_new("DAS_bodyControls", 0)
 
   can_msg_set(msg, "DAS_headlightRequest", 2)
   can_msg_set(msg, "DAS_hazardLightRequest", 1)

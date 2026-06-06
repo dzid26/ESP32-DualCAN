@@ -160,6 +160,32 @@ export function preprocessScript(
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
+  /* ---- Pattern 1b: can_msg_new("msg" [, bus]) ---- */
+  // Resolves message name to ID + DLC from DBC; passes through to the
+  // on-device `can_msg_new(id, bus, dlc)` C binding.
+  const canMsgNewNamePattern = /can_msg_new\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
+  while ((match = canMsgNewNamePattern.exec(code)) !== null) {
+    const msgName = match[1];
+    const trailing = match[2]; // e.g. ", 1" or ""
+    const fullMatch = match[0];
+    const matchStart = match.index;
+    const matchEnd = matchStart + fullMatch.length;
+
+    const msgId = findMsgId(msgName);
+    if (msgId === null) {
+      missingMessages.add(msgName);
+      errors.push(`can_msg_new: message '${msgName}' not found`);
+      const replacement = `raise("key_error", "can_msg_new: message '${msgName}' not found")`;
+      replacements.push({ start: matchStart, end: matchEnd, replacement });
+      continue;
+    }
+
+    const msg = messages.find(m => m.id === msgId)!;
+    const bus = trailing ? trailing.trim().replace(/^,\s*/, '') : '0';
+    const replacement = `can_msg_new(0x${msgId.toString(16)}, ${bus}, ${msg.dlc})`;
+    replacements.push({ start: matchStart, end: matchEnd, replacement });
+  }
+
   /* ---- Pattern 2: can_signal_get("msg", "sig" [, bus]) ---- */
   const canSigGetPattern =
     /can_signal_get\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
