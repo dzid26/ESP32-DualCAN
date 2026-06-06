@@ -300,6 +300,7 @@ static int l_action_invoke(bvm *vm)
 
 static int l_action_list(bvm *vm)
 {
+    be_getglobal(vm, "list");
     be_newlist(vm);
     for (int i = 0; i < MAX_ACTIONS; i++) {
         if (!s_actions[i].in_use) continue;
@@ -307,6 +308,8 @@ static int l_action_list(bvm *vm)
         be_data_push(vm, -2);
         be_pop(vm, 1);
     }
+    be_call(vm, 1);
+    be_pop(vm, 1);
     be_return(vm);
 }
 
