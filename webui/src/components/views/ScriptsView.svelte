@@ -26,6 +26,7 @@
   let confirmRemove = $state<string | null>(null);
   const dirty = $derived(code !== savedCode);
   let lastScriptStatusSeq = 0;
+  const canShowInstalled = $derived(selFn !== null && !dirty);
 
   let editorScrollTop = $state(0);
 
@@ -333,7 +334,7 @@
   }
 </script>
 
-<div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px" style:overflow-y={isMobile ? 'auto' : 'visible'} style:overflow-x={isMobile ? 'hidden' : 'visible'}>
+<div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
   <SectionHead
     title="Automations"
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
@@ -380,6 +381,7 @@
     style:min-height="0"
     style:overflow={isMobile ? 'visible' : 'auto'}
     style:grid-template-columns={isMobile ? '1fr' : 'minmax(180px, 240px) 1fr'}
+    style:grid-template-rows="1fr"
   >
     <div
       class="frame"
@@ -452,29 +454,13 @@
       style:min-height={isMobile ? 'calc(100dvh - 120px)' : '0'}
     >
       <div class="frame__head" style="flex-wrap: wrap-reverse; gap: 6px">
-        <span class="row-flex" style="gap: 6px; min-width: 0">
-          <input
-            class="inp"
-            value={showPreprocessed ? editorFilename.replace(/\.be$/, '.bep') : editorFilename}
-            oninput={(e) => { editorFilename = (e.currentTarget as HTMLInputElement).value.replace(/\.bep$/, '.be'); }}
-            placeholder={showPreprocessed ? 'filename.bep' : 'filename.be'}
-            style="width: 220px; min-width: 0; max-width: 280px; height: 22px; font-size: 12px"
-          />
-          {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px; white-space: nowrap">● unsaved</span>{/if}
-        </span>
         <span class="row-flex" style="flex-wrap: wrap; gap: 4px; margin-left: auto">
           <button class="btn btn--sm"
             onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
             title="Send this script to the AI assistant for editing">
             <Icon name="sparkle" size={16} /> AI edit
           </button>
-          <button class="btn btn--sm" 
-            class:btn--info={showPreprocessed}
-            onclick={() => { showPreprocessed = !showPreprocessed; }}
-            disabled={selFn === null || dirty}
-            title="Toggle between source and preprocessed view">
-            <Icon name="search" size={13} />Toggle
-          </button>
+
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save & process
           </button>
@@ -485,6 +471,31 @@
         </span>
       </div>
 
+
+      <div class="script-tabs">
+        <span class="row-flex" style="gap: 6px; min-width: 0; margin-right: auto">
+          <input
+            class="inp"
+            value={showPreprocessed ? editorFilename.replace(/\.be$/, '.bep') : editorFilename}
+            oninput={(e) => { editorFilename = (e.currentTarget as HTMLInputElement).value.replace(/\.bep$/, '.be'); }}
+            placeholder={showPreprocessed ? 'filename.bep' : 'filename.be'}
+            style="width: 220px; min-width: 0; max-width: 280px; height: 22px; font-size: 12px"
+          />
+          {#if dirty}<span class="mono" style="color: var(--dc-warn); font-size: 10px; white-space: nowrap">● unsaved</span>{/if}
+        </span>
+        <button
+          class="script-tab"
+          class:script-tab--active={!showPreprocessed}
+          onclick={() => showPreprocessed = false}>
+          Source
+        </button>
+        <button
+          class="script-tab"
+          class:script-tab--active={showPreprocessed}
+          onclick={() => showPreprocessed = true}>
+          {canShowInstalled ? 'Installed' : 'Preview'}
+        </button>
+      </div>
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
         <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;display:flex">
@@ -576,6 +587,33 @@
     background: linear-gradient(135deg, transparent 50%, var(--dc-border-hi) 50%);
   }
 
+  .script-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border-bottom: 1px solid var(--dc-border);
+    padding: 0 10px;
+    flex-shrink: 0;
+  }
+  .script-tab {
+    padding: 5px 14px;
+    border: none;
+    background: transparent;
+    color: var(--dc-text-fade);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .script-tab:hover {
+    color: var(--dc-text);
+  }
+  .script-tab--active {
+    color: var(--dc-accent, #4a9eff);
+    border-bottom-color: var(--dc-accent, #4a9eff);
+  }
   .ce-hide { display: none !important; }
   :global(.ad-overlay) {
     position: fixed; inset: 0; background: rgba(10, 8, 4, 0.55); z-index: 200;
