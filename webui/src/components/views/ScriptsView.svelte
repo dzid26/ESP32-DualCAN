@@ -453,25 +453,22 @@
       style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
       style:min-height={isMobile ? 'calc(100dvh - 120px)' : '0'}
     >
-      <div class="frame__head" style="flex-wrap: wrap-reverse; gap: 6px">
-        <span class="row-flex" style="flex-wrap: wrap; gap: 4px; margin-left: auto">
+      {#if isMobile}
+        <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border)">
           <button class="btn btn--sm"
             onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
             title="Send this script to the AI assistant for editing">
             <Icon name="sparkle" size={16} /> AI edit
           </button>
-
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
-            <Icon name="up" size={13} />Save & process
+            <Icon name="up" size={13} />Save
           </button>
           <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
             <Icon name="up" size={13} />Save & enable
           </button>
           <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
-        </span>
-      </div>
-
-
+        </div>
+      {/if}
       <div class="script-tabs">
         <span class="row-flex" style="gap: 6px; min-width: 0; margin-right: auto">
           <input
@@ -486,15 +483,33 @@
         <button
           class="script-tab"
           class:script-tab--active={!showPreprocessed}
-          onclick={() => showPreprocessed = false}>
+          onclick={() => showPreprocessed = false}
+          title="Edit the the source code">
           Source
         </button>
         <button
           class="script-tab"
           class:script-tab--active={showPreprocessed}
-          onclick={() => showPreprocessed = true}>
+          onclick={() => showPreprocessed = true}
+          title={canShowInstalled ? 'View the preprocessed script running on the device' : 'Preview what preprocessing'}>
           {canShowInstalled ? 'Installed' : 'Preview'}
         </button>
+        {#if !isMobile}
+        <span class="row-flex" style="flex-wrap: wrap; gap: 4px; margin-left: auto">
+          <button class="btn btn--sm"
+            onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
+            title="Send this script to the AI assistant for editing">
+            <Icon name="sparkle" size={16} /> AI edit
+          </button>
+          <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
+            <Icon name="up" size={13} />Save
+          </button>
+          <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
+            <Icon name="up" size={13} />Save & enable
+          </button>
+          <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
+        </span>
+        {/if}
       </div>
 
       <div style="flex: 1; min-height: 0; display: flex; position: relative">
