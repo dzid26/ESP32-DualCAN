@@ -341,16 +341,16 @@
   >
     {#snippet actions()}
       <a
-        href="https://berry-lang.github.io/"
+        href="https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/scripting.md"
         target="_blank"
         rel="noopener"
         class="btn btn--sm"
-        title="Berry language docs — syntax, stdlib, examples"
+        title="Scripting guide — writing and using scripts"
         style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none"
       >
-        Berry guide
-        <span aria-hidden="true" style="font-size: 9px; opacity: 0.7">↗</span>
-      </a>
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+          <path d="M2 3h10M2 7h10M2 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>Scripting Guide
       <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
       <select
         class="sel"

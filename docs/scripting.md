@@ -1,9 +1,12 @@
-# Dorky Commander — Berry Scripting Reference
+# Dorky Commander — Scripting Reference
+
+> **💡 This is where the fun begins.** You can turn your commander into a smart device that reacts to the car CAN signals. Dive in!
+
+> Scripting is based on Berry - a Python like language: <https://berry-lang.github.io/>
 
 Scripts are `.be` files stored on LittleFS under `/scripts/`. Saving can also
 write a `.bep` preprocessed runtime file with DBC names linked to numeric refs.
-Each source file can carry
-metadata comments at the top and must define a `setup()` function.
+Each source file can carry metadata comments at the top and must define a `setup()` function.
 
 ## Script structure
 
