@@ -110,6 +110,7 @@
   async function save(): Promise<void> {
     const fn = normalizeScriptFilename((selFn ?? editorFilename).trim());
     if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
+    const wasEnabled = scripts.find(s => s.filename === fn)?.enabled ?? false;
     busy = true;
     try {
       // Upload .be immediately so the save feels fast.
@@ -120,7 +121,6 @@
       app.setLastScriptFilename(fn);
       app.pushLog(`scripts: saved ${fn}`, 'info', 'scripts');
       await refresh();
-      busy = false;
 
       // Then preprocess and upload .bep in the background if needed.
       const result = preprocessScript(code, getFullMessages());
@@ -134,16 +134,16 @@
           app.pushLog(`scripts: preprocessed runtime updated`, 'info', 'scripts');
         }
       }
+      // Reload the saved script from device to confirm clean state.
+      await loadScript(fn);
+      // Re-enable if it was running before editing.
+      if (wasEnabled) await enable(fn);
+      busy = false;
     } catch (e) {
       app.pushLog(`scripts: upload failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally {
       busy = false;
     }
-  }
-
-  async function saveAndEnable(): Promise<void> {
-    await save();
-    if (selFn) await enable(selFn);
   }
 
   async function enable(filename: string): Promise<void> {
@@ -463,9 +463,6 @@
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save
           </button>
-          <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
-            <Icon name="up" size={13} />Save & enable
-          </button>
           <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
         </div>
       {/if}
@@ -503,9 +500,6 @@
           </button>
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save
-          </button>
-          <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
-            <Icon name="up" size={13} />Save & enable
           </button>
           <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
         </span>
