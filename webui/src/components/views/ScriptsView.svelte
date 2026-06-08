@@ -343,26 +343,26 @@
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
   >
     {#snippet actions()}
-      <button class="btn btn--sm" onclick={() => showGuide = true} title="Scripting guide — writing and using scripts">
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="margin-right: 2px">
+      <button class="btn btn--sm" onclick={() => showGuide = true} title="Scripting guide — writing and using scripts" style="flex: 1 1 30px; overflow: hidden; justify-content: center">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink: 0">
           <path d="M2 3h10M2 7h10M2 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>Scripting Guide
+        </svg><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scripting Guide</span>
       </button>
-      <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
+      <button class="btn btn--sm" style="flex-shrink: 0" onclick={newScript}><Icon name="up" size={13} />New</button>
       <select
         class="sel"
         onchange={loadExample}
         title="Load a bundled Berry example into the editor (firmware/scripts_examples)"
-        style="flex: 1 1 auto; min-width: 80px; max-width: 160px; padding-right: 24px"
+        style="flex: 1 1 auto; flex-shrink: 0; min-width: 80px; max-width: 160px; padding-right: 24px"
       >
         <option value="">Load example…</option>
         {#each examples as ex}
           <option value={ex.filename}>{ex.name}</option>
         {/each}
       </select>
-      <label class="btn btn--sm btn--info" title="Read a .be file from disk into the editor">
+      <label class="btn btn--sm btn--info" style="flex-shrink: 0" title="Read a .be file from disk into the editor">
         Import
-        <input type="file" accept=".be,text/plain" onchange={importFile} style="display: none" />
+        <input type="file" accept=".be;text/plain" onchange={importFile} style="display: none" />
       </label>
     {/snippet}
   </SectionHead>
