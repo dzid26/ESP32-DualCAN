@@ -2,44 +2,18 @@
  * CodeMirror 6 editor setup.
  *
  * The web UI uses CodeMirror's core packages directly rather than an editor
- * wrapper. This module owns the custom Berry stream tokenizer, the warm
- * theme shared with app.css, and the extension factory.
+ * wrapper. This module owns the warm theme shared with app.css and the
+ * extension factory.  The Berry tokenizer lives in highlight-berry.ts so
+ * the ScriptingGuide overlay can reuse it.
  */
 import { autocompletion, closeBrackets } from '@codemirror/autocomplete';
-import { bracketMatching, defaultHighlightStyle, indentOnInput, indentUnit, syntaxHighlighting, HighlightStyle, StreamLanguage, type StreamParser } from '@codemirror/language';
+import { bracketMatching, defaultHighlightStyle, indentOnInput, indentUnit, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, dropCursor, EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { completeBerry, berryHover, BUILTINS, KEYWORD_SET } from './autocomplete';
-
-const IDENT = /[A-Za-z_][\w]*/;
-
-const berryParser: StreamParser<unknown> = {
-  name: 'berry',
-  languageData: { commentTokens: { line: '#' } },
-  token(stream) {
-    if (stream.eatSpace()) return null;
-    if (stream.match(/#.*$/)) return 'comment';
-    if (stream.match(/"([^"\\]|\\.)*"/) || stream.match(/'([^'\\]|\\.)*'/)) return 'string';
-    if (stream.match(/0x[0-9A-Fa-f]+/) || stream.match(/\d+(\.\d+)?/)) return 'number';
-    if (stream.match(/[{}()[\]]/)) return 'bracket';
-    if (stream.match(/[<>!=+\-*/%&|^~]+/)) return 'operator';
-
-    const word = stream.match(IDENT);
-    if (word) {
-      const value = stream.current();
-      if (KEYWORD_SET.has(value)) return 'keyword';
-      if (BUILTINS.has(value)) return 'builtin';
-      return 'variableName';
-    }
-
-    stream.next();
-    return null;
-  },
-};
-
-const berryLanguage = StreamLanguage.define(berryParser);
+import { completeBerry, berryHover } from './autocomplete';
+import { berryLanguage } from './highlight-berry';
 
 const berryHighlight = HighlightStyle.define([
   { tag: tags.comment, color: '#70583a', fontStyle: 'italic' },
