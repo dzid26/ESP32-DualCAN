@@ -614,7 +614,7 @@
     padding: 5px 14px;
     border: none;
     background: transparent;
-    color: var(--dc-text-fade);
+    color: var(--dc-text-dim);
     cursor: pointer;
     font-size: 11px;
     font-family: inherit;
@@ -626,8 +626,8 @@
     color: var(--dc-text);
   }
   .script-tab--active {
-    color: var(--dc-accent, #4a9eff);
-    border-bottom-color: var(--dc-accent, #4a9eff);
+    color: var(--dc-text);
+    border-bottom-color: var(--dc-text);
   }
   .ce-hide { display: none !important; }
   :global(.ad-overlay) {
