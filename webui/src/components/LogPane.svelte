@@ -26,6 +26,17 @@
     app.setView('scripts');
   }
 
+  function handleLogKeydown(e: KeyboardEvent) {
+    if (e.key !== 'Enter') return;
+    const btn = (e.currentTarget as HTMLElement).querySelector('.log-link') as HTMLElement | null;
+    if (!btn) return;
+    const fn = btn.dataset.fn;
+    const line = parseInt(btn.dataset.line ?? '', 10);
+    if (!fn || isNaN(line)) return;
+    app.gotoEditorLine = { filename: fn, line };
+    app.setView('scripts');
+  }
+
   function levelColor(level: string): string {
     switch (level) {
       case 'warn':  return 'var(--dc-warn)';
@@ -92,7 +103,8 @@
       </button>
     </span>
   </div>
-  <div class="logpane__body mono" bind:this={logContainer} onscroll={handleScroll} onclick={handleLogClick}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="logpane__body mono" bind:this={logContainer} onscroll={handleScroll} onclick={handleLogClick} onkeydown={handleLogKeydown} role="button" tabindex="0">
     {#each app.logs as l}
       <div class="logpane__row">
         <span style="color: var(--dc-text-ghost)">{l.ts}</span>
@@ -134,7 +146,7 @@
     font-size: 11px;
     padding: 1px 4px;
   }
-  .log-link {
+  :global(.log-link) {
     background: none;
     border: none;
     color: var(--dc-accent);
@@ -146,7 +158,7 @@
     text-decoration: underline;
     text-decoration-style: dotted;
   }
-  .log-link:hover {
+  :global(.log-link:hover) {
     color: var(--dc-accent-hi);
     text-decoration-style: solid;
   }
