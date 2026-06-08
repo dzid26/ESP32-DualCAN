@@ -11,7 +11,7 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, dropCursor, EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { completeBerry, berryHover, BUILTINS, KEYWORD_SET } from './berry-completions';
+import { completeBerry, berryHover, BUILTINS, KEYWORD_SET } from './autocomplete';
 
 const IDENT = /[A-Za-z_][\w]*/;
 
