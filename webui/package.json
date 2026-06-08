@@ -30,6 +30,7 @@
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.42.0",
     "@lezer/highlight": "^1.2.3",
-    "bits-ui": "^2.18.1"
+    "bits-ui": "^2.18.1",
+    "marked": "^18.0.5"
   }
 }

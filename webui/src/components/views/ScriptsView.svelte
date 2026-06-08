@@ -9,6 +9,7 @@
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
+  import ScriptingGuide from '../ScriptingGuide.svelte';
 
 
   const NEW_SCRIPT = '# Write your Berry script here\n\ndef setup()\n  print("hello from setup")\nend\n';
@@ -34,6 +35,7 @@
 
   let isMobile = $state(false);
   let showPreprocessed = $state(false);
+  let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
   let editorPanelHeight = $state<number | null>(null);
   let editorPanelEl: HTMLElement | undefined;
@@ -340,17 +342,11 @@
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
   >
     {#snippet actions()}
-      <a
-        href="https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/scripting.md"
-        target="_blank"
-        rel="noopener"
-        class="btn btn--sm"
-        title="Scripting guide — writing and using scripts"
-        style="display: inline-flex; align-items: center; gap: 4px; text-decoration: none"
-      >
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+      <button class="btn btn--sm" onclick={() => showGuide = true} title="Scripting guide — writing and using scripts">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="margin-right: 2px">
           <path d="M2 3h10M2 7h10M2 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>Scripting Guide
+      </button>
       <button class="btn btn--sm" onclick={newScript}><Icon name="up" size={13} />New</button>
       <select
         class="sel"
@@ -565,6 +561,10 @@
     </AlertDialog.Portal>
   </AlertDialog.Root>
 </div>
+
+{#if showGuide}
+  <ScriptingGuide onClose={() => showGuide = false} />
+{/if}
 
 <style>
   .srow {

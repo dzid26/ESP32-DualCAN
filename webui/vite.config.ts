@@ -32,9 +32,38 @@ function serveDbc(): import('vite').Plugin {
   }
 }
 
+/** Serve the repo-root `docs/` folder (e.g. scripting.md) as URL path,
+ *  avoiding a duplicate copy in webui/public/docs/. */
+function serveDocs(): import('vite').Plugin {
+  const docsDir = path.resolve(__dirname, '..', 'docs')
+  return {
+    name: 'serve-docs',
+    configureServer(server) {
+      server.middlewares.use('/docs', (req, res, next) => {
+        const file = path.join(docsDir, req.url ?? '')
+        if (fs.existsSync(file) && fs.statSync(file).isFile()) {
+          res.setHeader('Content-Type', 'text/markdown')
+          fs.createReadStream(file).pipe(res)
+        } else {
+          next()
+        }
+      })
+    },
+    closeBundle() {
+      const outDir = path.resolve(__dirname, 'dist', 'docs')
+      if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true })
+      for (const f of fs.readdirSync(docsDir)) {
+        const src = path.join(docsDir, f)
+        if (fs.statSync(src).isFile())
+          fs.copyFileSync(src, path.join(outDir, f))
+      }
+    },
+  }
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
-  plugins: [svelte(), serveDbc()],
+  plugins: [svelte(), serveDbc(), serveDocs()],
   server: {
     allowedHosts: true,
   },
