@@ -35,6 +35,37 @@
 
   let ro: ResizeObserver | undefined;
 
+  /* Give .cm-scroller a definite pixel height so it becomes an independent
+     scroll container. Without this the height:100% chain collapses to auto
+     somewhere up the ancestor tree, making .cm-scroller size to its content
+     with no overflow — scroll events then bubble up to the grid or frame
+     and shift the entire view instead of just the editor. */
+  function syncScrollerSize() {
+    if (!host || !view) return;
+    const h = host.clientHeight;
+    if (h > 0) view.scrollDOM.style.height = h + 'px';
+  }
+
+  /* Force .cm-content to be as wide as its widest rendered line so that
+     overflow-x:auto on .cm-scroller triggers a horizontal scrollbar.
+     CM6's default flex-grow:2 defeats any CSS width:min-content or
+     width:max-content on .cm-content — the flex algorithm distributes
+     remaining space, pushing the element back to scroller width.
+     Directly measuring a .cm-line's scrollWidth and setting it as the
+     explicit width on .cm-content bypasses the flex calculation entirely. */
+  function syncContentWidth() {
+    if (!view) return;
+    const el = view.contentDOM;
+    /* Measure the widest rendered .cm-line — its scrollWidth includes
+       text that overflows due to white-space:pre. */
+    let max = 0;
+    for (const line of el.querySelectorAll('.cm-line')) {
+      const w = (line as HTMLElement).scrollWidth;
+      if (w > max) max = w;
+    }
+    if (max > 0) el.style.width = max + 'px';
+  }
+
   onMount(() => {
     view = new EditorView({
       parent: host!,
@@ -64,6 +95,9 @@
               }
               const next = update.state.doc.toString();
               if (next !== value) value = next;
+              /* Re-measure after content changes so new long lines trigger
+                 the horizontal scrollbar. */
+              requestAnimationFrame(syncContentWidth);
             }
             if (update.selectionSet) {
               cursorLine = update.state.doc.lineAt(update.state.selection.main.from).number;
@@ -79,10 +113,16 @@
     /* Restore saved scroll position (e.g. after .be/.bep toggle or initial mount). */
     if (scrollTop > 0) view.scrollDOM.scrollTop = scrollTop;
 
-    /* Observe layout changes (hidden→visible due to .be/.bep toggle) so we
-       can restore scroll on the now-visible editor. */
+    syncScrollerSize();
+    requestAnimationFrame(syncContentWidth);
+
+    /* Observe layout changes (hidden→visible due to .be/.bep toggle, resize)
+       so we keep the scroller height/content-width in sync and restore
+       scroll position. */
     ro = new ResizeObserver(() => {
       if (!view || !host || host.clientHeight === 0) return;
+      syncScrollerSize();
+      syncContentWidth();
       const saved = scrollTop;
       if (view.scrollDOM.scrollTop !== saved) {
         view.scrollDOM.scrollTop = saved;
@@ -109,6 +149,7 @@
       if (view.scrollDOM.scrollTop !== saved) {
         view.scrollDOM.scrollTop = saved;
       }
+      requestAnimationFrame(syncContentWidth);
     }
   });
 

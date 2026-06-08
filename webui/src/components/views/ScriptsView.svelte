@@ -38,6 +38,7 @@
   let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
   let editorPanelHeight = $state<number | null>(null);
+  let containerHeight = $state(0);
   let editorPanelEl: HTMLElement | undefined;
   let gotoLine = $state<number | null>(null);
   let preprocessedGotoLine = $state<number | null>(null);
@@ -336,7 +337,7 @@
   }
 </script>
 
-<div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
+<div bind:clientHeight={containerHeight} class="scripts-container" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
   <SectionHead
     title="Automations"
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
@@ -371,19 +372,21 @@
   {/if}
 
   <div
-    style:display="grid"
+    style:display={isMobile ? 'flex' : 'grid'}
+    style:flex-direction={isMobile ? 'column' : undefined}
     style:gap="10px"
     style:flex="1"
     style:min-height="0"
     style:overflow={isMobile ? 'visible' : 'auto'}
-    style:grid-template-columns={isMobile ? '1fr' : 'minmax(180px, 240px) 1fr'}
-    style:grid-template-rows="1fr"
+    style:grid-template-columns={isMobile ? undefined : 'minmax(180px, 240px) 1fr'}
+    style:grid-template-rows={isMobile ? undefined : '1fr'}
   >
     <div
       class="frame"
       style="display: flex; flex-direction: column; overflow: hidden"
       style:min-height={isMobile ? '0' : '130px'}
-      style:max-height={isMobile ? '35vh' : 'none'}
+      style:max-height={isMobile ? '123px' : 'none'}
+      style:flex-shrink={isMobile ? '0' : undefined}
     >
       <div class="frame__head">
         Installed <span class="ghost mono">{scripts.length}</span>
@@ -446,23 +449,24 @@
       class="frame"
       style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
       bind:this={editorPanelEl}
-      style:height={editorPanelHeight ? `${editorPanelHeight}px` : 'auto'}
-      style:min-height={isMobile ? 'calc(100dvh - 120px)' : '0'}
+      style:height={isMobile && containerHeight > 0 ? `${containerHeight - 4}px` : (editorPanelHeight ? `${editorPanelHeight}px` : 'auto')}
+      style:min-height={isMobile ? '300px' : '0'}
+      style:flex={isMobile ? 'none' : undefined}
     >
       {#if isMobile}
-        <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border)">
-          <button class="btn btn--sm"
+        <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border); touch-action: pan-y;">
+          <button class="btn btn--sm" style="touch-action: pan-y;"
             onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
             title="Send this script to the AI assistant for editing">
             <Icon name="sparkle" size={16} /> AI edit
           </button>
-          <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
+          <button class="btn btn--sm" style="touch-action: pan-y;" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save
           </button>
-          <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
+          <button class="btn btn--sm" style="touch-action: pan-y;" onclick={revert} disabled={!dirty}>Revert</button>
         </div>
       {/if}
-      <div class="script-tabs">
+      <div class="script-tabs" style="touch-action: pan-y;">
         <span class="row-flex" style="gap: 6px; min-width: 0; margin-right: auto">
           <input
             class="inp"
@@ -475,6 +479,7 @@
         </span>
         <button
           class="script-tab"
+          style="touch-action: pan-y;"
           class:script-tab--active={!showPreprocessed}
           onclick={() => showPreprocessed = false}
           title="Edit the the source code">
@@ -482,6 +487,7 @@
         </button>
         <button
           class="script-tab"
+          style="touch-action: pan-y;"
           class:script-tab--active={showPreprocessed}
           onclick={() => showPreprocessed = true}
           title={canShowInstalled ? 'View the preprocessed script running on the device' : 'Preview what preprocessing'}>
@@ -502,11 +508,11 @@
         {/if}
       </div>
 
-      <div style="flex: 1; min-height: 0; display: flex; position: relative">
-        <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;display:flex">
+      <div style="flex: 1; min-height: 0; min-width: 0; display: flex; position: relative">
+        <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
         </div>
-        <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;display:flex">
+        <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} bind:cursorLine={sourceCursorLine} />
         </div>
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -631,5 +637,12 @@
     position: fixed; z-index: 201;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: min(420px, 92vw);
+  }
+  .scripts-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scripts-container::-webkit-scrollbar {
+    display: none;
   }
 </style>
