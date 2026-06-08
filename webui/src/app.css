@@ -79,6 +79,7 @@ button { font: inherit; color: inherit; }
 ::-webkit-scrollbar-track { background: var(--dc-bg); }
 ::-webkit-scrollbar-thumb { background: var(--dc-surface-2); border-radius: 4px; border: 2px solid var(--dc-bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--dc-surface-3); }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* ===== Buttons ===== */
 .btn {

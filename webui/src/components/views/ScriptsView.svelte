@@ -37,9 +37,8 @@
   let showPreprocessed = $state(false);
   let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
-  let editorPanelHeight = $state<number | null>(null);
-  let containerHeight = $state(0);
-  let editorPanelEl: HTMLElement | undefined;
+
+
   let gotoLine = $state<number | null>(null);
   let preprocessedGotoLine = $state<number | null>(null);
   let sourceCursorLine = $state(0);
@@ -53,20 +52,6 @@
     return () => mq.removeEventListener('change', update);
   });
 
-  function startEditorResize(e: PointerEvent) {
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    e.preventDefault();
-  }
-
-  function handleResizeMove(e: PointerEvent) {
-    if (!e.buttons) return;
-    if (editorPanelEl) {
-      const rect = editorPanelEl.getBoundingClientRect();
-      editorPanelHeight = Math.max(100, e.clientY - rect.top);
-    }
-  }
-
-  function handleResizeEnd() {}
 
   async function refresh(): Promise<void> {
     if (!app.connected) return;
@@ -337,7 +322,7 @@
   }
 </script>
 
-<div bind:clientHeight={containerHeight} class="scripts-container" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
+<div class="scripts-container" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
   <SectionHead
     title="Automations"
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
@@ -448,10 +433,6 @@
     <div
       class="frame"
       style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
-      bind:this={editorPanelEl}
-      style:height={isMobile && containerHeight > 0 ? `${containerHeight - 4}px` : (editorPanelHeight ? `${editorPanelHeight}px` : 'auto')}
-      style:min-height={isMobile ? '300px' : '0'}
-      style:flex={isMobile ? 'none' : undefined}
     >
       {#if isMobile}
         <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border); touch-action: pan-y;">
@@ -508,24 +489,13 @@
         {/if}
       </div>
 
-      <div style="flex: 1; min-height: 0; min-width: 0; display: flex; position: relative">
+      <div style="flex: 1; min-height: 0; min-width: 0; display: flex">
         <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
         </div>
         <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} bind:cursorLine={sourceCursorLine} />
         </div>
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div
-          class="resize-corner-editor"
-          onpointerdown={startEditorResize}
-          onpointermove={handleResizeMove}
-          onpointerup={handleResizeEnd}
-          title="Drag to resize editor"
-          role="button"
-          aria-label="Resize editor"
-          tabindex="0"
-        ></div>
       </div>
     </div>
   </div>
@@ -583,23 +553,6 @@
     border-bottom: 1px solid var(--dc-border);
     cursor: pointer;
     min-height: 0;
-  }
-
-  .resize-corner-editor {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 20px;
-    height: 20px;
-    cursor: nwse-resize;
-    background: linear-gradient(135deg, transparent 50%, var(--dc-border-2) 50%);
-    border-radius: 0 0 4px 0;
-    pointer-events: auto;
-    touch-action: none;
-  }
-
-  .resize-corner-editor:hover {
-    background: linear-gradient(135deg, transparent 50%, var(--dc-border-hi) 50%);
   }
 
   .script-tabs {
