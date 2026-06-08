@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   test:
-    name: Tests (protocol round-trip)
+    name: Type check + tests
     runs-on: ubuntu-latest
     defaults:
       run:
