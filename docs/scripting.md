@@ -54,16 +54,17 @@ end
 ## Raw CAN frames
 
 ```berry
-# Send a raw frame: bus (0 or 1), CAN ID (integer), payload (bytes object).
+# Send a raw frame: bus (0 or 1), CAN ID (integer), payload (bytes object, max 8).
 var b = bytes()
 b.add(0x01)
 b.add(0xFF)
 can_send_raw(0, 0x100, b)
 
-# Dequeue the next received frame — returns bytes or nil when queue is empty.
+# Dequeue the next received frame — returns a list [id, data] or nil when
+# the queue is empty. rx[0] = CAN ID (int), rx[1] = payload (bytes).
 var rx = can_recv_raw(0)
 if rx != nil
-  print("got id 0x" .. format("%03X", rx.item(0)))
+  print("got id 0x" .. format("%03X", rx[0]))
 end
 ```
 
@@ -75,6 +76,30 @@ var msg = can_msg_new("UI_powertrainControl")
 # Or with numeric ID, bus, DLC:  can_msg_new(0x313, 0, 8)
 can_msg_set(msg, "UI_trackModeRequest", 1)
 can_msg_send(msg)
+
+# Or fetch the latest received frame as a modifiable draft
+var msg2 = can_msg_get("UI_powertrainControl")   # get by DBC message name
+# or by numeric CAN ID: can_msg_get(0x313)
+can_msg_set(msg2, "UI_trackModeRequest", 1)
+can_msg_send(msg2)
+```
+
+The draft is a map instance with keys `id` (int), `bus` (int), `data` (bytes), `dlc` (int). You can read/write individual signals with `can_msg_set`, or access the raw data buffer directly: `msg["data"]`.
+
+### Low-level bit encoding (used by the preprocessor, exposed for custom work)
+
+```berry
+# Extract a raw integer bit field from bytes.
+var raw = bit_extract(data, 0, 2, false)   # start_bit=0, len=2, little_endian
+
+# Insert a raw integer into bytes, returns a new bytes copy.
+var encoded = bit_insert(data, 0, 2, false, 3)
+
+# Decode a DBC signal: raw bits → physical value (scale + offset).
+var val = signal_decode(data, 0, 2, false, false, 1.0, 0.0)
+
+# Encode a physical value into bytes, returns a new copy.
+var out = signal_encode(data, 0, 2, false, false, 1.0, 0.0, 42.0)
 ```
 
 ### AI authoring guidance
@@ -86,12 +111,18 @@ When writing scripts that inject a vehicle command frame, send only the intended
 ## Timers
 
 ```berry
-timer_after(500, /-> print("once after 500 ms"))
+# Fire once after 500 ms. Returns a handle (int).
+var h1 = timer_after(500, def()
+  print("fired once")
+end)
 
-var t = def() print("every 200 ms") end
-timer_every(200, t)
+# Fire every 200 ms. Returns a handle (int) for cancellation.
+var h2 = timer_every(200, def()
+  print("every 200 ms")
+end)
 
-timer_cancel(t)   # cancel by function reference
+# Cancel by handle (no-op if handle is invalid or already fired).
+timer_cancel(h2)
 ```
 
 ---
@@ -122,25 +153,69 @@ led_off()
 ## Persistent storage  *(NVS flash — survives reboot)*
 
 ```berry
-state_set("my_key", 42)
-var v = state_get("my_key")   # nil if not set
-state_remove("my_key")
+state_set("my_key", "hello")          # write a string
+var v = state_get("my_key", "fallback")  # read, with default
+state_remove("my_key")                  # delete key
 ```
 
 ---
 
-## Utilities
+## Function reference
+
+### High-level API *(user-facing — write these directly in scripts)*
+
+**Not renamed by the preprocessor** (the call you write is the call that compiles):
 
 | Function | Returns | Description |
 |---|---|---|
-| `millis()` | integer | milliseconds since boot |
-| `print(msg)` | — | logs to the web UI log panel |
-| `str(v)` | string | converts any value to string |
+| `can_msg_new(name [, bus])` | draft \| nil | Create zeroed draft from DBC name (name→ID+DLC resolved at compile time) |
+| `can_msg_new(id, bus, dlc)` | draft \| nil | Create zeroed draft from numeric ID/bus/DLC |
+| `can_msg_get(id \| name [, bus])` | draft \| nil | Latest received frame as editable draft |
+| `can_msg_send(draft)` | — | Transmit the draft (auto-handles checksum/counter) |
+| `can_send_raw(bus, id, data)` | — | Transmit a raw CAN frame (max 8 bytes) |
+| `can_recv_raw(bus)` | list \| nil | Pop next queued frame → `[id, data]` |
+| `timer_after(ms, fn)` | handle | Fire fn once after ms |
+| `timer_every(ms, fn)` | handle | Fire fn every ms |
+| `timer_cancel(handle)` | — | Cancel a timer by handle |
+| `action_register(name, fn)` | — | Register a Dashboard tile |
+| `action_invoke(name)` | — | Invoke an action by name |
+| `led_set(r, g, b)` | — | On-board RGB LED (0–255 each) |
+| `led_off()` | — | Turn off LED |
+| `state_set(key, val)` | — | Write string to NVS flash |
+| `state_get(key [, default])` | str \| nil | Read string from NVS flash |
+| `state_remove(key)` | — | Delete key from NVS flash |
+| `millis()` | int | Milliseconds since boot |
+| `print(msg)` | — | Log to web UI panel |
+| `str(v)` | string | Convert any value to string |
 | `format(fmt, ...)` | string | C-style string formatting |
+
+**Renamed or rewritten by the preprocessor** (the call you write is replaced
+at compile time — writing them without a DBC loaded will produce errors):
+
+| Source (what you write) | Becomes (after preprocessing) |
+|---|---|
+| `can_msg_set(draft, "sig", val)` | `draft["data"] = signal_encode(draft["data"], sb, len, be, sg, sc, off, val)` |
+| `can_signal_get("msg", "sig" [, bus])` | `__sig_get(msg_id, sb, len, be, sg, sc, off, bus)` |
+| `on_can_signal("msg", "sig", fn [, bus])` | `__watch_sig(msg_id, sb, len, be, sg, sc, off, bus, fn)` |
+
+### Low-level API *(generated by the preprocessor — do not write these manually)*
+
+These are emitted automatically when the preprocessor (invoked on save) rewrites
+DBC-aware calls. You'll see them if you inspect a `.bep` file, but you should
+never type them into a `.be` source file.
+
+| Function | Generated from | Description |
+|---|---|---|
+| `__sig_get(msg_id, sb, len, be, sg, sc, off, bus)` | `can_signal_get` | Helper that calls `can_msg_get` + `signal_decode` |
+| `__watch_sig(msg_id, sb, len, be, sg, sc, off, bus, fn)` | `on_can_signal` | Helper that polls a signal and fires `fn` on change |
+| `signal_decode(data, sb, len, be, sg, sc, off)` | `__sig_get` / `__watch_sig` bodies | Decode raw bytes to physical value |
+| `signal_encode(data, sb, len, be, sg, sc, off, val)` | `can_msg_set` body | Encode physical value into bytes |
+| `bit_extract(data, sb, len, be)` | `signal_decode` body | Extract raw bit field |
+| `bit_insert(data, sb, len, be, raw)` | `signal_encode` body | Insert raw integer into bytes |
 
 ---
 
-## Berry syntax cheat sheet
+## Berry lang syntax cheat sheet
 
 ```berry
 var x = 0                        # variable
@@ -174,3 +249,5 @@ b.add(0xFF)                      # append byte
 b.set(0, 0x01)                   # set by index
 b.item(0)                        # read by index
 ```
+
+More here - [Berry-in-20-minutes](https://berry.readthedocs.io/en/latest/source/en/Berry-in-20-minutes.html)

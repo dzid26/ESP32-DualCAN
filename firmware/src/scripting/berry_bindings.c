@@ -10,6 +10,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 
+/* ---- Internals ---- */
+
 static const char *TAG_BB = "berry";
 
 /* ---- Limits ---- */
@@ -31,8 +33,11 @@ static const char *TAG_BB = "berry";
             (int)(n), be_top(vm))); \
     }
 
+/* CAN engine pointers set by berry_set_buses() */
 static can_t *s_bus[2];
+/* The active Berry VM; set once by berry_register_bindings(). */
 static bvm   *s_vm;
+/* Script context used to tag timer/action registrations for cleanup. */
 static int    s_current_script_id;
 
 void berry_set_buses(can_t *eng0, can_t *eng1)
@@ -56,7 +61,11 @@ static can_t *get_bus(int bus)
     return s_bus[bus];
 }
 
-/* ---- Berry function ref storage (list at global ".refs") ---- */
+/* ---- Berry function ref storage ----
+ * Keeps a hidden global list ".refs" on the VM containing function references
+ * that C code holds across script invocations (timers, actions). Each ref is
+ * just the list index. When the function is no longer needed, the list slot
+ * is set to nil (refs_free). This prevents GC from collecting the closures. */
 
 static int refs_alloc(bvm *vm, int fn_index)
 {
@@ -134,7 +143,10 @@ int berry_call_ref(bvm *vm, int ref)
     return 0;
 }
 
-/* ---- timer.* (polled from main loop via berry_timer_tick) ---- */
+/* ---- timer.* (polled from main loop via berry_timer_tick) ----
+ * All timers are polled (not interrupt-driven). Each timer_after/every call
+ * allocates a slot in s_timers[] and stores a Berry function ref. The main
+ * loop calls berry_timer_tick() which walks the table and fires due timers. */
 
 typedef struct {
     bool     in_use;
@@ -144,6 +156,7 @@ typedef struct {
     uint32_t period_ms;     /* 0 = one-shot */
 } timer_entry_t;
 
+/* Registry of all active timers. Index == handle returned to Berry. */
 static timer_entry_t s_timers[MAX_TIMERS];
 
 static int alloc_timer(int ref, uint32_t period_ms, uint32_t now_ms)
@@ -162,6 +175,9 @@ static int alloc_timer(int ref, uint32_t period_ms, uint32_t now_ms)
     return -1;
 }
 
+/* timer_after(ms:int, fn:function) -> handle:int
+ * Schedule a one-shot callback. fn is called once after ms milliseconds.
+ * Returns an integer handle (pass to timer_cancel). */
 static int l_timer_after(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -181,6 +197,9 @@ static int l_timer_after(bvm *vm)
     be_return(vm);
 }
 
+/* timer_every(ms:int, fn:function) -> handle:int
+ * Schedule a repeating callback. fn is called every ms milliseconds.
+ * Returns an integer handle (pass to timer_cancel). */
 static int l_timer_every(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -199,6 +218,8 @@ static int l_timer_every(bvm *vm)
     be_return(vm);
 }
 
+/* timer_cancel(handle:int) -> nil
+ * Cancel a pending timer. No-op if the handle is invalid or already fired. */
 static int l_timer_cancel(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -238,7 +259,11 @@ void berry_timer_tick(uint32_t now_ms)
     }
 }
 
-/* ---- actions.register / actions.invoke ---- */
+/* ---- actions.register / actions.invoke ----
+ * Dashboard actions are named Berry closures callable from the web UI or
+ * from other scripts. Each entry stores the name string and a Berry ref.
+ * Berry names the function "action_register"/"action_invoke" at the global
+ * level; C uses "actions.register"/"actions.invoke" internally. */
 
 typedef struct {
     bool in_use;
@@ -247,6 +272,7 @@ typedef struct {
     int  script_id;
 } action_entry_t;
 
+/* Registry of all registered actions. Name is the lookup key. */
 static action_entry_t s_actions[MAX_ACTIONS];
 
 static int find_action(const char *name)
@@ -257,6 +283,9 @@ static int find_action(const char *name)
     return -1;
 }
 
+/* action_register(name:str, fn:function) -> nil
+ * Register a named action visible on the Dashboard. If an action with the
+ * same name already exists, it is replaced. */
 static int l_action_register(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -290,6 +319,8 @@ static int l_action_register(bvm *vm)
     be_return_nil(vm);
 }
 
+/* action_invoke(name:str) -> nil
+ * Programmatically invoke a registered action by name. */
 static int l_action_invoke(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -325,7 +356,9 @@ int berry_action_invoke(const char *name)
     return 0;
 }
 
-/* ---- Per-script cleanup ---- */
+/* ---- Per-script cleanup ----
+ * Called when a script is disabled. Releases all timers and actions tagged
+ * with script_id. Script 0 is reserved for system use and never cleaned up. */
 
 void berry_cleanup_script(int script_id)
 {
@@ -348,9 +381,18 @@ void berry_cleanup_script(int script_id)
     }
 }
 
-/* ---- CAN: raw frames, message drafts ---- */
+/* ---- CAN: raw frames, message drafts ----
+ * Naming convention:
+ *   can_*_raw / can_send_raw, can_recv_raw     — raw CAN, no DBC
+ *   can_msg_* / can_msg_get, can_msg_new, can_msg_send — named messages
+ *
+ * All CAN functions take a bus argument (0 or 1). In simulation mode
+ * (can_t.sim_mode), can_send_raw logs the frame instead of transmitting. */
 
-/* can_send_raw(bus:int, id:int, data:bytes) -> nil */
+/* can_send_raw(bus:int, id:int, data:bytes) -> nil
+ * Transmit a raw CAN frame. No DBC encoding, no signal modification, no
+ * checksum/counter injection. bus = 0 or 1, id = 11-bit CAN ID,
+ * data = bytes object (max 8 bytes). In sim mode, logs to the UI instead. */
 static int l_can_send_raw(bvm *vm)
 {
     CHECK_ARITY(vm, 3);
@@ -378,7 +420,10 @@ static int l_can_send_raw(bvm *vm)
     be_return_nil(vm);
 }
 
-/* can_recv_raw(bus:int) -> [id, bytes] | nil */
+/* can_recv_raw(bus:int) -> list | nil
+ * Pop one received frame. Returns a list [id, data] — rx[0] is the CAN
+ * identifier (int), rx[1] is the payload (bytes). List is used instead
+ * of a map for lower overhead on raw frame access. */
 static int l_can_recv_raw(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -403,8 +448,11 @@ static int l_can_recv_raw(bvm *vm)
     be_return_nil(vm);
 }
 
-/* can_msg_get(msg_id:int [, bus:int]) -> draft
- * Returns the latest received frame as a draft you can edit and send. */
+/* can_msg_get(msg_id:int [, bus:int]) -> draft | nil
+ * Returns the latest received frame for msg_id as a message draft (map
+ * instance with keys: id, bus, data, dlc). Returns nil if no matching frame
+ * has been received. The draft can be modified with can_msg_set and
+ * transmitted via can_msg_send. If bus is omitted, defaults to 0. */
 static int l_can_msg_get(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -434,7 +482,10 @@ static int l_can_msg_get(bvm *vm)
 }
 
 /* can_msg_new(id:int, bus:int, dlc:int) -> draft
- * Creates a zeroed message draft for encoding and transmission. */
+ * Creates a zeroed message draft (all bytes = 0) for encoding and
+ * transmission. The draft is a map instance with keys: id, bus, data, dlc.
+ * The preprocessor rewrites can_msg_new("msg_name" [, bus]) to call this
+ * with the resolved ID, bus, and DLC from the DBC. */
 static int l_can_msg_new(bvm *vm)
 {
     CHECK_ARITY(vm, 3);
@@ -464,9 +515,9 @@ static int l_can_msg_new(bvm *vm)
 }
 
 /* can_msg_send(draft) -> nil
- * Transmit a message draft. The draft must contain id, bus, data, dlc.
- * Signal encoding and counter/checksum update must be done in Berry
- * before calling this function. */
+ * Transmit a message draft. Reads id, bus, data, dlc from the draft map
+ * instance via dot-member access. Signal encoding and counter/checksum
+ * update must be done in Berry before calling (use can_msg_set). */
 static int l_can_msg_send(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -501,9 +552,15 @@ static int l_can_msg_send(bvm *vm)
     be_return_nil(vm);
 }
 
-/* ---- CAN utility functions (pure computation, no DBC) ---- */
+/* ---- CAN utility functions (pure computation, no DBC) ----
+ * These operate on raw bytes and are called by the preprocessor-generated
+ * code. They implement the CAN signal encoding layer: DBC signal metadata
+ * (start_bit, length, byte order, scaling) is resolved at preprocess time
+ * and baked into the generated Berry code as integer/float literals. */
 
-/* bit_extract(data:bytes, start_bit:int, bit_length:int, big_endian:bool) -> int */
+/* bit_extract(data:bytes, start_bit:int, bit_length:int, big_endian:bool) -> int
+ * Extract an integer bit field from a bytes object. Motorola (big-endian)
+ * or Intel (little-endian) byte order. Returns the raw unscaled value. */
 static int l_bit_extract(bvm *vm)
 {
     CHECK_ARITY(vm, 4);
@@ -522,7 +579,9 @@ static int l_bit_extract(bvm *vm)
 }
 
 /* bit_insert(data:bytes, start_bit:int, bit_length:int, big_endian:bool, raw:int) -> bytes
- * Returns a new bytes object with the bits inserted (data is immutable in Berry). */
+ * Returns a new bytes object with the raw integer value inserted at the
+ * specified bit position. Berry bytes are immutable so this allocates a new
+ * copy (8 bytes max). Used by the preprocessor for can_msg_set. */
 static int l_bit_insert(bvm *vm)
 {
     CHECK_ARITY(vm, 5);
@@ -545,7 +604,9 @@ static int l_bit_insert(bvm *vm)
 }
 
 /* signal_decode(data:bytes, start_bit:int, bit_length:int, big_endian:bool,
- *               is_signed:bool, scale:real, offset:real) -> real */
+ *               is_signed:bool, scale:real, offset:real) -> real
+ * Decode a DBC signal from raw bytes: extract the bit field, apply sign
+ * extension, multiply by scale, add offset. Returns the physical value. */
 static int l_signal_decode(bvm *vm)
 {
     CHECK_ARITY(vm, 7);
@@ -564,7 +625,10 @@ static int l_signal_decode(bvm *vm)
 }
 
 /* signal_encode(data:bytes, start_bit:int, bit_length:int, big_endian:bool,
- *               is_signed:bool, scale:real, offset:real, value:real) -> bytes */
+ *               is_signed:bool, scale:real, offset:real, value:real) -> bytes
+ * Encode a physical value into a DBC signal bit field: subtract offset,
+ * divide by scale, clamp, insert into a copy of data. Returns new bytes.
+ * Used by the preprocessor-generated can_msg_set body. */
 static int l_signal_encode(bvm *vm)
 {
     CHECK_ARITY(vm, 8);
@@ -587,6 +651,8 @@ static int l_signal_encode(bvm *vm)
 
 /* ---- LED ---- */
 
+/* led_set(r:int, g:int, b:int) -> nil
+ * Set the on-board RGB LED to the given colour. Each channel 0–255. */
 static int l_led_set(bvm *vm)
 {
     CHECK_ARITY(vm, 3);
@@ -600,6 +666,8 @@ static int l_led_set(bvm *vm)
     be_return_nil(vm);
 }
 
+/* led_off() -> nil
+ * Turn the on-board RGB LED off. */
 static int l_led_off(bvm *vm)
 {
     (void)vm;
@@ -607,8 +675,12 @@ static int l_led_off(bvm *vm)
     be_return_nil(vm);
 }
 
-/* ---- State (NVS) ---- */
+/* ---- State (NVS) ----
+ * Key-value storage persisted to NVS flash under the "script" namespace.
+ * Values survive reboot. All keys and values are strings. */
 
+/* state_set(key:str, value:str) -> nil
+ * Write a string value to persistent storage. Overwrites existing. */
 static int l_state_set(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -618,6 +690,9 @@ static int l_state_set(bvm *vm)
     be_return_nil(vm);
 }
 
+/* state_get(key:str [, default]) -> str | default | nil
+ * Read a string value from persistent storage. If key is missing, returns
+ * the optional default or nil if no default given. */
 static int l_state_get(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -634,6 +709,8 @@ static int l_state_get(bvm *vm)
     be_return_nil(vm);
 }
 
+/* state_remove(key:str) -> nil
+ * Delete a key from persistent storage. No-op if key does not exist. */
 static int l_state_remove(bvm *vm)
 {
     CHECK_ARITY(vm, 1);
@@ -644,44 +721,56 @@ static int l_state_remove(bvm *vm)
 
 /* ---- millis() helper ---- */
 
+/* millis() -> int
+ * Milliseconds since boot. Wraps at 2^31 (~24 days). */
 static int l_millis(bvm *vm)
 {
     be_pushint(vm, (bint)(esp_timer_get_time() / 1000));
     be_return(vm);
 }
 
-/* ---- Registration ---- */
+/* ---- Registration ----
+ * Called once during Berry VM initialisation to expose all native functions.
+ * The names here are what Berry scripts see at global scope. Keep the
+ * completions in webui/src/editor/berry-completions.ts in sync. */
 
 void berry_register_bindings(bvm *vm)
 {
     s_vm = vm;
 
-    /* Raw CAN I/O */
+    /* Raw CAN I/O: no DBC, no encoding */
     be_regfunc(vm, "can_send_raw",   l_can_send_raw);
     be_regfunc(vm, "can_recv_raw",   l_can_recv_raw);
+
+    /* Message drafts: DBC-aware, named fields {id, bus, data, dlc} */
     be_regfunc(vm, "can_msg_get",    l_can_msg_get);
     be_regfunc(vm, "can_msg_new",    l_can_msg_new);
     be_regfunc(vm, "can_msg_send",   l_can_msg_send);
 
-    /* CAN utility functions (signal encode/decode without DBC) */
+    /* CAN bit-level utilities: used by preprocessor-generated code */
     be_regfunc(vm, "bit_extract",    l_bit_extract);
     be_regfunc(vm, "bit_insert",     l_bit_insert);
     be_regfunc(vm, "signal_decode",  l_signal_decode);
     be_regfunc(vm, "signal_encode",  l_signal_encode);
 
+    /* On-board RGB LED */
     be_regfunc(vm, "led_set", l_led_set);
     be_regfunc(vm, "led_off", l_led_off);
 
+    /* Persistent key-value storage (NVS flash, "script" namespace) */
     be_regfunc(vm, "state_set", l_state_set);
     be_regfunc(vm, "state_get", l_state_get);
     be_regfunc(vm, "state_remove", l_state_remove);
 
+    /* Timers (polled) */
     be_regfunc(vm, "timer_after", l_timer_after);
     be_regfunc(vm, "timer_every", l_timer_every);
     be_regfunc(vm, "timer_cancel", l_timer_cancel);
 
+    /* Dashboard actions */
     be_regfunc(vm, "action_register", l_action_register);
     be_regfunc(vm, "action_invoke",   l_action_invoke);
 
+    /* System */
     be_regfunc(vm, "millis", l_millis);
 }
