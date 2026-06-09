@@ -2,10 +2,28 @@
   import { onDestroy, onMount, untrack } from 'svelte';
   import { acceptCompletion, completionKeymap } from '@codemirror/autocomplete';
   import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
-  import { EditorState, EditorSelection } from '@codemirror/state';
-  import { EditorView, keymap } from '@codemirror/view';
+  import { EditorState, EditorSelection, StateEffect, StateField } from '@codemirror/state';
+  import { Decoration, EditorView, keymap } from '@codemirror/view';
   import { searchKeymap } from '@codemirror/search';
   import { createCodeMirrorExtensions } from './codemirror-setup';
+
+  const setErrorLine = StateEffect.define<number | null>();
+  const errorLineField = StateField.define({
+    create() { return Decoration.none; },
+    update(decos, tr) {
+      for (const e of tr.effects) {
+        if (e.is(setErrorLine)) {
+          if (e.value === null) return Decoration.none;
+          const line = tr.state.doc.line(e.value);
+          return Decoration.set([errorLineDeco.range(line.from)]);
+        }
+      }
+      return decos.map(tr.changes);
+    },
+    provide: f => EditorView.decorations.from(f),
+  });
+  const errorLineDeco = Decoration.line({ attributes: { style: 'background-color: rgba(200, 50, 50, 0.2); border-radius: 2px;' } });
+  let lastErrorLine = $state(0);
 
   /* Bound value uses Svelte 5 $bindable() so the parent can write the editor
    * contents (e.g. when loading a script from the device or an example) and
@@ -74,10 +92,16 @@
         extensions: [
           history(),
           createCodeMirrorExtensions(onSave, language),
+          errorLineField,
           readOnly
-            ? EditorState.transactionFilter.of(tr =>
-                tr.docChanged && (tr.isUserEvent('input') || tr.isUserEvent('delete')) ? [] : [tr]
-              )
+            ? [
+                EditorState.transactionFilter.of(tr =>
+                  tr.docChanged && (tr.isUserEvent('input') || tr.isUserEvent('delete')) ? [] : [tr]
+                ),
+                EditorView.theme({
+                  '.cm-cursor': { display: 'none !important' },
+                }),
+              ]
             : [],
           keymap.of([
             { key: 'Tab', run: acceptCompletion },

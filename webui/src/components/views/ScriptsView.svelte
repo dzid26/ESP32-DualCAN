@@ -40,6 +40,24 @@
   let preprocessedCode = $state<string>('');
   let deviceBepCode = $state<string | null>(null);
   let skipPreprocessedEffect = $state(false);
+  let editorPaneEl = $state<HTMLDivElement | undefined>();
+  let watermarkAngle = $state(45);
+  let watermarkFontSize = $state(120);
+
+  $effect(() => {
+    const el = editorPaneEl;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width === 0 || height === 0) return;
+      const angle = Math.atan2(height, width) * (180 / Math.PI);
+      watermarkAngle = angle;
+      const d = Math.sqrt(width * width + height * height);
+      watermarkFontSize = Math.round(d / 8);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
 
 
   let gotoLine = $state<number | null>(null);
@@ -532,8 +550,9 @@
       </div>
 
       <div style="flex: 1; min-height: 0; min-width: 0; display: flex">
-        <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
+        <div bind:this={editorPaneEl} class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
           <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
+          <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>
         </div>
         <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} bind:cursorLine={sourceCursorLine} />
@@ -639,5 +658,22 @@
   }
   .scripts-container::-webkit-scrollbar {
     display: none;
+  }
+  .watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    font-weight: 900;
+    color: var(--dc-err-text);
+    opacity: 0.06;
+    white-space: nowrap;
+    user-select: none;
+    z-index: 1;
+    font-family: var(--dc-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 </style>
