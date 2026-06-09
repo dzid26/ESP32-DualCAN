@@ -24,6 +24,7 @@
 
   const filterPattern = $derived(signalFilter.trim().toLowerCase());
   let openMessages = $state(new Set<number>());
+  let showAllSignalsSet = $state(new Set<number>());
   let busDbc = $state.raw<Record<number, { messages: Message[]; loadedFrom: string }>>({});
 
   function matchesId(m: Message): boolean {
@@ -36,10 +37,8 @@
     return m.name.toLowerCase().includes(filterPattern) || matchesId(m);
   }
 
-  function signalVisible(sig: Signal, msg?: Message): boolean {
-    if (!filterPattern) return true;
-    if (msg && messageMatchesMeta(msg)) return true;
-    return sig.name.toLowerCase().includes(filterPattern);
+  function showAllSignals(m: Message): boolean {
+    return !filterPattern || showAllSignalsSet.has(m.id);
   }
 
   const visibleMessages = $derived.by(() => {
@@ -56,6 +55,7 @@
     if (!f) {
       const prev = untrack(() => openMessages);
       if (prev.size > 0) openMessages = new Set();
+      showAllSignalsSet = new Set();
     } else if (count < 20 && count > 0) {
       const prev = untrack(() => openMessages);
       const next = new Set(prev);
@@ -85,6 +85,7 @@
 
   $effect(() => {
     const d = busDbc[bus];
+    showAllSignalsSet = new Set();
     if (d) {
       messages = d.messages;
       loadedFrom = d.loadedFrom;
@@ -98,7 +99,14 @@
 
   function toggleMessage(e: Event, id: number): void {
     const s = new Set(openMessages);
-    (e.currentTarget as HTMLDetailsElement).open ? s.add(id) : s.delete(id);
+    if ((e.currentTarget as HTMLDetailsElement).open) {
+      s.add(id);
+    } else {
+      s.delete(id);
+      const ss = new Set(showAllSignalsSet);
+      ss.delete(id);
+      showAllSignalsSet = ss;
+    }
     openMessages = s;
   }
 
@@ -215,6 +223,15 @@
     return '0x' + n.toString(16).toUpperCase().padStart(3, '0');
   }
 
+  function onSearchKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Enter' && filterPattern) {
+      const next = new Set(openMessages);
+      for (const m of visibleMessages) next.add(m.id);
+      openMessages = next;
+      showAllSignalsSet = new Set();
+    }
+  }
+
   function highlightId(m: Message): string {
     const hex = hex3(m.id);
     if (!filterPattern) return hex;
@@ -273,6 +290,7 @@
       <Icon name="search" size={13} />
       <input
         bind:value={filterInput}
+        onkeydown={onSearchKeydown}
         placeholder="Search messages &amp; signals…"
         class="mono"
         style="background: transparent; border: none; outline: none; color: var(--dc-text); flex: 1; font-size: 12px"
@@ -299,11 +317,11 @@
               <span>{@html highlightId(m)}</span>
               <span class="muted" style="font-size: 11px">{@html highlightDec(m)}</span>
               <span style="font-family: var(--dc-font-sans); color: var(--dc-text)">{m.name}</span>
-              <span class="muted">{m.signals.filter(s => signalVisible(s, m)).length} signals</span>
+              <span class="muted">{m.signals.length} signals</span>
             </summary>
             {#if openMessages.has(m.id)}
               <ul class="mono" style="margin: 0; padding: 4px 10px 8px 28px; font-size: 11px; color: var(--dc-text-fade); list-style: square">
-                {#each m.signals.filter(s => signalVisible(s, m)) as sig}
+                {#each showAllSignals(m) ? m.signals : m.signals.filter(s => s.name.toLowerCase().includes(filterPattern)) as sig}
                   <li>
                     {#if filterPattern}
                       {@const idx = sig.name.toLowerCase().indexOf(filterPattern)}
@@ -318,13 +336,20 @@
                     <span class="ghost"> [{sig.startBit}|{sig.bitLength}] scale={sig.scale} offset={sig.offset}</span>
                   </li>
                 {/each}
+                {#if filterPattern && !showAllSignals(m)}
+                  <li style="list-style: none">
+                    <button class="btn btn--sm btn--ghost" style="font-size: 11px" onclick={() => { const eo = new Set(showAllSignalsSet); eo.add(m.id); showAllSignalsSet = eo; }}>
+                      Show other signals ({m.signals.length} total)
+                    </button>
+                  </li>
+                {/if}
               </ul>
             {/if}
           </details>
         {/each}
       </div>
       <div style="padding: 4px 10px; border-top: 1px solid var(--dc-border); font-size: 11px; color: var(--dc-text-fade); display: flex; justify-content: space-between">
-        <span>{visibleMessages.length} messages · {visibleMessages.reduce((n, m) => n + m.signals.filter(s => signalVisible(s, m)).length, 0)} signals{filterPattern ? ' match' : ''}</span>
+        <span>{visibleMessages.length} messages · {visibleMessages.reduce((n, m) => n + m.signals.length, 0)} signals{filterPattern ? ' match' : ''}</span>
         <span class="mono">{loadedFrom ?? ''}</span>
       </div>
     </div>
