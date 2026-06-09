@@ -30,9 +30,13 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
+        bool was_connected = s_current_ip[0] != '\0';
         s_current_ip[0] = '\0';
         xEventGroupClearBits(s_event_group, BIT_CONNECTED);
-        ESP_LOGW(TAG, "disconnected, retrying in %d ms", WIFI_RETRY_BACKOFF_MS);
+        if (was_connected) {
+            ESP_LOGI(TAG, "disconnected");
+        }
+        ESP_LOGD(TAG, "reconnecting attempt in %d ms", WIFI_RETRY_BACKOFF_MS);
         vTaskDelay(pdMS_TO_TICKS(WIFI_RETRY_BACKOFF_MS));
         esp_wifi_connect();
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
