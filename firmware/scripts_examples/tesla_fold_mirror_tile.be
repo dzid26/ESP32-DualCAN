@@ -1,33 +1,41 @@
 # @name Tesla fold mirrors
-# @description Registers Dashboard tiles to fold/unfold Tesla mirrors. Each
-#              tile blinks the onboard RGB LED blue when executed.
+# @description Registers Dashboard tiles to fold/unfold Tesla mirrors.
 # @bus 0
-#
-# Requires: Tesla Model 3/Y dedup DBC loaded on bus 0.
 #
 # TX: UI_vehicleControl, ID 0x273 / 627
 #   UI_mirrorFoldRequest: 0=IDLE, 1=RETRACT, 2=PRESENT
-# This injects a one-shot request. Do not send a follow-up IDLE frame.
 
-def flash_blue(dur_ms)
-  led_set(0, 0, 40)
-  timer_after(dur_ms, /-> led_off())
+def fold()
+  print("=== fold ===")
+  var msg = can_msg_get("UI_vehicleControl", 0)
+  print("  can_msg_get -> " .. str(msg))
+  if msg == nil
+    msg = can_msg_new("UI_vehicleControl", 0)
+    print("  can_msg_new -> " .. str(msg))
+  end
+  print("  msg type: " .. type(msg))
+  can_msg_set(msg, "UI_mirrorFoldRequest", 1)
+  print("  can_msg_set OK")
+  can_msg_send(msg)
+  print("  can_msg_send OK")
+  led_set(0,0,40)
+  timer_after(150, /-> led_off())
 end
 
-def mirror_request(value, label)
-  flash_blue(150)
-
+def unfold()
+  print("=== unfold ===")
   var msg = can_msg_get("UI_vehicleControl", 0)
   if msg == nil
     msg = can_msg_new("UI_vehicleControl", 0)
   end
-  can_msg_set(msg, "UI_mirrorFoldRequest", value)
+  can_msg_set(msg, "UI_mirrorFoldRequest", 2)
   can_msg_send(msg)
-  print("Mirror " .. label .. " requested")
+  led_set(0,0,40)
+  timer_after(150, /-> led_off())
 end
 
 def setup()
-  action_register("fold_mirrors", /-> mirror_request(1, "fold"))
-  action_register("unfold_mirrors", /-> mirror_request(2, "unfold"))
+  action_register("fold_mirrors", /-> fold())
+  action_register("unfold_mirrors", /-> unfold())
   print("Tesla mirror tiles loaded")
 end

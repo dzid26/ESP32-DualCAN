@@ -90,6 +90,7 @@ def run_test()
     print("SOME TESTS FAILED")
     led_set(64, 0, 0)
   end
+  timer_after(3000, /-> led_set(0, 0, 0))
 end
 
 run_test()
