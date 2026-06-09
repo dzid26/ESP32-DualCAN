@@ -9,7 +9,7 @@ export type IconName =
 
 export const ICON_PATHS: Record<IconName, string[]> = {
   scripts:  ['M8 4h9l3 3v13H8z', 'M4 8h12v12H4z', 'M7 12h6', 'M7 15h4'],
-  dbc:      ['M4 5h16v4H4z', 'M4 11h16v4H4z', 'M4 17h16v2H4z', 'M7 7h1', 'M7 13h1'],
+  dbc:      ['M4 6 C4 3.3,20 3.3,20 6 C20 8.7,4 8.7,4 6', 'M4 6v4a8 2 0 0 0 16 0v-4', 'M4 10v5a8 2 0 0 0 16 0v-5', 'M4 15v5a8 2 0 0 0 16 0v-5'],
   dash:     ['M3 18a9 9 0 0 1 18 0', 'M12 18l5-6'],
   trace:    ['M3 12h3l2-6 4 12 2-6h7'],
   capture:  ['M5 7h3l1-2h6l1 2h3v12H5z', 'M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
