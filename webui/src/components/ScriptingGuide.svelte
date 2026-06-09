@@ -154,6 +154,10 @@
     border: 1px solid var(--dc-border);
     padding: 6px 10px;
     text-align: left;
+    white-space: nowrap;
+  }
+  .guide-content :global(td:last-child) {
+    white-space: normal;
   }
   .guide-content :global(th) {
     background: var(--dc-surface-2);
