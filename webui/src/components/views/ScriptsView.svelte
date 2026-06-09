@@ -564,7 +564,7 @@
     flex-shrink: 0;
   }
   .script-tab {
-    padding: 5px 14px;
+    padding: 8px 14px;
     border: none;
     background: transparent;
     color: var(--dc-text-dim);
