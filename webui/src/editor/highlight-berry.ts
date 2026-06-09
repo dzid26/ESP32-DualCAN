@@ -21,7 +21,7 @@ export const BERRY_COLORS = {
   bracket: '#a08555',
 } as const;
 
-const IDENT = /[A-Za-z_][\w]*/;
+const IDENT = /^[A-Za-z_][\w]*/;
 
 /* ── StreamLanguage parser for the CodeMirror editor ── */
 export const berryParser: StreamParser<unknown> = {
