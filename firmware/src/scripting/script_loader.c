@@ -85,7 +85,7 @@ int script_loader_scan(script_loader_t *loader, bvm *vm)
         } else {
             strncpy(s->filename, ent->d_name, SCRIPT_MAX_NAME - 1);
         }
-        ESP_LOGI(TAG, "  [%d] %s", loader->count - 1, s->filename);
+        ESP_LOGD(TAG, "  [%d] %s", loader->count - 1, s->filename);
     }
     closedir(dir);
 
