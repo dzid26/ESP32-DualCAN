@@ -27,7 +27,8 @@
   let confirmRemove = $state<string | null>(null);
   const dirty = $derived(code !== savedCode);
   let lastScriptStatusSeq = 0;
-  const canShowInstalled = $derived(selFn !== null && !dirty);
+  let bepNavigationActive = $state(false);
+  const canShowInstalled = $derived(selFn !== null && (!dirty || bepNavigationActive));
 
   let editorScrollTop = $state(0);
 
@@ -83,9 +84,11 @@
       const r = await app.proto.readScript(filename);
       code = r.code;
       savedCode = r.code;
+      bepNavigationActive = false;
       try {
         const bep = await app.proto.readScript(filename.replace(/\.be$/, '.bep'));
         deviceBepCode = bep.code;
+        preprocessedCode = bep.code;
       } catch {
         deviceBepCode = null;
       }
@@ -248,11 +251,11 @@
 
   // Update preprocessed code display
   $effect(() => {
-    void showPreprocessed; void deviceBepCode; void code; void dbcStore.fullMessages; void selFn; void dirty; void skipPreprocessedEffect;
+    void showPreprocessed; void code; void dbcStore.fullMessages; void canShowInstalled; void skipPreprocessedEffect;
     if (skipPreprocessedEffect) {
       skipPreprocessedEffect = false;
-    } else if (showPreprocessed && selFn && !dirty) {
-      // Installed tab: show the .bep from device
+    } else if (showPreprocessed && canShowInstalled) {
+      // Installed tab: preprocessedCode already set by loadScript / error handler
       preprocessedCode = deviceBepCode ?? '(no preprocessed file on device)';
     } else if (showPreprocessed) {
       // Preview tab: preprocess client-side
@@ -303,17 +306,29 @@
     function doScroll() {
       if (isBep) {
         if (dirty && fn === selFn) {
-          // Error link for .bep while dirty: fetch device .bep directly
+          // Error link for .bep while dirty: fetch device .bep directly,
+          // prevent effect from overriding, and mark Installed tab
           preprocessedCode = '(loading .bep from device\u2026)';
+          bepNavigationActive = true;
           skipPreprocessedEffect = true;
           app.proto.readScript(target!.filename)
-            .then(r => { preprocessedCode = r.code; deviceBepCode = r.code; })
-            .catch(() => { preprocessedCode = '(no preprocessed file on device)'; });
+            .then(r => {
+              preprocessedCode = r.code;
+              deviceBepCode = r.code;
+              skipPreprocessedEffect = true;
+              preprocessedGotoLine = targetLine;
+            })
+            .catch(() => {
+              preprocessedCode = '(no preprocessed file on device)';
+            });
+        } else {
+          bepNavigationActive = true;
         }
         showPreprocessed = true;
-        setTimeout(() => { preprocessedGotoLine = targetLine; }, 0);
+        requestAnimationFrame(() => { preprocessedGotoLine = targetLine; });
       } else {
         showPreprocessed = false;
+        bepNavigationActive = false;
         gotoLine = targetLine;
       }
     }
@@ -489,7 +504,7 @@
           class="script-tab"
           style="touch-action: pan-y;"
           class:script-tab--active={!showPreprocessed}
-          onclick={() => showPreprocessed = false}
+          onclick={() => { showPreprocessed = false; bepNavigationActive = false; }}
           title="Edit the the source code">
           Source
         </button>
@@ -497,7 +512,7 @@
           class="script-tab"
           style="touch-action: pan-y;"
           class:script-tab--active={showPreprocessed}
-          onclick={() => showPreprocessed = true}
+          onclick={() => { showPreprocessed = true; bepNavigationActive = false; }}
           title={canShowInstalled ? 'View the preprocessed script running on the device' : 'Preview what preprocessing'}>
           {canShowInstalled ? 'Installed' : 'Preview'}
         </button>
