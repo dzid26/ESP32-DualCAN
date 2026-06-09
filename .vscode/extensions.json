@@ -2,10 +2,11 @@
     // See http://go.microsoft.com/fwlink/?LinkId=827846
     // for the documentation about the extensions.json format
     "recommendations": [
-        "platformio.platformio-ide"
+        "platformio.platformio-ide",
+        "lharri73.dbc",
+        "berry.berry"
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools-extension-pack",
-        "berry.berry"
     ]
 }
