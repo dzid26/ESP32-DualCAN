@@ -26,14 +26,26 @@
   let openMessages = $state(new Set<number>());
   let busDbc = $state.raw<Record<number, { messages: Message[]; loadedFrom: string }>>({});
 
-  function signalVisible(sig: Signal): boolean {
-    return !filterPattern || sig.name.toLowerCase().includes(filterPattern);
+  function matchesId(m: Message): boolean {
+    return hex3(m.id).toLowerCase().includes(filterPattern) ||
+      m.id.toString().includes(filterPattern) ||
+      m.id.toString(16).includes(filterPattern);
+  }
+
+  function messageMatchesMeta(m: Message): boolean {
+    return m.name.toLowerCase().includes(filterPattern) || matchesId(m);
+  }
+
+  function signalVisible(sig: Signal, msg?: Message): boolean {
+    if (!filterPattern) return true;
+    if (msg && messageMatchesMeta(msg)) return true;
+    return sig.name.toLowerCase().includes(filterPattern);
   }
 
   const visibleMessages = $derived.by(() => {
     if (!filterPattern) return messages;
     return messages.filter(m =>
-      m.name.toLowerCase().includes(filterPattern) ||
+      messageMatchesMeta(m) ||
       m.signals.some(s => s.name.toLowerCase().includes(filterPattern))
     );
   });
@@ -202,6 +214,23 @@
   function hex3(n: number): string {
     return '0x' + n.toString(16).toUpperCase().padStart(3, '0');
   }
+
+  function highlightId(m: Message): string {
+    const hex = hex3(m.id);
+    if (!filterPattern) return hex;
+    const lowerHex = hex.toLowerCase();
+    const idx = lowerHex.indexOf(filterPattern);
+    if (idx === -1) return hex;
+    return hex.slice(0, idx) + '<strong style="color: var(--dc-ok)">' + hex.slice(idx, idx + filterPattern.length) + '</strong>' + hex.slice(idx + filterPattern.length);
+  }
+
+  function highlightDec(m: Message): string {
+    const dec = m.id.toString();
+    if (!filterPattern) return dec;
+    const idx = dec.indexOf(filterPattern);
+    if (idx === -1) return dec;
+    return dec.slice(0, idx) + '<strong style="color: var(--dc-ok)">' + dec.slice(idx, idx + filterPattern.length) + '</strong>' + dec.slice(idx + filterPattern.length);
+  }
 </script>
 
 <div style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px">
@@ -260,20 +289,21 @@
       </div>
     {:else}
     <div class="dtable" style="flex: 1">
-      <div class="dtable__head" style="grid-template-columns: 80px 1fr 90px">
-        <span>ID</span><span>Message</span><span>Signals</span>
+      <div class="dtable__head" style="grid-template-columns: 80px 55px 1fr 90px">
+        <span>ID</span><span>Dec</span><span>Message</span><span>Signals</span>
       </div>
       <div class="dtable__body">
         {#each visibleMessages as m (m.id)}
           <details style="border-bottom: 1px solid var(--dc-border)" ontoggle={(e) => toggleMessage(e, m.id)} open={openMessages.has(m.id)}>
-            <summary class="mono" style="display: grid; grid-template-columns: 80px 1fr 90px; gap: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px; align-items: center">
-              <span>{hex3(m.id)}</span>
+            <summary class="mono" style="display: grid; grid-template-columns: 80px 55px 1fr 90px; gap: 8px; padding: 4px 10px; cursor: pointer; font-size: 12px; align-items: center">
+              <span>{@html highlightId(m)}</span>
+              <span class="muted" style="font-size: 11px">{@html highlightDec(m)}</span>
               <span style="font-family: var(--dc-font-sans); color: var(--dc-text)">{m.name}</span>
-              <span class="muted">{m.signals.filter(signalVisible).length} signals</span>
+              <span class="muted">{m.signals.filter(s => signalVisible(s, m)).length} signals</span>
             </summary>
             {#if openMessages.has(m.id)}
               <ul class="mono" style="margin: 0; padding: 4px 10px 8px 28px; font-size: 11px; color: var(--dc-text-fade); list-style: square">
-                {#each m.signals.filter(signalVisible) as sig}
+                {#each m.signals.filter(s => signalVisible(s, m)) as sig}
                   <li>
                     {#if filterPattern}
                       {@const idx = sig.name.toLowerCase().indexOf(filterPattern)}
@@ -294,7 +324,7 @@
         {/each}
       </div>
       <div style="padding: 4px 10px; border-top: 1px solid var(--dc-border); font-size: 11px; color: var(--dc-text-fade); display: flex; justify-content: space-between">
-        <span>{visibleMessages.length} messages · {visibleMessages.reduce((n, m) => n + m.signals.filter(signalVisible).length, 0)} signals{filterPattern ? ' match' : ''}</span>
+        <span>{visibleMessages.length} messages · {visibleMessages.reduce((n, m) => n + m.signals.filter(s => signalVisible(s, m)).length, 0)} signals{filterPattern ? ' match' : ''}</span>
         <span class="mono">{loadedFrom ?? ''}</span>
       </div>
     </div>
