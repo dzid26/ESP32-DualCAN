@@ -37,6 +37,8 @@
   let showPreprocessed = $state(false);
   let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
+  let deviceBepCode = $state<string | null>(null);
+  let skipPreprocessedEffect = $state(false);
 
 
   let gotoLine = $state<number | null>(null);
@@ -81,6 +83,12 @@
       const r = await app.proto.readScript(filename);
       code = r.code;
       savedCode = r.code;
+      try {
+        const bep = await app.proto.readScript(filename.replace(/\.be$/, '.bep'));
+        deviceBepCode = bep.code;
+      } catch {
+        deviceBepCode = null;
+      }
     } catch (e) {
       app.pushLog(`scripts: read failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
       return false;
@@ -101,6 +109,7 @@
     const wasEnabled = scripts.find(s => s.filename === fn)?.enabled ?? false;
     busy = true;
     try {
+      const codeChanged = code !== savedCode;
       // Upload .be immediately so the save feels fast.
       await app.proto.writeScript(fn, code, undefined);
       savedCode = code;
@@ -121,6 +130,9 @@
         if (result.errors.length === 0) {
           app.pushLog(`scripts: preprocessed runtime updated`, 'info', 'scripts');
         }
+      } else if (!codeChanged && deviceBepCode !== null) {
+        // No DBC and source unchanged — preserve the existing .bep from device
+        await app.proto.writeScript(fn, code, deviceBepCode);
       }
       // Reload the saved script from device to confirm clean state.
       await loadScript(fn);
@@ -234,16 +246,23 @@
     else if (!app.connected) { scripts = []; }
   });
 
-  // Update preprocessed code display when script or DBC changes
+  // Update preprocessed code display
   $effect(() => {
-    void code; // Reactivity: code changed
-    void dbcStore.fullMessages; // Reactivity: DBC changed
-    const messages = getFullMessages();
-    if (messages.length > 0) {
-      const result = preprocessScript(code, messages);
-      preprocessedCode = result.code;
-    } else {
-      preprocessedCode = '(no DBC loaded - pick your car)';
+    void showPreprocessed; void deviceBepCode; void code; void dbcStore.fullMessages; void selFn; void dirty; void skipPreprocessedEffect;
+    if (skipPreprocessedEffect) {
+      skipPreprocessedEffect = false;
+    } else if (showPreprocessed && selFn && !dirty) {
+      // Installed tab: show the .bep from device
+      preprocessedCode = deviceBepCode ?? '(no preprocessed file on device)';
+    } else if (showPreprocessed) {
+      // Preview tab: preprocess client-side
+      const messages = getFullMessages();
+      if (messages.length > 0) {
+        const result = preprocessScript(code, messages);
+        preprocessedCode = result.code;
+      } else {
+        preprocessedCode = '(no DBC loaded - pick your car)';
+      }
     }
   });
 
@@ -283,6 +302,14 @@
     const targetLine = target.line;
     function doScroll() {
       if (isBep) {
+        if (dirty && fn === selFn) {
+          // Error link for .bep while dirty: fetch device .bep directly
+          preprocessedCode = '(loading .bep from device\u2026)';
+          skipPreprocessedEffect = true;
+          app.proto.readScript(target!.filename)
+            .then(r => { preprocessedCode = r.code; deviceBepCode = r.code; })
+            .catch(() => { preprocessedCode = '(no preprocessed file on device)'; });
+        }
         showPreprocessed = true;
         setTimeout(() => { preprocessedGotoLine = targetLine; }, 0);
       } else {
