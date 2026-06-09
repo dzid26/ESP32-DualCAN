@@ -9,7 +9,7 @@
   let isAtBottom = $state(true);
 
   /** Pattern: filename.extension:line: (e.g. "my_script.be:42:") */
-  const LINK_RE = /([\w. -]+\.(?:be|bep)):(\d+):/g;
+  const LINK_RE = /([\w.-]+\.(?:be|bep)):(\d+):/g;
 
   function linkify(msg: string): string {
     return msg.replace(LINK_RE,
@@ -19,7 +19,7 @@
   function handleLogClick(e: MouseEvent) {
     const btn = (e.target as HTMLElement).closest('.log-link') as HTMLElement | null;
     if (!btn) return;
-    const fn = btn.dataset.fn;
+    const fn = (btn.dataset.fn ?? '').trim();
     const line = parseInt(btn.dataset.line ?? '', 10);
     if (!fn || isNaN(line)) return;
     app.gotoEditorLine = { filename: fn, line };
@@ -30,7 +30,7 @@
     if (e.key !== 'Enter') return;
     const btn = (e.currentTarget as HTMLElement).querySelector('.log-link') as HTMLElement | null;
     if (!btn) return;
-    const fn = btn.dataset.fn;
+    const fn = (btn.dataset.fn ?? '').trim();
     const line = parseInt(btn.dataset.line ?? '', 10);
     if (!fn || isNaN(line)) return;
     app.gotoEditorLine = { filename: fn, line };
