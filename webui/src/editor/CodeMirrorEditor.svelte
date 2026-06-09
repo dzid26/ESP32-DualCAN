@@ -101,6 +101,10 @@
             }
             if (update.selectionSet) {
               cursorLine = update.state.doc.lineAt(update.state.selection.main.from).number;
+              if (lastErrorLine > 0 && cursorLine !== lastErrorLine) {
+                view!.dispatch({ effects: [setErrorLine.of(null)] });
+                lastErrorLine = 0;
+              }
             }
           }),
         ],
@@ -142,8 +146,10 @@
     const current = view.state.doc.toString();
     if (current !== value) {
       suppressNextChange = true;
+      lastErrorLine = 0;
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
+        effects: [setErrorLine.of(null)],
       });
       const saved = untrack(() => scrollTop);
       if (view.scrollDOM.scrollTop !== saved) {
@@ -153,7 +159,7 @@
     }
   });
 
-  /* Scroll to and select a specific line when gotoLine is set.
+  /* Scroll to and highlight a specific line when gotoLine is set.
      Re-fires when the editor view becomes ready so a goto queued before
      mount still works. */
   $effect(() => {
@@ -161,9 +167,13 @@
     if (!view || !gotoLine) return;
     try {
       const line = view.state.doc.line(gotoLine);
+      lastErrorLine = gotoLine;
       view.dispatch({
         selection: EditorSelection.single(line.from, line.to),
-        effects: EditorView.scrollIntoView(line.from, { y: 'start' }),
+        effects: [
+          EditorView.scrollIntoView(line.from, { y: 'nearest' }),
+          setErrorLine.of(gotoLine),
+        ],
       });
     } catch { /* line out of range */ }
     gotoLine = null;
