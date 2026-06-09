@@ -55,10 +55,12 @@ end
 
 ```berry
 # Send a raw frame: bus (0 or 1), CAN ID (integer), payload (bytes object, max 8).
-var b = bytes()
-b.add(0x01)
-b.add(0xFF)
+var b = bytes("01FF")               # from hex string
 can_send_raw(0, 0x100, b)
+
+# Using setbits(offset_bits, len_bits, val) — chainable, returns self.
+# UI_mirrorFoldRequest at bit 24, 2 bits, value 0x2 (unfold):
+can_send_raw(0, 0x273, bytes(-8).setbits(24, 2, 0x2))
 
 # Dequeue the next received frame — returns a list [id, data] or nil when
 # the queue is empty. rx[0] = CAN ID (int), rx[1] = payload (bytes).
@@ -244,10 +246,27 @@ end
 var fn = /-> print("lambda")     # zero-arg lambda
 var fn2 = def(a) a * 2 end       # inline function expression
 
-var b = bytes()                  # byte buffer
-b.add(0xFF)                      # append byte
-b.set(0, 0x01)                   # set by index
-b.item(0)                        # read by index
+var b = bytes(-8)                 # fixed 8-byte buffer, zero-filled
+b.setbits(24, 2, 2)               # signal at bit 24, 2 bits, value 2 (PRESENT)
+var b2 = bytes('deadbeef0011')    # 8 bytes from hex string
+b.item(0)                         # read by index
+```
+
+## `setbits`
+
+Writes a bit-level value into a `bytes` buffer. Chainable — returns `self`.
+
+Works natively with **Intel (little-endian) unsigned** DBC signals — the most common format. For Motorola (big-endian) or signed signals, convert offset/value before calling.
+
+| Parameter | Unit | Range |
+|---|---|---|
+| `offset_bits` | bits | `0`+ |
+| `len_bits` | bits | `1`..`32` |
+| `val` | integer | uses only lower `len_bits` |
+
+```berry
+# arbitrary bit offset, no need for byte alignment
+can_send_raw(0, 0x273, bytes(-8).setbits(24, 2, 2))
 ```
 
 More here - [Berry-in-20-minutes](https://berry.readthedocs.io/en/latest/source/en/Berry-in-20-minutes.html)
