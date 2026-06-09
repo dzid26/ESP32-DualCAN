@@ -49,7 +49,7 @@ static esp_err_t chunk(httpd_req_t *req, const char *s)
 }
 
 #define CHUNK(...) do { \
-    char _b[256]; \
+    char _b[512]; \
     int _n = snprintf(_b, sizeof(_b), __VA_ARGS__); \
     if (_n > 0) { \
         if (_n >= (int)sizeof(_b)) _n = (int)sizeof(_b) - 1; \
