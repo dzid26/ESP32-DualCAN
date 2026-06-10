@@ -42,10 +42,10 @@
 #define BE_USE_FILE_SYSTEM              0
 
 #define BE_USE_SCRIPT_COMPILER          1
-#define BE_USE_BYTECODE_SAVER           1
-#define BE_USE_BYTECODE_LOADER          1
+#define BE_USE_BYTECODE_SAVER           0
+#define BE_USE_BYTECODE_LOADER          0
 #define BE_USE_SHARED_LIB               0
-#define BE_USE_OVERLOAD_HASH            1
+#define BE_USE_OVERLOAD_HASH            0
 
 #define BE_USE_DEBUG_HOOK               0
 #define BE_USE_DEBUG_GC                 0
@@ -63,7 +63,7 @@
 #define BE_USE_DEBUG_MODULE             0
 #define BE_USE_GC_MODULE                1
 #define BE_USE_SOLIDIFY_MODULE          0
-#define BE_USE_INTROSPECT_MODULE        1
+#define BE_USE_INTROSPECT_MODULE        0
 #define BE_USE_STRICT_MODULE            0
 
 /* libc hooks — newlib-nano on ESP-IDF provides these. */
