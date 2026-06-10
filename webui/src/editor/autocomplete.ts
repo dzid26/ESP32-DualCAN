@@ -115,7 +115,13 @@ const KEYWORDS = [
   'try', 'except', 'raise', 'new',
 ];
 
-export const BUILTINS = new Set(API.map(b => b.label));
+const BERRY_BUILTINS = [
+  'assert', 'bool', 'input', 'classname', 'classof', 'number', 'real',
+  'bytes', 'compile', 'map', 'list', 'int', 'isinstance', 'range',
+  'str', 'module', 'size', 'issubclass', 'open', 'file', 'type', 'call',
+];
+
+export const BUILTINS = new Set([...API.map(b => b.label), ...BERRY_BUILTINS]);
 export const KEYWORD_SET = new Set(KEYWORDS);
 
 /* Functions that expect a DBC message name as the first string argument. */
@@ -132,6 +138,12 @@ const berryCompletions: Completion[] = [
     boost: 10,
   })),
   ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })),
+  ...BERRY_BUILTINS.map(label => ({
+    label,
+    type: 'function' as const,
+    detail: 'Berry builtin',
+    boost: 5,
+  })),
 ];
 
 const MAX_DBC = 200;
