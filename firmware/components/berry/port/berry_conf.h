@@ -11,7 +11,11 @@
 #ifndef BERRY_CONF_H
 #define BERRY_CONF_H
 
+#include <assert.h>
+
+#ifndef BE_DEBUG
 #define BE_DEBUG                        0
+#endif
 
 /* 0 = int, 1 = long (32-bit on RISC-V C6), 2 = long long. */
 #define BE_INTGER_TYPE                  1
@@ -73,6 +77,6 @@
 #define BE_EXPLICIT_FREE                free
 #define BE_EXPLICIT_REALLOC             realloc
 
-#define be_assert(expr)                 ((void)0)
+#define be_assert(expr)                 assert(expr)
 
 #endif
