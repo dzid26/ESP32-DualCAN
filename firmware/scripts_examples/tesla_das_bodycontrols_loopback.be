@@ -52,7 +52,7 @@ def run_test()
 
   # ---- Phase 3: Send ----
   print("\n3: Send on bus 0")
-  can_msg_send(msg)
+  can_msg_send(0, msg)
 
   # ---- Phase 4: Modify ----
   print("\n4: Modify signals")
@@ -79,7 +79,7 @@ def run_test()
 
   # ---- Phase 6: Re-send ----
   print("\n6: Re-send on bus 0")
-  can_msg_send(msg)
+  can_msg_send(0, msg)
 
   # ---- Summary ----
   print("\n=== " .. str(errors) .. " failure(s) ===")

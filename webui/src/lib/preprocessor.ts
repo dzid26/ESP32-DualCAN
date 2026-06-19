@@ -5,7 +5,8 @@
  * All signal metadata is inlined as Berry code by the preprocessor.
  *
  * Conversion rules:
- *   can_msg_get("msg" [, bus])      → can_msg_get(0xID [, bus])
+ *   can_msg_new("msg" [, bus])      → can_msg_new(0xID, dlc)  (bus dropped)
+ *   can_msg_get("msg" [, bus])      → can_msg_get(bus, 0xID)
  *   can_signal_get("msg", "sig" [, bus])
  *     → __sig_get(msg_id, sb, len, be, sg, sc, off [, bus])
  *   on_can_signal("msg", "sig", fn [, bus])
@@ -39,7 +40,7 @@ function ensureHelperSigGet(): void {
   if (helperSigGet) return;
   helperSigGet = [
     'def __sig_get(msg_id, sb, len, be, sg, sc, off, bus)',
-    '  var f = can_msg_get(msg_id, bus)',
+    '  var f = can_msg_get(bus, msg_id)',
     '  if f != nil',
     '    return signal_decode(f.data, sb, len, be, sg, sc, off)',
     '  end',
@@ -60,7 +61,7 @@ function ensureHelperWatchSig(): void {
     '    __poll_timer = timer.every(50, def()',
     '      for var k : __subs.keys()',
     '        var s = __subs[k]',
-    '        var f = can_msg_get(s.msg_id, s.bus)',
+    '        var f = can_msg_get(s.bus, s.msg_id)',
     '        if f != nil',
     '          var v = signal_decode(f.data, s.sb, s.len, s.be, s.sg, s.sc, s.off)',
     '          if v != s.prev',
@@ -138,6 +139,7 @@ export function preprocessScript(
 
   /* ---- Pattern 1: can_msg_get("msg" [, bus]) ---- */
   // Matches: can_msg_get("msg") or can_msg_get("msg", bus)
+  // Reorders to can_msg_get(bus, 0xID) — bus is always first.
   const canMsgGetPattern = /can_msg_get\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
   let match: RegExpExecArray | null;
   while ((match = canMsgGetPattern.exec(code)) !== null) {
@@ -156,17 +158,18 @@ export function preprocessScript(
       continue;
     }
 
-    const replacement = `can_msg_get(0x${msgId.toString(16)}${trailing})`;
+    const bus = trailing ? trailing.trim().replace(/^,\s*/, '') : '0';
+    const replacement = `can_msg_get(${bus}, 0x${msgId.toString(16)})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
   /* ---- Pattern 1b: can_msg_new("msg" [, bus]) ---- */
   // Resolves message name to ID + DLC from DBC; passes through to the
-  // on-device `can_msg_new(id, bus, dlc)` C binding.
+  // on-device `can_msg_new(id, dlc)` C binding. Bus is ignored — the draft
+  // is bus-agnostic; pass it at send time via can_msg_send(bus, draft).
   const canMsgNewNamePattern = /can_msg_new\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
   while ((match = canMsgNewNamePattern.exec(code)) !== null) {
     const msgName = match[1];
-    const trailing = match[2]; // e.g. ", 1" or ""
     const fullMatch = match[0];
     const matchStart = match.index;
     const matchEnd = matchStart + fullMatch.length;
@@ -181,8 +184,7 @@ export function preprocessScript(
     }
 
     const msg = messages.find(m => m.id === msgId)!;
-    const bus = trailing ? trailing.trim().replace(/^,\s*/, '') : '0';
-    const replacement = `can_msg_new(0x${msgId.toString(16)}, ${bus}, ${msg.dlc})`;
+    const replacement = `can_msg_new(0x${msgId.toString(16)}, ${msg.dlc})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 

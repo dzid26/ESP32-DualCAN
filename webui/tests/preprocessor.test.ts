@@ -25,7 +25,7 @@ const mockMessages = [
 test('preprocesses can_msg_get with string message name', () => {
   const code = `can_msg_get("DAS_bodyControls", 0)`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('can_msg_get(0x3e9'));
+  assert(result.code.includes('can_msg_get(0, 0x3e9'));
   assert.equal(result.errors.length, 0);
 });
 
@@ -79,19 +79,19 @@ test('reports error for unknown signal in can_msg_set', () => {
 test('preprocesses can_msg_new with string message name', () => {
   const code = `var msg = can_msg_new("DAS_bodyControls", 0)`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('can_msg_new(0x3e9, 0, 8)'));
+  assert(result.code.includes('can_msg_new(0x3e9, 8)'));
   assert.equal(result.errors.length, 0);
 });
 
-test('preprocesses can_msg_new with default bus', () => {
+test('preprocesses can_msg_new without bus', () => {
   const code = `var msg = can_msg_new("VCLEFT_doorStatus")`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('can_msg_new(0x102, 0, 8)'));
+  assert(result.code.includes('can_msg_new(0x102, 8)'));
   assert.equal(result.errors.length, 0);
 });
 
 test('passes can_msg_new with numeric id through unchanged', () => {
-  const code = `var msg = can_msg_new(0x3E9, 0, 8)`;
+  const code = `var msg = can_msg_new(0x3E9, 8)`;
   const result = preprocessScript(code, mockMessages);
   assert.equal(result.code, code);
   assert.equal(result.errors.length, 0);
@@ -114,7 +114,7 @@ test('handles multiple replacements in one script', () => {
   const result = preprocessScript(code, mockMessages);
   assert(result.code.includes('__watch_sig'));
   assert(result.code.includes('__sig_get'));
-  assert(result.code.includes('can_msg_get(0x102'));
+  assert(result.code.includes('can_msg_get(0, 0x102'));
   assert(result.code.includes('signal_encode'));
   assert.equal(result.errors.length, 0);
 });

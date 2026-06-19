@@ -119,7 +119,7 @@ int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
     return i;
 }
 
-int can_send(can_t *c, uint32_t id, uint8_t *data, uint8_t dlc)
+int can_send(can_t *c, uint32_t id, const uint8_t *data, uint8_t dlc)
 {
     uint32_t now_us = (uint32_t)(esp_timer_get_time());
     if (!rate_limiter_allow(&c->rate_limiter, id, now_us)) {

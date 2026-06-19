@@ -20,7 +20,7 @@ def hazards_off()
     msg = can_msg_new("DAS_bodyControls", 0)
   end
   can_msg_set(msg, "DAS_hazardLightRequest", 0)
-  can_msg_send(msg)
+  can_msg_send(0, msg)
   print("Hazards off requested")
 end
 
@@ -32,7 +32,7 @@ def hazards_on()
     msg = can_msg_new("DAS_bodyControls", 0)
   end
   can_msg_set(msg, "DAS_hazardLightRequest", 1)
-  can_msg_send(msg)
+  can_msg_send(0, msg)
   print("Hazards on requested")
 
   timer_after(3000, /-> hazards_off())

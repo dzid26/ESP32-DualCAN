@@ -52,7 +52,7 @@ def hazards_on()
   var msg = can_msg_get("DAS_bodyControls", 0)
   if msg == nil msg = can_msg_new("DAS_bodyControls", 0) end
   can_msg_set(msg, "DAS_hazardLightRequest", 1)
-  can_msg_send(msg)
+  can_msg_send(0, msg)
   print("Hazards ON")
 
   timer_after(3000, def()
@@ -61,7 +61,7 @@ def hazards_on()
       m2 = can_msg_new("DAS_bodyControls", 0)
     end
     can_msg_set(m2, "DAS_hazardLightRequest", 0)
-    can_msg_send(m2)
+    can_msg_send(0, m2)
     print("Hazards OFF")
   end)
 end

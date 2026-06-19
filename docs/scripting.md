@@ -75,18 +75,18 @@ end
 ```berry
 # Create a fresh zeroed draft from DBC (name → ID + DLC resolved at compile time)
 var msg = can_msg_new("UI_powertrainControl")
-# Or with numeric ID, bus, DLC:  can_msg_new(0x313, 0, 8)
+# Or with numeric ID, DLC:  can_msg_new(0x313, 8)
 can_msg_set(msg, "UI_trackModeRequest", 1)
-can_msg_send(msg)
+can_msg_send(0, msg)                           # bus, msg
 
 # Or fetch the latest received frame as a modifiable draft
-var msg2 = can_msg_get("UI_powertrainControl")   # get by DBC message name
-# or by numeric CAN ID: can_msg_get(0x313)
+var msg2 = can_msg_get(0, "UI_powertrainControl")   # bus first, then DBC name
+# or by numeric CAN ID: can_msg_get(0, 0x313)
 can_msg_set(msg2, "UI_trackModeRequest", 1)
-can_msg_send(msg2)
+can_msg_send(0, msg2)
 ```
 
-The draft is a map instance with keys `id` (int), `bus` (int), `data` (bytes), `dlc` (int). You can read/write individual signals with `can_msg_set`, or access the raw data buffer directly: `msg["data"]`.
+The draft is a map instance with keys `id` (int), `data` (bytes), `dlc` (int). You can read/write individual signals with `can_msg_set`, or access the raw data buffer directly: `msg["data"]`.
 
 ### Low-level bit encoding (used by the preprocessor, exposed for custom work)
 
@@ -170,10 +170,10 @@ state_remove("my_key")                  # delete key
 
 | Function | Returns | Description |
 |---|---|---|
-| `can_msg_new(name [, bus])` | draft \| nil | Create zeroed draft from DBC name (name→ID+DLC resolved at compile time) |
-| `can_msg_new(id, bus, dlc)` | draft \| nil | Create zeroed draft from numeric ID/bus/DLC |
-| `can_msg_get(id \| name [, bus])` | draft \| nil | Latest received frame as editable draft |
-| `can_msg_send(draft)` | — | Transmit the draft (auto-handles checksum/counter) |
+| `can_msg_new(name)` | draft \| nil | Create zeroed draft from DBC name (name→ID+DLC resolved at compile time) |
+| `can_msg_new(id, dlc)` | draft \| nil | Create zeroed draft from numeric ID and DLC |
+| `can_msg_get(bus, id \| name)` | draft \| nil | Latest received frame as editable draft — bus is first |
+| `can_msg_send(bus, draft)` | — | Transmit the draft on bus (auto-handles checksum/counter) |
 | `can_send_raw(bus, id, data)` | — | Transmit a raw CAN frame (max 8 bytes) |
 | `can_recv_raw(bus)` | list \| nil | Pop next queued frame → `[id, data]` |
 | `timer_after(ms, fn)` | handle | Fire fn once after ms |

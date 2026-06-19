@@ -389,6 +389,9 @@ void berry_cleanup_script(int script_id)
  * All CAN functions take a bus argument (0 or 1). In simulation mode
  * (can_t.sim_mode), can_send_raw logs the frame instead of transmitting. */
 
+
+
+ 
 /* can_send_raw(bus:int, id:int, data:bytes) -> nil
  * Transmit a raw CAN frame. No DBC encoding, no signal modification, no
  * checksum/counter injection. bus = 0 or 1, id = 11-bit CAN ID,
@@ -448,17 +451,19 @@ static int l_can_recv_raw(bvm *vm)
     be_return_nil(vm);
 }
 
-/* can_msg_get(msg_id:int [, bus:int]) -> draft | nil
+/* can_msg_get(bus:int, msg_id:int) -> draft | nil
  * Returns the latest received frame for msg_id as a message draft (map
- * instance with keys: id, bus, data, dlc). Returns nil if no matching frame
- * has been received. The draft can be modified with can_msg_set and
- * transmitted via can_msg_send. If bus is omitted, defaults to 0. */
+ * instance with keys: id, data, dlc). Returns nil if no matching frame has
+ * been received. The draft can be modified with can_msg_set and transmitted
+ * via can_msg_send. bus is first for consistency with can_send_raw/
+ * can_recv_raw. */
 static int l_can_msg_get(bvm *vm)
 {
-    CHECK_ARITY(vm, 1);
-    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int"); //msg_id
-    uint32_t msg_id = (uint32_t)be_toint(vm, 1);
-    int bus = (be_top(vm) >= 2 && be_isint(vm, 2)) ? be_toint(vm, 2) : 0;
+    CHECK_ARITY(vm, 2);
+    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int"); //bus
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int"); //msg_id
+    int bus = be_toint(vm, 1);
+    uint32_t msg_id = (uint32_t)be_toint(vm, 2);
     can_t *eng = get_bus(bus);
     if (!eng) be_return_nil(vm);
 
@@ -470,8 +475,6 @@ static int l_can_msg_get(bvm *vm)
     be_newmap(vm);
     be_pushstring(vm, "id");      be_pushint(vm, (bint)msg_id);
     be_data_insert(vm, -3); be_pop(vm, 2);
-    be_pushstring(vm, "bus");     be_pushint(vm, bus);
-    be_data_insert(vm, -3); be_pop(vm, 2);
     be_pushstring(vm, "data");    be_pushbytes(vm, data, dlc);
     be_data_insert(vm, -3); be_pop(vm, 2);
     be_pushstring(vm, "dlc");     be_pushint(vm, dlc);
@@ -481,20 +484,19 @@ static int l_can_msg_get(bvm *vm)
     be_return(vm);
 }
 
-/* can_msg_new(id:int, bus:int, dlc:int) -> draft
+/* can_msg_new(id:int, dlc:int) -> draft
  * Creates a zeroed message draft (all bytes = 0) for encoding and
- * transmission. The draft is a map instance with keys: id, bus, data, dlc.
- * The preprocessor rewrites can_msg_new("msg_name" [, bus]) to call this
- * with the resolved ID, bus, and DLC from the DBC. */
+ * transmission. The draft is a bus-free map instance with keys: id, data,
+ * dlc. Pass the bus at send time via can_msg_send(bus, draft). The
+ * preprocessor rewrites can_msg_new("msg_name") to call this with the
+ * resolved ID and DLC from the DBC. */
 static int l_can_msg_new(bvm *vm)
 {
-    CHECK_ARITY(vm, 3);
+    CHECK_ARITY(vm, 2);
     CHECK_TYPE(vm, 1, be_isint(vm, 1), "int"); //msg_id
-    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int"); //bus
-    CHECK_TYPE(vm, 3, be_isint(vm, 3), "int"); //dlc
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int"); //dlc
     uint32_t msg_id = (uint32_t)be_toint(vm, 1);
-    int bus = be_toint(vm, 2);
-    int dlc = be_toint(vm, 3);
+    int dlc = be_toint(vm, 2);
     if (dlc <= 0 || dlc > 8) dlc = 8;
 
     uint8_t zeros[8] = {0};
@@ -502,8 +504,6 @@ static int l_can_msg_new(bvm *vm)
     be_getglobal(vm, "map");
     be_newmap(vm);
     be_pushstring(vm, "id");      be_pushint(vm, (bint)msg_id);
-    be_data_insert(vm, -3); be_pop(vm, 2);
-    be_pushstring(vm, "bus");     be_pushint(vm, bus);
     be_data_insert(vm, -3); be_pop(vm, 2);
     be_pushstring(vm, "data");    be_pushbytes(vm, zeros, dlc);
     be_data_insert(vm, -3); be_pop(vm, 2);
@@ -514,34 +514,34 @@ static int l_can_msg_new(bvm *vm)
     be_return(vm);
 }
 
-/* can_msg_send(draft) -> nil
- * Transmit a message draft. Reads id, bus, data, dlc from the draft map
- * instance via dot-member access. Signal encoding and counter/checksum
- * update must be done in Berry before calling (use can_msg_set). */
+/* can_msg_send(bus:int, draft) -> nil
+ * Transmit a message draft on the given bus. Reads id, data, dlc from the
+ * draft map instance via dot-member access. bus is first for consistency
+ * with can_send_raw/can_recv_raw. The draft is kept bus-agnostic — pass the
+ * bus at send time. Signal encoding and counter/checksum update must be done
+ * in Berry before calling (use can_msg_set). */
 static int l_can_msg_send(bvm *vm)
 {
-    CHECK_ARITY(vm, 1);
-    if (!be_isinstance(vm, 1)) {
+    CHECK_ARITY(vm, 2);
+    CHECK_TYPE(vm, 1, be_isint(vm, 1), "int"); //bus
+    if (!be_isinstance(vm, 2)) {
         ESP_LOGW(TAG_BB, "can_msg_send: trying to send empty message");
         be_return_nil(vm);
     }
 
-    be_getmember(vm, 1, "bus");
-    int bus = be_toint(vm, -1);
-    be_pop(vm, 1);
-
-    be_getmember(vm, 1, "id");
-    uint32_t id = (uint32_t)be_toint(vm, -1);
-    be_pop(vm, 1);
-
-    be_getmember(vm, 1, "dlc");
-    int dlc = be_toint(vm, -1);
-    be_pop(vm, 1);
-
+    int bus = be_toint(vm, 1);
     can_t *eng = get_bus(bus);
     if (!eng) be_return_nil(vm);
 
-    be_getmember(vm, 1, "data");
+    be_getmember(vm, 2, "id");
+    uint32_t id = (uint32_t)be_toint(vm, -1);
+    be_pop(vm, 1);
+
+    be_getmember(vm, 2, "dlc");
+    int dlc = be_toint(vm, -1);
+    be_pop(vm, 1);
+
+    be_getmember(vm, 2, "data");
     size_t len = 0;
     const uint8_t *draft_data = be_tobytes(vm, -1, &len);
     uint8_t data[8];

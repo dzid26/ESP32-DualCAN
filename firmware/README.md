@@ -117,11 +117,11 @@ function name, or inline code.
 
 | Function | Returns | Preprocessed? | Description |
 |---|---|---|---|
-| `can_msg_new(name [, bus])` | draft \| nil | arg resolve | Zeroed draft from DBC name *(ID+DLC baked in)* |
-| `can_msg_new(id, bus, dlc)` | draft \| nil | no | Zeroed draft from numeric ID |
-| `can_msg_get(id \| name [, bus])` | draft \| nil | arg resolve | Latest rx frame as editable draft |
+| `can_msg_new(name)` | draft \| nil | arg resolve | Zeroed draft from DBC name *(ID+DLC baked in)* |
+| `can_msg_new(id, dlc)` | draft \| nil | no | Zeroed draft from numeric ID |
+| `can_msg_get(bus, id \| name)` | draft \| nil | arg resolve | Latest rx frame as a draft
 | `can_msg_set(draft, sig, val)` | — | **rewritten** | Becomes `draft["data"] = signal_encode(...)` |
-| `can_msg_send(draft)` | — | no | Transmit draft (auto checksum/counter) |
+| `can_msg_send(bus, draft)` | — | no | Transmit draft (auto checksum/counter) |
 | `can_signal_get(msg, sig [, bus])` | map \| nil | **renamed** | Becomes `__sig_get(msg_id, ...)` |
 | `on_can_signal(msg, sig, fn [, bus])` | — | **renamed** | Becomes `__watch_sig(msg_id, ..., fn)` |
 | `can_send_raw(bus, id, data)` | — | no | Send raw CAN frame (no DBC) |

@@ -55,6 +55,6 @@ uint16_t can_bus_rx_rate(int bus_id); /* RX frames/sec over last ~1 s, 0 when id
 int  can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc);
 
 /* Send a raw CAN frame. Rate-limited per ID. */
-int  can_send(can_t *c, uint32_t id, uint8_t *data, uint8_t dlc);
+int  can_send(can_t *c, uint32_t id, const uint8_t *data, uint8_t dlc);
 
 void can_set_sim_mode(can_t *c, bool enabled);

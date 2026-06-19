@@ -23,7 +23,7 @@ def setup()
         print("Full throttle detected — would request track mode")
         # var msg = can_msg_get("UI_powertrainControl")
         # can_msg_set(msg, "UI_trackModeRequest", 1)  # ON
-        # can_msg_send(msg)
+        # can_msg_send(bus, msg)
         track_requested = true
       end
     else
