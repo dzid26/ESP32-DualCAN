@@ -68,6 +68,12 @@ var rx = can_recv_raw(0)
 if rx != nil
   print("got id 0x" .. format("%03X", rx[0]))
 end
+
+# Or read the latest received data for a specific CAN ID directly:
+var payload = can_recv_raw(0, 0x118)
+if payload != nil
+  print("DI_state: " .. str(payload))
+end
 ```
 
 ## Encoded messages  *(requires DBC — applies Tesla checksum/counter automatically)*
@@ -175,7 +181,7 @@ state_remove("my_key")                  # delete key
 | `can_msg_get(bus, id \| name)` | draft \| nil | Latest received frame as editable draft — bus is first |
 | `can_msg_send(bus, draft)` | — | Transmit the draft on bus (auto-handles checksum/counter) |
 | `can_send_raw(bus, id, data)` | — | Transmit a raw CAN frame (max 8 bytes) |
-| `can_recv_raw(bus)` | list \| nil | Pop next queued frame → `[id, data]` |
+| `can_recv_raw(bus [, msg_id])` | list \| nil / bytes \| nil | Without msg_id: pop queued → `[id, data]`. With msg_id: latest rx payload (bytes). |
 | `timer_after(ms, fn)` | handle | Fire fn once after ms |
 | `timer_every(ms, fn)` | handle | Fire fn every ms |
 | `timer_cancel(handle)` | — | Cancel a timer by handle |
