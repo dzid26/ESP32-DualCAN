@@ -77,6 +77,7 @@ extern const bcstring be_const_str_item;
 extern const bcstring be_const_str_iter;
 extern const bcstring be_const_str_keys;
 extern const bcstring be_const_str_length_X20in_X20bits_X20must_X20be_X20between_X200_X20and_X2032;
+extern const bcstring be_const_str_length_X20in_X20bits_X20must_X20be_X20between_X20_X2D32_X20and_X2032;
 extern const bcstring be_const_str_list;
 extern const bcstring be_const_str_lower;
 extern const bcstring be_const_str_map;
