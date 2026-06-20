@@ -180,15 +180,17 @@ void app_main(void)
                            dorky_ble_pairing_open() || now < led_on_until ? 1 : 0);
         }
 
-        if ((tick % 1000) == 0) {
+        static uint32_t last_log_ms = 0;
+        if ((now - last_log_ms) >= 1000) {
+            last_log_ms = now;
             ESP_LOGD(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
                      tick, (uint32_t)esp_get_free_heap_size());
-            
+
             static char stats[1024];
             // vTaskGetRunTimeStats(stats);
             // printf("--- CPU usage ---\n%s\n", stats);
         }
         tick++;
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
