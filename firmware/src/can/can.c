@@ -34,15 +34,82 @@ uint16_t can_bus_rx_rate(int bus_id)
     return s_rx_rate[bus_id];
 }
 
-static int cache_idx(uint32_t id)
+/* ---- Ring buffer helpers (msg_ring_t, arbitrary depth) ---- */
+
+static void ring_push(msg_ring_t *ring, const twai_message_t *msg)
 {
-    return (int)(id % CAN_FRAME_CACHE);
+    ring->frames[ring->head] = *msg;
+    ring->head = (ring->head + 1) % ring->depth;
+    if (ring->count < ring->depth) {
+        ring->count++;
+    } else {
+        ring->tail = (ring->tail + 1) % ring->depth;
+    }
+}
+
+static const twai_message_t *ring_latest(const msg_ring_t *ring)
+{
+    if (ring->count == 0) return NULL;
+    uint8_t pos = (ring->head + ring->depth - 1) % ring->depth;
+    return &ring->frames[pos];
+}
+
+static bool ring_pop(msg_ring_t *ring, twai_message_t *out)
+{
+    if (ring->count == 0) return false;
+    *out = ring->frames[ring->tail];
+    ring->tail = (ring->tail + 1) % ring->depth;
+    ring->count--;
+    return true;
+}
+
+/* ---- Cache helpers ---- */
+
+static int cache_find(msg_ring_t *cache, uint32_t id)
+{
+    for (int i = 0; i < CAN_FRAME_CACHE; i++) {
+        if (cache[i].frames[0].identifier == id) return i;
+    }
+    return -1;
+}
+
+static int cache_alloc(msg_ring_t *cache, uint32_t msg_id)
+{
+    int i = cache_find(cache, msg_id);
+    if (i >= 0) return i;  /* already registered */
+    i = cache_find(cache, 0);  /* find free slot */
+    if (i < 0) return -1;
+    cache[i].frames[0].identifier = msg_id;
+    cache[i].head = 0;
+    cache[i].tail = 0;
+    cache[i].count = 0;
+    cache[i].depth = CAN_CACHE_DEPTH;
+    return i;
+}
+
+static void cache_update(msg_ring_t *cache, const twai_message_t *rx)
+{
+    int i = cache_find(cache, rx->identifier);
+    if (i < 0) return;
+    ring_push(&cache[i], rx);
+}
+
+static const twai_message_t *cache_read(msg_ring_t *cache, uint32_t msg_id)
+{
+    int i = cache_find(cache, msg_id);
+    if (i < 0) {
+        i = cache_alloc(cache, msg_id);
+        if (i < 0) return NULL;
+        return NULL;
+    }
+    return ring_latest(&cache[i]);
 }
 
 int can_init(can_t *c, int bus_id)
 {
     memset(c, 0, sizeof(*c));
     c->bus_id = bus_id;
+    c->rx_buf.depth = CAN_RX_BUF;
     rate_limiter_init(&c->rate_limiter, RATE_LIMIT_DEFAULT_HZ);
     c->loaded = true;
     ESP_LOGI(TAG, "bus%d: initialized (no DBC — scripts handle signal processing)", bus_id);
@@ -56,22 +123,12 @@ void can_free(can_t *c)
 
 static void rx_buf_push(can_t *c, const twai_message_t *frame)
 {
-    if (c->rx_count >= CAN_RX_BUF) {
-        c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
-        c->rx_count--;
-    }
-    uint8_t tail = (c->rx_head + c->rx_count) % CAN_RX_BUF;
-    c->rx_buf[tail] = *frame;
-    c->rx_count++;
+    ring_push(&c->rx_buf, frame);
 }
 
 bool can_rx_pop(can_t *c, twai_message_t *out)
 {
-    if (c->rx_count == 0) return false;
-    *out = c->rx_buf[c->rx_head];
-    c->rx_head = (c->rx_head + 1) % CAN_RX_BUF;
-    c->rx_count--;
-    return true;
+    return ring_pop(&c->rx_buf, out);
 }
 
 int can_poll(can_t *c, uint32_t now_ms)
@@ -86,12 +143,8 @@ int can_poll(can_t *c, uint32_t now_ms)
         rx_buf_push(c, &rx);
         if (s_raw_observer) s_raw_observer(c->bus_id, &rx, now_ms);
 
-        /* Update frame cache */
-        int i = cache_idx(rx.identifier);
-        c->frames[i].id = rx.identifier;
-        memcpy(c->frames[i].data, rx.data, rx.data_length_code);
-        c->frames[i].dlc = rx.data_length_code;
-        c->frames[i].received = true;
+        /* Update frame cache — only if a script has registered this ID */
+        cache_update(c->msg_cache, &rx);
     }
 
     /* Roll the rate window */
@@ -111,12 +164,11 @@ int can_poll(can_t *c, uint32_t now_ms)
 
 int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
 {
-    int i = cache_idx(msg_id);
-    cached_frame_t *f = &c->frames[i];
-    if (!f->received || f->id != msg_id) return -1;
-    memcpy(out_data, f->data, 8);
-    *out_dlc = f->dlc;
-    return i;
+    const twai_message_t *msg = cache_read(c->msg_cache, msg_id);
+    if (!msg) return -1;
+    memcpy(out_data, msg->data, 8);
+    *out_dlc = msg->data_length_code;
+    return 0;
 }
 
 int can_send(can_t *c, uint32_t id, const uint8_t *data, uint8_t dlc)

@@ -7,19 +7,26 @@
 #include "can/rate_limit.h"
 
 #define CAN_RX_BUF        16  /* per-bus software ring buffer depth for Berry scripts */
-#define CAN_FRAME_CACHE   32  /* number of CAN IDs to cache latest frame for */
+#define CAN_FRAME_CACHE   32  /* number of CAN IDs that can be cached */
+#define CAN_CACHE_DEPTH    3  /* ring buffer depth per cache slot */
 
 /* CAN-layer error codes */
 #define CAN_ERR_FULL    (-202)
 #define CAN_ERR_NO_FRAME (-203)
 
-/* Latest received frame data for a CAN ID */
+/* Ring buffer of twai_message_t with configurable depth.
+ * frames[] is sized for the largest use (CAN_RX_BUF = 16).
+ * depth determines the actual wrap point (CAN_CACHE_DEPTH for cache
+ * slots, CAN_RX_BUF for rx_buf).
+ * frames[0].identifier == 0 means a cache slot is free.
+ * head = next write index, tail = oldest (read) index. */
 typedef struct {
-    uint32_t id;
-    uint8_t  data[8];
-    uint8_t  dlc;
-    bool     received;
-} cached_frame_t;
+    twai_message_t frames[CAN_RX_BUF];
+    uint8_t        depth;    /* actual ring depth */
+    uint8_t        head;     /* next write index */
+    uint8_t        tail;     /* oldest (read) index */
+    uint8_t        count;    /* frames stored (0..depth) */
+} msg_ring_t;
 
 typedef struct {
     int                bus_id;
@@ -27,15 +34,11 @@ typedef struct {
     bool               loaded;
     bool               sim_mode;       /* true = TX goes to log, not bus */
 
-    /* Frame cache: latest received frame per CAN ID (linear scan). */
-    cached_frame_t     frames[CAN_FRAME_CACHE];
-    int                frame_count;
+    /* Frame cache: per-ID ring buffers. Only caches IDs scripts have read. */
+    msg_ring_t         msg_cache[CAN_FRAME_CACHE];
 
-    /* Software RX ring buffer: can_poll fills this so Berry can_recv_raw()
-     * sees frames that arrived before the timer callback fires. */
-    twai_message_t     rx_buf[CAN_RX_BUF];
-    uint8_t            rx_head;
-    uint8_t            rx_count;
+    /* RX ring buffer: flat FIFO of mixed IDs for can_recv_raw() / can_rx_pop(). */
+    msg_ring_t         rx_buf;
 } can_t;
 
 int  can_init(can_t *c, int bus_id);
