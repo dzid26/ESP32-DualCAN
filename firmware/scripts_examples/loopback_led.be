@@ -16,8 +16,8 @@ def tick_fn()
   tick += 1
 
   # Check CAN1 for loopback
-  var rx = can_recv_raw(1)
-  if rx && rx[0] == 0x123
+  var rx_data = can_recv_raw(1, 0x123)
+  if rx_data != nil
     led_set(0, 32, 0)   # green
   else
     led_set(32, 0, 0)   # red

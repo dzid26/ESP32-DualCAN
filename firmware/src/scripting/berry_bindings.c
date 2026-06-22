@@ -423,43 +423,22 @@ static int l_can_send_raw(bvm *vm)
     be_return_nil(vm);
 }
 
-/* can_recv_raw(bus:int [, msg_id:int]) -> list | nil | bytes | nil
- * Without msg_id: pop one received frame from the bus queue. Returns a
- * list [id, data] — rx[0] is the CAN ID (int), rx[1] is the payload
- * (bytes). Returns nil when the queue is empty.
- * With msg_id: read the latest received frame for that CAN ID directly.
- * Returns the payload bytes, or nil if no frame seen for that ID yet. */
+/* can_recv_raw(bus:int, msg_id:int) -> bytes | nil
+ * Returns the latest received payload bytes for a CAN ID, or nil
+ * if no frame has been received for that ID yet. */
 static int l_can_recv_raw(bvm *vm)
 {
-    CHECK_ARITY(vm, 1);
+    CHECK_ARITY(vm, 2);
     CHECK_TYPE(vm, 1, be_isint(vm, 1), "int");
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int");
     int bus = be_toint(vm, 1);
+    uint32_t msg_id = (uint32_t)be_toint(vm, 2);
     can_t *c = get_bus(bus);
     if (!c) be_return_nil(vm);
 
-    if (be_top(vm) >= 2) {
-        CHECK_TYPE(vm, 2, be_isint(vm, 2), "int");
-        uint32_t msg_id = (uint32_t)be_toint(vm, 2);
-        uint8_t data[8], dlc;
-        if (can_read(c, msg_id, data, &dlc) >= 0) {
-            be_pushbytes(vm, data, dlc);
-            be_return(vm);
-        }
-        be_return_nil(vm);
-    }
-
-    twai_message_t rx;
-    if (can_rx_pop(c, &rx)) {
-        be_getglobal(vm, "list");
-        be_newlist(vm);
-        be_pushint(vm, (bint)rx.identifier);
-        be_data_push(vm, -2);
-        be_pop(vm, 1);
-        be_pushbytes(vm, rx.data, rx.data_length_code);
-        be_data_push(vm, -2);
-        be_pop(vm, 1);
-        be_call(vm, 1);
-        be_pop(vm, 1);
+    uint8_t data[8], dlc;
+    if (can_read(c, msg_id, data, &dlc) >= 0) {
+        be_pushbytes(vm, data, dlc);
         be_return(vm);
     }
     be_return_nil(vm);

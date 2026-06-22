@@ -34,40 +34,31 @@ uint16_t can_bus_rx_rate(int bus_id)
     return s_rx_rate[bus_id];
 }
 
-/* ---- Ring buffer helpers (msg_ring_t, arbitrary depth) ---- */
+/* ---- Ring buffer helpers ----
+ *
+ * Each cache slot is a depth-3 ring buffer.  `ring_latest` only returns
+ * the most recently pushed frame — the older 2 frames are never read.
+ * They are reserved for future sliding-window or burst analysis use. */
 
 static void ring_push(msg_ring_t *ring, const twai_message_t *msg)
 {
     ring->frames[ring->head] = *msg;
-    ring->head = (ring->head + 1) % ring->depth;
-    if (ring->count < ring->depth) {
-        ring->count++;
-    } else {
-        ring->tail = (ring->tail + 1) % ring->depth;
-    }
+    ring->head = (ring->head + 1) % CAN_FRAME_CACHE;
+    if (ring->count < CAN_FRAME_CACHE) ring->count++;
 }
 
 static const twai_message_t *ring_latest(const msg_ring_t *ring)
 {
     if (ring->count == 0) return NULL;
-    uint8_t pos = (ring->head + ring->depth - 1) % ring->depth;
+    uint8_t pos = (ring->head + CAN_FRAME_CACHE - 1) % CAN_FRAME_CACHE;
     return &ring->frames[pos];
-}
-
-static bool ring_pop(msg_ring_t *ring, twai_message_t *out)
-{
-    if (ring->count == 0) return false;
-    *out = ring->frames[ring->tail];
-    ring->tail = (ring->tail + 1) % ring->depth;
-    ring->count--;
-    return true;
 }
 
 /* ---- Cache helpers ---- */
 
 static int cache_find(msg_ring_t *cache, uint32_t id)
 {
-    for (int i = 0; i < CAN_FRAME_CACHE; i++) {
+    for (int i = 0; i < CAN_MSG_CACHE_MAX; i++) {
         if (cache[i].frames[0].identifier == id) return i;
     }
     return -1;
@@ -81,9 +72,7 @@ static int cache_alloc(msg_ring_t *cache, uint32_t msg_id)
     if (i < 0) return -1;
     cache[i].frames[0].identifier = msg_id;
     cache[i].head = 0;
-    cache[i].tail = 0;
     cache[i].count = 0;
-    cache[i].depth = CAN_CACHE_DEPTH;
     return i;
 }
 
@@ -109,7 +98,6 @@ int can_init(can_t *c, int bus_id)
 {
     memset(c, 0, sizeof(*c));
     c->bus_id = bus_id;
-    c->rx_buf.depth = CAN_RX_BUF;
     rate_limiter_init(&c->rate_limiter, RATE_LIMIT_DEFAULT_HZ);
     c->loaded = true;
     ESP_LOGI(TAG, "bus%d: initialized (no DBC — scripts handle signal processing)", bus_id);
@@ -121,16 +109,6 @@ void can_free(can_t *c)
     memset(c, 0, sizeof(*c));
 }
 
-static void rx_buf_push(can_t *c, const twai_message_t *frame)
-{
-    ring_push(&c->rx_buf, frame);
-}
-
-bool can_rx_pop(can_t *c, twai_message_t *out)
-{
-    return ring_pop(&c->rx_buf, out);
-}
-
 int can_poll(can_t *c, uint32_t now_ms)
 {
     can_bus_off_recover(c->bus_id);
@@ -140,7 +118,6 @@ int can_poll(can_t *c, uint32_t now_ms)
         rx_count++;
         s_rate_count[c->bus_id]++;
         s_last_rx_ms[c->bus_id] = now_ms;
-        rx_buf_push(c, &rx);
         if (s_raw_observer) s_raw_observer(c->bus_id, &rx, now_ms);
 
         /* Update frame cache — only if a script has registered this ID */

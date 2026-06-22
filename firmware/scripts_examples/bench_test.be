@@ -5,29 +5,28 @@
 
 var tick = 0
 
+var ids = [0x100, 0x103, 0x118]
+
 def tick_fn()
   # Send three different message IDs so we can see them in the trace
   var b = bytes()
   b.add(tick & 0xFF)
   b.add((tick >> 8) & 0xFF)
 
-  can_send_raw(0, 0x100, b)     # simulated DI_torque
-  can_send_raw(0, 0x103, b)     # simulated VCRIGHT_doorStatus
-  can_send_raw(0, 0x118, b)     # simulated DI_state
+  can_send_raw(0, 0x100, b)
+  can_send_raw(0, 0x103, b)
+  can_send_raw(0, 0x118, b)
 
   tick += 1
 
-  # Drain and print any received frames (from loopback or external)
-  var rx = can_recv_raw(0)
-  while rx != nil
-    print("bus0 rx: 0x" .. format("%03X", rx.item(0)))
-    rx = can_recv_raw(0)
-  end
-
-  rx = can_recv_raw(1)
-  while rx != nil
-    print("bus1 rx: 0x" .. format("%03X", rx.item(0)))
-    rx = can_recv_raw(1)
+  # Check for looped-back frames on each bus
+  for bus : [0, 1]
+    for id : ids
+      var payload = can_recv_raw(bus, id)
+      if payload != nil
+        print("bus" .. str(bus) .. " rx: 0x" .. format("%03X", id))
+      end
+    end
   end
 
   # Cycle LED color based on tick

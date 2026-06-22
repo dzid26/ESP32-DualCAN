@@ -62,14 +62,7 @@ can_send_raw(0, 0x100, b)
 # UI_mirrorFoldRequest at bit 24, 2 bits, value 0x2 (unfold):
 can_send_raw(0, 0x273, bytes(-8).setbits(24, 2, 0x2))
 
-# Dequeue the next received frame — returns a list [id, data] or nil when
-# the queue is empty. rx[0] = CAN ID (int), rx[1] = payload (bytes).
-var rx = can_recv_raw(0)
-if rx != nil
-  print("got id 0x" .. format("%03X", rx[0]))
-end
-
-# Or read the latest received data for a specific CAN ID directly:
+# Read the latest received payload bytes for a specific CAN ID:
 var payload = can_recv_raw(0, 0x118)
 if payload != nil
   print("DI_state: " .. str(payload))
@@ -181,7 +174,7 @@ state_remove("my_key")                  # delete key
 | `can_msg_get(bus, id \| name)` | draft \| nil | Latest received frame as editable draft — bus is first |
 | `can_msg_send(bus, draft)` | — | Transmit the draft on bus (auto-handles checksum/counter) |
 | `can_send_raw(bus, id, data)` | — | Transmit a raw CAN frame (max 8 bytes) |
-| `can_recv_raw(bus [, msg_id])` | list \| nil / bytes \| nil | Without msg_id: pop queued → `[id, data]`. With msg_id: latest rx payload (bytes). |
+| `can_recv_raw(bus, msg_id)` | bytes \| nil | Latest rx payload for a CAN ID. Returns nil if no frame received for that ID yet. |
 | `timer_after(ms, fn)` | handle | Fire fn once after ms |
 | `timer_every(ms, fn)` | handle | Fire fn every ms |
 | `timer_cancel(handle)` | — | Cancel a timer by handle |
