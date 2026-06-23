@@ -139,6 +139,40 @@ static void berry_log_handler(const char *msg)
     log_push("info", "berry", msg);
 }
 
+static cJSON *script_to_json(const script_entry_t *s);
+
+/* Called when a Berry timer callback throws. Disables the offending script. */
+static void script_timer_error_handler(int script_id, const char *error_type, const char *msg)
+{
+    if (!s_loader) return;
+    int line = berry_error_line();
+
+    for (int i = 0; i < s_loader->count; i++) {
+        script_entry_t *s = &s_loader->scripts[i];
+        if (s->script_id != script_id) continue;
+
+        char fullmsg[192];
+        if (line > 0) {
+            snprintf(fullmsg, sizeof(fullmsg), "%s:%d: %s: %s", s->filename, line,
+                     error_type ? error_type : "error", msg ? msg : "unknown error");
+        } else {
+            snprintf(fullmsg, sizeof(fullmsg), "%s: %s",
+                     error_type ? error_type : "error", msg ? msg : "unknown error");
+        }
+        snprintf(s->error, sizeof(s->error), "%s", fullmsg);
+        s->errored = true;
+        script_loader_disable(s_loader, i);
+
+        log_push("error", "scripts", fullmsg);
+        cJSON *push = cJSON_CreateObject();
+        cJSON_AddStringToObject(push, "type", "script_update");
+        cJSON_AddItemToObject(push, "script", script_to_json(s));
+        send_frame(push);
+        cJSON_Delete(push);
+        return;
+    }
+}
+
 /* ---- vprintf hook: mirrors ESP_LOG output to the webui log panel ---- */
 
 static vprintf_like_t s_orig_vprintf;
@@ -292,21 +326,26 @@ static void handle_system_reboot(int id)
     xTaskCreate(reboot_task, "reboot", 2048, NULL, 5, NULL);
 }
 
+/* Serialise a script entry into a JSON object. Caller owns the result. */
+static cJSON *script_to_json(const script_entry_t *s)
+{
+    cJSON *o = cJSON_CreateObject();
+    cJSON_AddStringToObject(o, "filename", s->filename);
+    cJSON_AddBoolToObject(o, "enabled", s->enabled);
+    cJSON_AddBoolToObject(o, "errored", s->errored);
+    if (s->errored) {
+        cJSON_AddStringToObject(o, "error", s->error);
+    }
+    return o;
+}
+
 static void handle_script_list(int id)
 {
     script_loader_scan(s_loader, s_loader->vm);
 
     cJSON *arr = cJSON_CreateArray();
     for (int i = 0; i < s_loader->count; i++) {
-        const script_entry_t *s = &s_loader->scripts[i];
-        cJSON *o = cJSON_CreateObject();
-        cJSON_AddStringToObject(o, "filename", s->filename);
-        cJSON_AddBoolToObject(o, "enabled", s->enabled);
-        cJSON_AddBoolToObject(o, "errored", s->errored);
-        if (s->errored) {
-            cJSON_AddStringToObject(o, "error", s->error);
-        }
-        cJSON_AddItemToArray(arr, o);
+        cJSON_AddItemToArray(arr, script_to_json(&s_loader->scripts[i]));
     }
     cJSON *result = cJSON_CreateObject();
     cJSON_AddItemToObject(result, "scripts", arr);
@@ -1070,12 +1109,24 @@ void protocol_tick(void)
     }
 }
 
+static const char *script_name_by_id(int script_id)
+{
+    if (!s_loader) return NULL;
+    for (int i = 0; i < s_loader->count; i++) {
+        if (s_loader->scripts[i].script_id == script_id)
+            return s_loader->scripts[i].filename;
+    }
+    return NULL;
+}
+
 void protocol_init(script_loader_t *loader)
 {
     s_loader = loader;
     frame_buf_init(&s_rx_fb, s_rx_buf, sizeof(s_rx_buf));
     s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
     berry_set_log_handler(berry_log_handler);
+    berry_set_timer_error_handler(script_timer_error_handler);
+    berry_set_script_name_callback(script_name_by_id);
     can_set_raw_observer(trace_observer);
     memset(s_bus_status, 0xFF, sizeof(s_bus_status));  /* force push on first check */
     s_orig_vprintf = esp_log_set_vprintf(log_vprintf_hook);

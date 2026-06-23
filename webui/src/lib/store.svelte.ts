@@ -268,6 +268,7 @@ class AppState {
       }
     });
     this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status, u.rate));
+    this.proto.onScriptUpdate(() => { this.scriptsVersion++; });
     this.proto.onStall(() => this.recoverStalledTransport());
 
     if (typeof window !== 'undefined') {

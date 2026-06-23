@@ -33,7 +33,7 @@ void berry_release_ref(bvm *vm, int ref);
 
 /* Call a captured ref with no args. Returns 0 on success, -1 if ref is invalid,
  * -2 if the call errored (logged). */
-int  berry_call_ref(bvm *vm, int ref);
+int  berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size);
 
 /* Poll all timers; fire any whose next_fire_ms has passed. Call once per
  * main-loop iteration. */
@@ -51,6 +51,28 @@ void berry_set_log_handler(berry_log_handler_t fn);
  * (e.g. the script loader) surface diagnostics to the UI log panel. No-op
  * if no handler is registered. */
 void berry_log_push(const char *msg);
+
+/* Callback type for looking up a script name by script_id. Returns a pointer
+ * to the filename (owned by the caller's script_loader). */
+typedef const char *(*berry_script_name_cb_t)(int script_id);
+
+/* Register (or clear, pass NULL) a callback to resolve script names. */
+void berry_set_script_name_callback(berry_script_name_cb_t fn);
+
+/* Returns the line number of the innermost tracestack frame (where the
+ * error occurred), or 0 if no tracestack or line info is available. */
+int berry_error_line(void);
+
+/* ---- Timer error handling ---- */
+
+/* Called when a Berry timer callback throws an error.
+ * script_id identifies the script; error_type is e.g. "type_error";
+ * msg is the error message. */
+typedef void (*berry_timer_error_handler_t)(int script_id, const char *error_type, const char *msg);
+
+/* Register (or clear, pass NULL) a handler for timer errors.
+ * The script_loader / protocol layer uses this to disable the offending script. */
+void berry_set_timer_error_handler(berry_timer_error_handler_t fn);
 
 /* ---- Action invocation ---- */
 

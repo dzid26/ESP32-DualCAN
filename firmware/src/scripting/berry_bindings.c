@@ -10,6 +10,12 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 
+/* Berry internal headers for tracestack inspection. */
+#include "be_vm.h"
+#include "be_var.h"
+#include "be_vector.h"
+#include "be_string.h"
+
 /* ---- Internals ---- */
 
 static const char *TAG_BB = "berry";
@@ -39,6 +45,10 @@ static can_t *s_bus[2];
 static bvm   *s_vm;
 /* Script context used to tag timer/action registrations for cleanup. */
 static int    s_current_script_id;
+/* Optional handler invoked when a timer callback throws. */
+static berry_timer_error_handler_t s_timer_error_handler;
+/* Optional callback to resolve script_id → filename for action errors. */
+static berry_script_name_cb_t s_script_name_cb;
 
 void berry_set_buses(can_t *eng0, can_t *eng1)
 {
@@ -130,12 +140,15 @@ void berry_release_ref(bvm *vm, int ref)
     refs_free(vm, ref);
 }
 
-int berry_call_ref(bvm *vm, int ref)
+int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size)
 {
     if (ref < 0) return -1;
     if (!refs_push(vm, ref)) return -1;
     if (be_pcall(vm, 0) != 0) {
-        ESP_LOGE(TAG_BB, "ref %d call error: %s", ref, be_tostring(vm, -1));
+        if (err_out && err_size > 0) {
+            const char *msg = be_tostring(vm, -1);
+            snprintf(err_out, err_size, "%s", msg ? msg : "unknown error");
+        }
         be_pop(vm, 2);
         return -2;
     }
@@ -250,12 +263,19 @@ void berry_timer_tick(uint32_t now_ms)
 
         if (refs_push(s_vm, ref)) {
             if (be_pcall(s_vm, 0) != 0) {
-                ESP_LOGE(TAG_BB, "timer callback error: %s", be_tostring(s_vm, -1));
+                const char *err_type = be_tostring(s_vm, -2);
+                const char *err_msg  = be_tostring(s_vm, -1);
+                if (!one_shot) t->in_use = false;
+                refs_free(s_vm, ref);
+                ref = -1;
+                if (s_timer_error_handler) {
+                    s_timer_error_handler(t->script_id, err_type, err_msg);
+                }
             }
             be_pop(s_vm, 2);
         }
 
-        if (one_shot) refs_free(s_vm, ref);
+        if (one_shot && ref >= 0) refs_free(s_vm, ref);
     }
 }
 
@@ -348,7 +368,16 @@ int berry_action_invoke(const char *name)
 
     if (!refs_push(s_vm, s_actions[idx].ref)) return -1;
     if (be_pcall(s_vm, 0) != 0) {
-        ESP_LOGE(TAG_BB, "action '%s' error: %s", name, be_tostring(s_vm, -1));
+        const char *emsg = be_tostring(s_vm, -1);
+        int line = berry_error_line();
+        const char *fname = s_script_name_cb ? s_script_name_cb(s_actions[idx].script_id) : NULL;
+        if (fname && line > 0) {
+            ESP_LOGE("scripts", "%s:%d: %s", fname, line, emsg);
+        } else if (line > 0) {
+            ESP_LOGE("scripts", "action '%s' (line %d): %s", name, line, emsg);
+        } else {
+            ESP_LOGE("scripts", "action '%s': %s", name, emsg);
+        }
         be_pop(s_vm, 2);
         return -2;
     }
@@ -766,4 +795,68 @@ void berry_register_bindings(bvm *vm)
 
     /* System */
     be_regfunc(vm, "millis", l_millis);
+}
+
+void berry_set_timer_error_handler(berry_timer_error_handler_t fn)
+{
+    s_timer_error_handler = fn;
+}
+
+void berry_set_script_name_callback(berry_script_name_cb_t fn)
+{
+    s_script_name_cb = fn;
+}
+
+/* Repair tracestack IPs after native-function errors.
+ * repair_stack() is a copy from berry be_debug.c:228
+ * Native frames don't save ip, but the recycled slot retains the
+ * Berry closure's return address. This copies it to the closure frame. */
+static void repair_stack(bvm *vm)
+{
+    bcallsnapshot *cf;
+    bcallsnapshot *base = be_stack_base(&vm->tracestack);
+    bcallsnapshot *top = be_stack_top(&vm->tracestack);
+    /* Because the native function does not push `ip` to the
+     * stack, the ip on the native function frame corresponds
+     * to the previous Berry closure. */
+    for (cf = top; cf >= base; --cf) {
+        if (!var_isclosure(&cf->func)) {
+            /* the last native function stack frame has the `ip` of
+             * the previous Berry frame */
+            binstruction *ip = cf->ip;
+            /* skip native function stack frames */
+            for (; cf >= base && !var_isclosure(&cf->func); --cf);
+            /* fixed `ip` of Berry closure frame near native function frame */
+            if (cf >= base) cf->ip = ip;
+        }
+    }
+}
+
+int berry_error_line(void)
+{
+    if (!s_vm) return 0;
+    if (be_stack_isempty(&s_vm->tracestack)) return 0;
+
+    repair_stack(s_vm);
+
+    bcallsnapshot *base = be_stack_base(&s_vm->tracestack);
+    bcallsnapshot *top = be_stack_top(&s_vm->tracestack);
+    for (bcallsnapshot *cf = top; cf >= base; --cf) {
+        if (!var_isclosure(&cf->func)) continue;
+        bclosure *cl = var_toobj(&cf->func);
+        if (!cl || !cl->proto) continue;
+        bproto *proto = cl->proto;
+#if BE_DEBUG_RUNTIME_INFO
+        if (proto->lineinfo && proto->nlineinfo) {
+            int pc = (int)(cf->ip - proto->code - 1);
+            if (pc < 0) pc = 0;
+            blineinfo *it = proto->lineinfo;
+            blineinfo *end = it + proto->nlineinfo;
+            for (; it < end && pc > it->endpc; ++it) {}
+            if (it < end) return it->linenumber;
+        }
+#endif
+        return 0;
+    }
+    return 0;
 }

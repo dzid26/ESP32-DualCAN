@@ -50,6 +50,13 @@ export interface BusStatusUpdate {
   rate: number;
 }
 
+export interface ScriptUpdate {
+  filename: string;
+  enabled: boolean;
+  errored: boolean;
+  error?: string;
+}
+
 type Pending = {
   resolve: (value: any) => void;
   reject: (err: Error) => void;
@@ -75,6 +82,7 @@ export class Protocol {
   private traceCallback: ((f: TraceFrame) => void) | null = null;
   private signalCallback: ((s: SignalUpdate) => void) | null = null;
   private busStatusCallback: ((u: BusStatusUpdate) => void) | null = null;
+  private scriptUpdateCallback: ((u: ScriptUpdate) => void) | null = null;
 
   /** Register a callback for device log pushes (ESP_LOG and Berry print). */
   onLog(cb: (entry: LogPush) => void) { this.logCallback = cb; }
@@ -87,6 +95,9 @@ export class Protocol {
 
   /** Register a callback for bus_status push frames from the device. */
   onBusStatus(cb: ((u: BusStatusUpdate) => void) | null) { this.busStatusCallback = cb; }
+
+  /** Register a callback for script_update push frames from the device. */
+  onScriptUpdate(cb: ((u: ScriptUpdate) => void) | null) { this.scriptUpdateCallback = cb; }
 
   // Per-write chunk size for the underlying transport. The firmware
   // requests an ATT_MTU of 512 and Chrome/desktop hosts typically settle
@@ -270,6 +281,13 @@ export class Protocol {
               bus: resp.bus ?? 0,
               status: (resp.status ?? 'idle') as BusStatus,
               rate: resp.rate ?? 0,
+            });
+          } else if (resp.type === 'script_update') {
+            if (this.scriptUpdateCallback) this.scriptUpdateCallback({
+              filename: resp.script?.filename ?? '',
+              enabled: !!resp.script?.enabled,
+              errored: !!resp.script?.errored,
+              error: resp.script?.error,
             });
           }
           continue;

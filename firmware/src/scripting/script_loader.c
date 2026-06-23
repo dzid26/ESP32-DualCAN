@@ -145,9 +145,15 @@ int script_loader_enable(script_loader_t *loader, int idx)
 
     /* Execute the script (defines its functions). */
     if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
-        snprintf(s->error, sizeof(s->error), "%.*s",
-                 (int)(sizeof(s->error) - 1),
-                 strip_script_dir(be_tostring(vm, -1)));
+        const char *msg = be_tostring(vm, -1);
+        int line = berry_error_line();
+        if (line > 0 && strncmp(msg, s->filename, strlen(s->filename)) != 0) {
+            snprintf(s->error, sizeof(s->error), "%s:%d: %s",
+                     s->filename, line, msg);
+        } else {
+            snprintf(s->error, sizeof(s->error), "%.*s",
+                     (int)(sizeof(s->error) - 1), strip_script_dir(msg));
+        }
         be_pop(vm, 1);
         s->errored = true;
         ESP_LOGE(TAG, "%s", s->error);
@@ -181,10 +187,16 @@ int script_loader_enable(script_loader_t *loader, int idx)
     ESP_LOGI(TAG, "Enabled: %s (script_id=%d)", s->filename, s->script_id);
 
     /* Call setup() via captured ref. */
-    if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref) == -2) {
-        snprintf(s->error, sizeof(s->error), "setup() raised");
+    if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref, s->error, sizeof(s->error)) == -2) {
+        int line = berry_error_line();
+        if (line > 0) {
+            /* Prepend filename:line: to the error message from Berry. */
+            char buf[256];
+            snprintf(buf, sizeof(buf), "%s:%d: %s", s->filename, line, s->error);
+            snprintf(s->error, sizeof(s->error), "%s", buf);
+        }
+        ESP_LOGE(TAG, "%s", s->error);
         s->errored = true;
-        ESP_LOGE(TAG, "%s setup() error", path);
         berry_set_current_script(0);
         berry_release_ref(vm, s->setup_ref);
         berry_release_ref(vm, s->teardown_ref);
@@ -212,7 +224,7 @@ int script_loader_disable(script_loader_t *loader, int idx)
     /* Call teardown via captured ref (any new registrations from teardown
      * still get tagged with this script's id so cleanup catches them). */
     berry_set_current_script(s->script_id);
-    if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref);
+    if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref, NULL, 0);
 
     /* Revoke every can.on / timer / action tagged to this script. */
     berry_cleanup_script(s->script_id);
@@ -224,7 +236,7 @@ int script_loader_disable(script_loader_t *loader, int idx)
 
     s->loaded = false;
     s->enabled = false;
-    ESP_LOGI(TAG, "Disabled: %s", s->filename);
+    ESP_LOGD(TAG, "Disabled: %s", s->filename);
     return 0;
 }
 
