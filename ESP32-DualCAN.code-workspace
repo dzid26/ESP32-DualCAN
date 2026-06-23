@@ -5,5 +5,24 @@
 			"path": "firmware"
 		},
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"*.be": "berry"
+		},
+		"terminal.integrated.profiles.windows": {
+			"Berry REPL": {
+				"path": "${workspaceFolder}\\firmware\\components\\berry\\berry\\berry.exe"
+			}
+		},
+		"terminal.integrated.profiles.linux": {
+			"Berry REPL": {
+				"path": "${workspaceFolder}/firmware/components/berry/berry/berry"
+			}
+		},
+		"terminal.integrated.profiles.osx": {
+			"Berry REPL": {
+				"path": "${workspaceFolder}/firmware/components/berry/berry/berry"
+			}
+		}
+	}
 }
