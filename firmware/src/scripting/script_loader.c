@@ -273,7 +273,7 @@ int script_loader_write(const char *filename, const char *code, size_t len)
     if (!f) return -1;
     fwrite(code, 1, len, f);
     fclose(f);
-    ESP_LOGI(TAG, "Wrote %zu bytes to %s", len, path);
+    ESP_LOGD(TAG, "Wrote %zu bytes to %s", len, path);
     return 0;
 }
 
@@ -285,7 +285,7 @@ int script_loader_write_runtime(const char *filename, const char *code, size_t l
     if (!f) return -1;
     fwrite(code, 1, len, f);
     fclose(f);
-    ESP_LOGI(TAG, "Wrote %zu bytes to %s", len, path);
+    ESP_LOGD(TAG, "Wrote %zu bytes to %s", len, path);
     return 0;
 }
 

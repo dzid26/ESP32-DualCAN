@@ -389,7 +389,7 @@ static void handle_script_write(int id, cJSON *req)
         s_loader->scripts[new_idx].errored = false;
         s_loader->scripts[new_idx].error[0] = '\0';
     }
-    ESP_LOGI(TAG, "script.write %s: %d scripts total", fn->valuestring, n);
+    ESP_LOGD(TAG, "script.write %s: %d scripts total", fn->valuestring, n);
     send_ok(id, NULL);
 }
 
@@ -1101,7 +1101,11 @@ void protocol_tick(void)
                 s_bus_status[b] = (uint8_t)ns;
                 push_bus_status(b, ns, can_bus_rx_rate(b));
                 if (changed) {
-                    ESP_LOGI(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
+                    if (ns == BUS_GOOD) {
+                        ESP_LOGD(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
+                    } else {
+                        ESP_LOGI(TAG, "bus%d status -> %s", b, BUS_STATUS_STR[ns]);
+                    }
                 }
             }
         }
