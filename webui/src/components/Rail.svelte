@@ -16,7 +16,7 @@
 <aside class="rail">
   {#snippet brandInner()}
     <div class="rail__brand-plate">
-      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      <svg class="rail__brand-icon" viewBox="0 0 24 24" aria-hidden="true">
         <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="var(--dc-accent)" stroke-width="1.4" />
         <circle cx="12" cy="12" r="2.2" fill="var(--dc-accent)" />
         <path d="M2 12h2M20 12h2M12 2v2M12 20v2" stroke="var(--dc-text-fade)" stroke-width="1" stroke-linecap="round" />

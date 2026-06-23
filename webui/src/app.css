@@ -149,6 +149,7 @@ button { font: inherit; color: inherit; }
   border-right: 1px solid var(--dc-border);
   display: flex; flex-direction: column; align-items: stretch;
   min-height: 0;
+  transition: flex-basis 200ms ease;
 }
 .rail__brand {
   height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -158,6 +159,7 @@ button { font: inherit; color: inherit; }
     linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.15)),
     repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,0.06) 3px 4px);
   position: relative;
+  overflow: hidden;
 }
 .rail__brand::after {
   content: ''; position: absolute; left: 6px; right: 6px; bottom: -1px; height: 1px;
@@ -170,7 +172,9 @@ button { font: inherit; color: inherit; }
   border: 1px solid var(--dc-border-hi);
   border-radius: 3px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 0 rgba(0,0,0,0.4);
+  flex-shrink: 0;
 }
+.rail__brand-icon { width: 20px; height: 20px; display: block; }
 .rail__brand-text {
   display: flex; flex-direction: column; align-items: center;
   line-height: 1; font-size: 8.5px; letter-spacing: 0.16em;
@@ -195,6 +199,7 @@ button { font: inherit; color: inherit; }
   color: var(--dc-text-fade);
   transition: color 80ms linear, background 80ms linear;
   touch-action: manipulation;
+  gap: 0;
 }
 .railItem:hover { background: var(--dc-surface); color: var(--dc-text-dim); }
 .railItem--active { color: var(--dc-text); }
@@ -218,6 +223,59 @@ button { font: inherit; color: inherit; }
 }
 .railItem:hover .tt { opacity: 1; }
 
+/* Default: hide labels (icon-only rail). Overridden by the wide-rail query below. */
+.railItem__label { display: none; }
+
+/* === Wide rail — labels visible at ≥1100px === */
+@media (min-width: 1100px) {
+  .rail { flex: 0 0 148px; }
+
+  /* Brand: horizontal logo + wordmark side by side */
+  .rail__brand {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 14px;
+  }
+  .rail__brand-plate {
+    flex: 0 0 30px; height: 30px; width: 30px;
+  }
+  .rail__brand-icon { width: 22px; height: 22px; }
+  .rail__brand-text {
+    align-items: flex-start;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+  .rail__brand-name { font-size: 11px; }
+  .rail__brand-name + .rail__brand-name { margin-top: 2px; font-size: 9px; letter-spacing: 0.22em; }
+
+  /* Nav items: icon left-padded, label inline */
+  /* height stays at 44px (same as narrow) to avoid layout shift on resize */
+  .railItem {
+    justify-content: flex-start;
+    padding-left: 14px;
+    gap: 10px;
+  }
+  .railItem--active::before {
+    top: 8px; bottom: 8px;
+  }
+
+  /* Show labels, hide tooltips (redundant when labels are visible) */
+  .railItem__label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 80ms linear;
+  }
+  .tt { display: none; }
+}
+
 @media (max-width: 720px) {
   .rail { flex: 0 0 auto; flex-direction: row; width: 100%; border-right: none; border-top: 1px solid var(--dc-border); }
   .rail__brand, .rail__foot { display: none; }
@@ -225,9 +283,9 @@ button { font: inherit; color: inherit; }
   .railItem { flex: 1 0 64px; height: 56px; flex-direction: column; gap: 2px; font-size: 10px; }
   .railItem--active::before { left: 8px; right: 8px; top: 0; bottom: auto; height: 2px; width: auto; border-radius: 0 0 2px 2px; }
   .tt { display: none; }
-  .railItem__label { display: block; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; }
+  .railItem__label { display: block; font-size: 9px; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 }
-.railItem__label { display: none; }
+
 
 /* ===== Status strip ===== */
 .status {
