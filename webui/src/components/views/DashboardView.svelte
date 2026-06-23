@@ -63,7 +63,6 @@
       app.pushLog(`▶ fired "${ev.name}"`, 'info', 'events');
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
-      app.pushLog(`fire ${ev.name} failed: ${m}`, 'error', 'events');
       tileErrors = { ...tileErrors, [ev.id]: m };
     } finally {
       busyId = null;

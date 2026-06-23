@@ -195,7 +195,6 @@ int script_loader_enable(script_loader_t *loader, int idx)
             snprintf(buf, sizeof(buf), "%s:%d: %s", s->filename, line, s->error);
             snprintf(s->error, sizeof(s->error), "%s", buf);
         }
-        ESP_LOGE(TAG, "%s", s->error);
         s->errored = true;
         berry_set_current_script(0);
         berry_release_ref(vm, s->setup_ref);
