@@ -146,10 +146,16 @@ int script_loader_enable(script_loader_t *loader, int idx)
     /* Execute the script (defines its functions). */
     if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
         const char *msg = be_tostring(vm, -1);
-        int line = berry_error_line();
+        const char *func_name = NULL;
+        int line = berry_error_line(&func_name);
         if (line > 0 && strncmp(msg, s->filename, strlen(s->filename)) != 0) {
-            snprintf(s->error, sizeof(s->error), "%s:%d: %s",
-                     s->filename, line, msg);
+            if (func_name) {
+                snprintf(s->error, sizeof(s->error), "%s:%d: %s(...): %s",
+                         s->filename, line, func_name, msg);
+            } else {
+                snprintf(s->error, sizeof(s->error), "%s:%d: %s",
+                         s->filename, line, msg);
+            }
         } else {
             snprintf(s->error, sizeof(s->error), "%.*s",
                      (int)(sizeof(s->error) - 1), strip_script_dir(msg));
@@ -188,11 +194,17 @@ int script_loader_enable(script_loader_t *loader, int idx)
 
     /* Call setup() via captured ref. */
     if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref, s->error, sizeof(s->error)) == -2) {
-        int line = berry_error_line();
+        const char *func_name = NULL;
+        int line = berry_error_line(&func_name);
         if (line > 0) {
-            /* Prepend filename:line: to the error message from Berry. */
             char buf[256];
-            snprintf(buf, sizeof(buf), "%s:%d: %s", s->filename, line, s->error);
+            if (func_name) {
+                snprintf(buf, sizeof(buf), "%s:%d: %s(...): %s",
+                         s->filename, line, func_name, s->error);
+            } else {
+                snprintf(buf, sizeof(buf), "%s:%d: %s",
+                         s->filename, line, s->error);
+            }
             snprintf(s->error, sizeof(s->error), "%s", buf);
         }
         s->errored = true;

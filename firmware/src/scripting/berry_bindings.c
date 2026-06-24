@@ -16,6 +16,8 @@
 #include "be_vector.h"
 #include "be_string.h"
 
+#include "be_debug.h"
+
 /* ---- Internals ---- */
 
 static const char *TAG_BB = "berry";
@@ -369,9 +371,12 @@ int berry_action_invoke(const char *name)
     if (!refs_push(s_vm, s_actions[idx].ref)) return -1;
     if (be_pcall(s_vm, 0) != 0) {
         const char *emsg = be_tostring(s_vm, -1);
-        int line = berry_error_line();
+        const char *func_name = NULL;
+        int line = berry_error_line(&func_name);
         const char *fname = s_script_name_cb ? s_script_name_cb(s_actions[idx].script_id) : NULL;
-        if (fname && line > 0) {
+        if (fname && line > 0 && func_name) {
+            ESP_LOGE("scripts", "%s:%d: %s(...): %s", fname, line, func_name, emsg);
+        } else if (fname && line > 0) {
             ESP_LOGE("scripts", "%s:%d: %s", fname, line, emsg);
         } else if (line > 0) {
             ESP_LOGE("scripts", "action '%s' (line %d): %s", name, line, emsg);
@@ -832,8 +837,9 @@ static void repair_stack(bvm *vm)
     }
 }
 
-int berry_error_line(void)
+int berry_error_line(const char **name_out)
 {
+    if (name_out) *name_out = NULL;
     if (!s_vm) return 0;
     if (be_stack_isempty(&s_vm->tracestack)) return 0;
 
@@ -846,6 +852,7 @@ int berry_error_line(void)
         bclosure *cl = var_toobj(&cf->func);
         if (!cl || !cl->proto) continue;
         bproto *proto = cl->proto;
+        if (name_out && proto->name) *name_out = str(proto->name);
 #if BE_DEBUG_RUNTIME_INFO
         if (proto->lineinfo && proto->nlineinfo) {
             int pc = (int)(cf->ip - proto->code - 1);
@@ -855,6 +862,8 @@ int berry_error_line(void)
             for (; it < end && pc > it->endpc; ++it) {}
             if (it < end) return it->linenumber;
         }
+#else
+        (void)proto;
 #endif
         return 0;
     }

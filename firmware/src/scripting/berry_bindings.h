@@ -60,8 +60,9 @@ typedef const char *(*berry_script_name_cb_t)(int script_id);
 void berry_set_script_name_callback(berry_script_name_cb_t fn);
 
 /* Returns the line number of the innermost tracestack frame (where the
- * error occurred), or 0 if no tracestack or line info is available. */
-int berry_error_line(void);
+ * error occurred), or 0 if no tracestack or line info is available.
+ * If name_out is non-NULL, it is set to the Berry function name (or NULL). */
+int berry_error_line(const char **name_out);
 
 /* ---- Timer error handling ---- */
 

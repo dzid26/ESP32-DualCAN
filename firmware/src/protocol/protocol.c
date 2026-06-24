@@ -145,14 +145,19 @@ static cJSON *script_to_json(const script_entry_t *s);
 static void script_timer_error_handler(int script_id, const char *error_type, const char *msg)
 {
     if (!s_loader) return;
-    int line = berry_error_line();
+    const char *fname = NULL;
+    int line = berry_error_line(&fname);
 
     for (int i = 0; i < s_loader->count; i++) {
         script_entry_t *s = &s_loader->scripts[i];
         if (s->script_id != script_id) continue;
 
         char fullmsg[192];
-        if (line > 0) {
+        if (line > 0 && fname) {
+            snprintf(fullmsg, sizeof(fullmsg), "%s:%d: %s(...): %s: %s",
+                     s->filename, line, fname,
+                     error_type ? error_type : "error", msg ? msg : "unknown error");
+        } else if (line > 0) {
             snprintf(fullmsg, sizeof(fullmsg), "%s:%d: %s: %s", s->filename, line,
                      error_type ? error_type : "error", msg ? msg : "unknown error");
         } else {
