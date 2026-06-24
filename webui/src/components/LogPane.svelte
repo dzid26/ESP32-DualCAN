@@ -7,6 +7,9 @@
 
   let logContainer: HTMLDivElement | null = null;
   let isAtBottom = $state(true);
+  let dragging = $state(false);
+  let dragStartY = 0;
+  let dragStartH = 0;
 
   /** Pattern: filename.extension:line: (e.g. "my_script.be:42:") */
   const LINK_RE = /([\w.-]+\.(?:be|bep)):(\d+):/g;
@@ -59,6 +62,27 @@
     isAtBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 10;
   }
 
+  function onDragStart(e: PointerEvent) {
+    const t = e.target as HTMLElement;
+    if (t.closest('button, select, label, input')) return;
+    dragging = true;
+    dragStartY = e.clientY;
+    dragStartH = app.logHeight;
+    t.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+
+  function onDragMove(e: PointerEvent) {
+    if (!dragging) return;
+    const delta = dragStartY - e.clientY;
+    const h = Math.min(800, Math.max(80, dragStartH + delta));
+    app.setLogHeight(h);
+  }
+
+  function onDragEnd() {
+    dragging = false;
+  }
+
   $effect(() => {
     app.logs; // Depend on logs array
     if (isAtBottom) {
@@ -68,8 +92,17 @@
   });
 </script>
 
-<div class="logpane">
-  <div class="logpane__head">
+<div class="logpane" style:height={app.logHeight + 'px'}>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="logpane__head"
+    role="separator"
+    aria-orientation="vertical"
+    onpointerdown={onDragStart}
+    onpointermove={onDragMove}
+    onpointerup={onDragEnd}
+    class:logpane__head--dragging={dragging}
+  >
     <span class="row-flex" style="color: var(--dc-text-dim); font-size: 12px">
       <Icon name="log" size={13} />
       <span>Logs</span>
@@ -89,8 +122,8 @@
         {/each}
       </select>
       <button class="btn btn--sm btn--ghost" onclick={() => app.clearLogs()}>Clear</button>
-      <button 
-        class="btn btn--sm btn--ghost" 
+      <button
+        class="btn btn--sm btn--ghost"
         onclick={() => scrollToBottom()}
         title="Scroll to bottom"
       >
@@ -119,14 +152,22 @@
 
 <style>
   .logpane {
-    height: 180px;
     border-top: 1px solid var(--dc-border);
     display: flex; flex-direction: column;
     background: var(--dc-surface-deep);
+    position: relative;
   }
   .logpane__head {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 4px 10px; border-bottom: 1px solid var(--dc-border);
+    padding: 0px 10px; border-bottom: 1px solid var(--dc-border);
+    cursor: ns-resize;
+    user-select: none;
+  }
+  .logpane__head--dragging {
+    background: rgba(224, 123, 31, 0.08);
+  }
+  .logpane__head button, .logpane__head select {
+    cursor: pointer;
   }
   .logpane__body {
     flex: 1; overflow-y: auto;
