@@ -162,6 +162,7 @@
     padding: 0px 10px; border-bottom: 1px solid var(--dc-border);
     cursor: ns-resize;
     user-select: none;
+    touch-action: none;
   }
   .logpane__head--dragging {
     background: rgba(224, 123, 31, 0.08);

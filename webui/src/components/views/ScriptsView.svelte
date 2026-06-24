@@ -41,6 +41,8 @@
   let deviceBepCode = $state<string | null>(null);
   let skipPreprocessedEffect = $state(false);
   let editorPaneEl = $state<HTMLDivElement | undefined>();
+  let containerEl = $state<HTMLDivElement | undefined>();
+  let editorMinHeight = $state(0);
   let watermarkAngle = $state(45);
   let watermarkFontSize = $state(120);
 
@@ -54,6 +56,21 @@
       watermarkAngle = angle;
       const d = Math.sqrt(width * width + height * height);
       watermarkFontSize = Math.round(d / 8);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+
+  /* Measure the scripts-container height so the editor frame scales to ~70%
+     on mobile — leaves room to scroll SectionHead/file-list away while keeping
+     the save button visible. */
+  $effect(() => {
+    if (!isMobile) { editorMinHeight = 0; return; }
+    const el = containerEl;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const h = entry.contentRect.height;
+      if (h > 0) editorMinHeight = Math.round(h * 0.7);
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -382,7 +399,7 @@
   }
 </script>
 
-<div class="scripts-container" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
+<div bind:this={containerEl} class="scripts-container" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
   <SectionHead
     title="Automations"
     sub="Berry scripts that run on their own — timers, event handlers, callbacks"
@@ -493,6 +510,8 @@
     <div
       class="frame"
       style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
+      style:flex={isMobile ? '1' : undefined}
+      style:max-height={isMobile && editorMinHeight ? editorMinHeight + 'px' : 'none'}
     >
       {#if isMobile}
         <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border); touch-action: pan-y;">

@@ -14,6 +14,13 @@ function loadLogLevel(): LogLevel {
   } catch { /* ignore */ }
   return 'info';
 }
+function loadLogHeight(): number {
+  try {
+    const v = localStorage.getItem('dc-log-height');
+    if (v) { const n = parseInt(v, 10); if (n >= 80 && n <= 800) return n; }
+  } catch { /* ignore */ }
+  return 180;
+}
 import type { LogLine } from './sampleData';
 import { type Car, loadCar, saveCar } from './cars';
 import { toast } from './toast.svelte';
@@ -120,6 +127,7 @@ class AppState {
   logAttention = $state(false);
   logs = $state<LogLine[]>([]);
   logLevel = $state<LogLevel>(loadLogLevel());
+  logHeight = $state<number>(loadLogHeight());
 
   /** Cross-view hand-off: another view (Events, Gallery) drops a script
    * filename here, then setView('scripts'). ScriptsView consumes + clears. */
@@ -323,6 +331,11 @@ class AppState {
     this.logLevel = level;
     try { localStorage.setItem('dc-log-level', level); } catch { /* ignore */ }
     if (this.connected) this.proto.setLogLevel(level).catch(() => { /* best effort */ });
+  }
+
+  setLogHeight(h: number): void {
+    this.logHeight = Math.round(h);
+    try { localStorage.setItem('dc-log-height', String(this.logHeight)); } catch { /* ignore */ }
   }
 
   async toggleConnect(): Promise<void> {
