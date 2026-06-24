@@ -153,17 +153,10 @@ static void script_timer_error_handler(int script_id, const char *error_type, co
         if (s->script_id != script_id) continue;
 
         char fullmsg[192];
-        if (line > 0 && fname) {
-            snprintf(fullmsg, sizeof(fullmsg), "%s:%d: %s(...): %s: %s",
-                     s->filename, line, fname,
-                     error_type ? error_type : "error", msg ? msg : "unknown error");
-        } else if (line > 0) {
-            snprintf(fullmsg, sizeof(fullmsg), "%s:%d: %s: %s", s->filename, line,
-                     error_type ? error_type : "error", msg ? msg : "unknown error");
-        } else {
-            snprintf(fullmsg, sizeof(fullmsg), "%s: %s",
-                     error_type ? error_type : "error", msg ? msg : "unknown error");
-        }
+        berry_format_error(fullmsg, sizeof(fullmsg),
+                           s->filename, line, fname,
+                           error_type ? error_type : "error",
+                           msg ? msg : "unknown error");
         snprintf(s->error, sizeof(s->error), "%s", fullmsg);
         s->errored = true;
         script_loader_disable(s_loader, i);

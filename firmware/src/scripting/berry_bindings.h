@@ -33,7 +33,7 @@ void berry_release_ref(bvm *vm, int ref);
 
 /* Call a captured ref with no args. Returns 0 on success, -1 if ref is invalid,
  * -2 if the call errored (logged). */
-int  berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size);
+int  berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size);
 
 /* Poll all timers; fire any whose next_fire_ms has passed. Call once per
  * main-loop iteration. */
@@ -63,6 +63,25 @@ void berry_set_script_name_callback(berry_script_name_cb_t fn);
  * error occurred), or 0 if no tracestack or line info is available.
  * If name_out is non-NULL, it is set to the Berry function name (or NULL). */
 int berry_error_line(const char **name_out);
+
+/* Format a Berry error message into buf.
+ *
+ * Produces:  file:line: funcname(...): [type: ]msg
+ *
+ * - filename  may be NULL (omits "file:")
+ * - line <= 0 omits "file:line: ".  line > 0 with NULL filename produces ":N:"
+ * - funcname  may be NULL (omits "funcname(...): ")
+ * - type      may be NULL (omits "type: ").  Non-NULL appends ": "
+ * - msg       may be NULL (prints "unknown error")
+ *
+ * When line <= 0 AND funcname is NULL AND type is NULL, just returns msg
+ * (or "unknown error").
+ *
+ * Returns the number of bytes written (like snprintf). */
+int berry_format_error(char *buf, size_t bufsize,
+                       const char *filename, int line,
+                       const char *funcname,
+                       const char *type, const char *msg);
 
 /* ---- Timer error handling ---- */
 

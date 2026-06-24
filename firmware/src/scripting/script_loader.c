@@ -146,16 +146,12 @@ int script_loader_enable(script_loader_t *loader, int idx)
     /* Execute the script (defines its functions). */
     if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
         const char *msg = be_tostring(vm, -1);
+        const char *etype = be_tostring(vm, -2);
         const char *func_name = NULL;
         int line = berry_error_line(&func_name);
         if (line > 0 && strncmp(msg, s->filename, strlen(s->filename)) != 0) {
-            if (func_name) {
-                snprintf(s->error, sizeof(s->error), "%s:%d: %s(...): %s",
-                         s->filename, line, func_name, msg);
-            } else {
-                snprintf(s->error, sizeof(s->error), "%s:%d: %s",
-                         s->filename, line, msg);
-            }
+            berry_format_error(s->error, sizeof(s->error),
+                               s->filename, line, func_name, etype, msg);
         } else {
             snprintf(s->error, sizeof(s->error), "%.*s",
                      (int)(sizeof(s->error) - 1), strip_script_dir(msg));
@@ -193,28 +189,27 @@ int script_loader_enable(script_loader_t *loader, int idx)
     ESP_LOGI(TAG, "Enabled: %s (script_id=%d)", s->filename, s->script_id);
 
     /* Call setup() via captured ref. */
-    if (s->setup_ref >= 0 && berry_call_ref(vm, s->setup_ref, s->error, sizeof(s->error)) == -2) {
-        const char *func_name = NULL;
-        int line = berry_error_line(&func_name);
-        if (line > 0) {
-            char buf[256];
-            if (func_name) {
-                snprintf(buf, sizeof(buf), "%s:%d: %s(...): %s",
-                         s->filename, line, func_name, s->error);
-            } else {
-                snprintf(buf, sizeof(buf), "%s:%d: %s",
-                         s->filename, line, s->error);
+    if (s->setup_ref >= 0) {
+        char errtype[32] = "";
+        if (berry_call_ref(vm, s->setup_ref, s->error, sizeof(s->error), errtype, sizeof(errtype)) == -2) {
+            const char *func_name = NULL;
+            int line = berry_error_line(&func_name);
+            if (line > 0) {
+                char buf[256];
+                berry_format_error(buf, sizeof(buf),
+                                   s->filename, line, func_name,
+                                   errtype[0] ? errtype : NULL, s->error);
+                snprintf(s->error, sizeof(s->error), "%s", buf);
             }
-            snprintf(s->error, sizeof(s->error), "%s", buf);
+            s->errored = true;
+            berry_set_current_script(0);
+            berry_release_ref(vm, s->setup_ref);
+            berry_release_ref(vm, s->teardown_ref);
+            s->setup_ref = -1;
+            s->teardown_ref = -1;
+            berry_cleanup_script(s->script_id);
+            return -1;
         }
-        s->errored = true;
-        berry_set_current_script(0);
-        berry_release_ref(vm, s->setup_ref);
-        berry_release_ref(vm, s->teardown_ref);
-        s->setup_ref = -1;
-        s->teardown_ref = -1;
-        berry_cleanup_script(s->script_id);
-        return -1;
     }
 
     berry_set_current_script(0);
@@ -235,7 +230,7 @@ int script_loader_disable(script_loader_t *loader, int idx)
     /* Call teardown via captured ref (any new registrations from teardown
      * still get tagged with this script's id so cleanup catches them). */
     berry_set_current_script(s->script_id);
-    if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref, NULL, 0);
+    if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref, NULL, 0, NULL, 0);
 
     /* Revoke every can.on / timer / action tagged to this script. */
     berry_cleanup_script(s->script_id);

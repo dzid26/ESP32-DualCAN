@@ -1,6 +1,7 @@
 #include "scripting/berry_bindings.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "can/can.h"
@@ -142,15 +143,17 @@ void berry_release_ref(bvm *vm, int ref)
     refs_free(vm, ref);
 }
 
-int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size)
+int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size)
 {
     if (ref < 0) return -1;
     if (!refs_push(vm, ref)) return -1;
     if (be_pcall(vm, 0) != 0) {
-        if (err_out && err_size > 0) {
-            const char *msg = be_tostring(vm, -1);
+        const char *msg = be_tostring(vm, -1);
+        const char *type = be_tostring(vm, -2);
+        if (err_out && err_size > 0)
             snprintf(err_out, err_size, "%s", msg ? msg : "unknown error");
-        }
+        if (type_out && type_size > 0)
+            snprintf(type_out, type_size, "%s", type ? type : "error");
         be_pop(vm, 2);
         return -2;
     }
@@ -371,13 +374,14 @@ int berry_action_invoke(const char *name)
     if (!refs_push(s_vm, s_actions[idx].ref)) return -1;
     if (be_pcall(s_vm, 0) != 0) {
         const char *emsg = be_tostring(s_vm, -1);
+        const char *etype = be_tostring(s_vm, -2);
         const char *func_name = NULL;
         int line = berry_error_line(&func_name);
         const char *fname = s_script_name_cb ? s_script_name_cb(s_actions[idx].script_id) : NULL;
-        if (fname && line > 0 && func_name) {
-            ESP_LOGE("scripts", "%s:%d: %s(...): %s", fname, line, func_name, emsg);
-        } else if (fname && line > 0) {
-            ESP_LOGE("scripts", "%s:%d: %s", fname, line, emsg);
+        if (fname) {
+            char logbuf[256];
+            berry_format_error(logbuf, sizeof(logbuf), fname, line, func_name, etype, emsg);
+            ESP_LOGE("scripts", "%s", logbuf);
         } else if (line > 0) {
             ESP_LOGE("scripts", "action '%s' (line %d): %s", name, line, emsg);
         } else {
@@ -868,4 +872,30 @@ int berry_error_line(const char **name_out)
         return 0;
     }
     return 0;
+}
+
+static int buprintf(char *buf, size_t size, int pos, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(buf + pos, size - pos, fmt, args);
+    va_end(args);
+    if (n > 0) pos = ((size_t)(pos + n) < size) ? pos + n : (int)size - 1;
+    return pos;
+}
+
+int berry_format_error(char *buf, size_t bufsize,
+                       const char *filename, int line,
+                       const char *funcname,
+                       const char *type, const char *msg)
+{
+    if (!msg) msg = "unknown error";
+    buf[0] = '\0';
+
+    int pos = 0;
+    if (line > 0 && filename)   pos = buprintf(buf, bufsize, pos, "%s:%d: ", filename, line);
+    if (funcname)               pos = buprintf(buf, bufsize, pos, "%s(...): ", funcname);
+    if (type)                   pos = buprintf(buf, bufsize, pos, "%s: ", type);
+    pos = buprintf(buf, bufsize, pos, "%s", msg);
+    return pos;
 }
