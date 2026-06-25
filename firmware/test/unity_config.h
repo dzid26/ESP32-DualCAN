@@ -10,6 +10,14 @@
 #ifndef UNITY_CONFIG_H
 #define UNITY_CONFIG_H
 
+// MinGW-w64 UCRT toolchain (Strawberry Perl) defines setjmp as a 2-arg
+// intrinsic, but PlatformIO's native env doesn't link the CRT import lib
+// that resolves _setjmp. Excluding setjmp is safe here — Unity's
+// TEST_PROTECT() becomes a no-op, and all assertion macros work normally.
+#ifndef UNITY_EXCLUDE_SETJMP_H
+#define UNITY_EXCLUDE_SETJMP_H
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
