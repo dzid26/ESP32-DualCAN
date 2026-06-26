@@ -125,7 +125,7 @@ function name, or inline code.
 | `can_signal_get(msg, sig [, bus])` | map \| nil | **renamed** | Becomes `__sig_get(msg_id, ...)` |
 | `on_can_signal(msg, sig, fn [, bus])` | — | **renamed** | Becomes `__watch_sig(msg_id, ..., fn)` |
 | `can_send_raw(bus, id, data)` | — | no | Send raw CAN frame (no DBC) |
-| `can_recv_raw(bus, msg_id)` | bytes \| nil | no | Latest rx payload for a CAN ID (nil if none) |
+| `can_recv_raw(bus, msg_id [, timeout])` | bytes \| nil | no | Last payload for a CAN ID. Default 1 s timeout blocks for initial data. |
 | `timer_after(ms, fn)` | handle | no | One-shot timer |
 | `timer_every(ms, fn)` | handle | no | Repeating timer |
 | `timer_cancel(handle)` | — | no | Cancel a timer |

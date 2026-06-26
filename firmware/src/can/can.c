@@ -6,6 +6,8 @@
 
 #include <inttypes.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -64,7 +66,7 @@ static int cache_find(msg_ring_t *cache, uint32_t id)
     return -1;
 }
 
-static int cache_alloc(msg_ring_t *cache, uint32_t msg_id)
+static int cache_check(msg_ring_t *cache, uint32_t msg_id)
 {
     int i = cache_find(cache, msg_id);
     if (i >= 0) return i;  /* already registered */
@@ -81,13 +83,6 @@ static void cache_update(msg_ring_t *cache, const twai_message_t *rx)
     int i = cache_find(cache, rx->identifier);
     if (i < 0) return;
     ring_push(&cache[i], rx);
-}
-
-static const twai_message_t *cache_read(msg_ring_t *cache, uint32_t msg_id)
-{
-    int i = cache_alloc(cache, msg_id);
-        if (i < 0) return NULL;
-    return ring_latest(&cache[i]);
 }
 
 int can_init(can_t *c, int bus_id)
@@ -135,13 +130,23 @@ int can_poll(can_t *c, uint32_t now_ms)
     return rx_count;
 }
 
-int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc)
+int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc, uint32_t timeout_ms)
 {
-    const twai_message_t *msg = cache_read(c->msg_cache, msg_id);
-    if (!msg) return -1;
-    memcpy(out_data, msg->data, 8);
-    *out_dlc = msg->data_length_code;
-    return 0;
+    int i = cache_check(c->msg_cache, msg_id);
+    if (i < 0) return -1;
+    msg_ring_t *ring = &c->msg_cache[i];
+
+    uint64_t deadline = esp_timer_get_time() + (uint64_t)timeout_ms * 1000;
+    do {
+        const twai_message_t *msg = ring_latest(ring);
+        if (msg) {
+            *out_dlc = msg->data_length_code;
+            memcpy(out_data, msg->data, *out_dlc);
+            return 0;
+        }
+        if (timeout_ms > 0) vTaskDelay(1);
+    } while (esp_timer_get_time() < deadline);
+    return -1;
 }
 
 int can_send(can_t *c, uint32_t id, const uint8_t *data, uint8_t dlc)

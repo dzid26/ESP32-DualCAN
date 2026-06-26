@@ -5,7 +5,7 @@
 
 var tick = 0
 
-def tick_fn()
+def send_fn()
   # TX a counter frame on CAN0
   var b = bytes()
   b.add(tick & 0xFF)
@@ -14,7 +14,9 @@ def tick_fn()
   b.add((tick >> 24) & 0xFF)
   can_send_raw(0, 0x123, b)
   tick += 1
+end
 
+def recv_fn()
   # Check CAN1 for loopback
   var rx_data = can_recv_raw(1, 0x123)
   if rx_data != nil
@@ -29,5 +31,6 @@ def teardown()
 end
 
 def setup()
-  timer_every(200, tick_fn)
+  timer_every(100, send_fn)
+  timer_every(200, recv_fn)
 end

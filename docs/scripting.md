@@ -62,12 +62,15 @@ can_send_raw(0, 0x100, b)
 # UI_mirrorFoldRequest at bit 24, 2 bits, value 0x2 (unfold):
 can_send_raw(0, 0x273, bytes(-8).setbits(24, 2, 0x2))
 
-# Read the latest received payload bytes for a specific CAN ID:
+# Read the last received payload bytes for a specific CAN ID:
+# Default timeout is 1 s — blocks up to 1 s for initial data.
+# Pass timeout_ms=0 for instant return (retuns nil if no data yet).
 var payload = can_recv_raw(0, 0x118)
 if payload != nil
   print("DI_state: " .. str(payload))
 end
 ```
+Note: long timeouts are not recommended - as they block all berry scripts.
 
 ## Encoded messages  *(requires DBC — applies Tesla checksum/counter automatically)*
 
@@ -174,7 +177,7 @@ state_remove("my_key")                  # delete key
 | `can_msg_get(bus, id \| name)` | draft \| nil | Latest received frame as editable draft — bus is first |
 | `can_msg_send(bus, draft)` | — | Transmit the draft on bus (auto-handles checksum/counter) |
 | `can_send_raw(bus, id, data)` | — | Transmit a raw CAN frame (max 8 bytes) |
-| `can_recv_raw(bus, msg_id)` | bytes \| nil | Latest rx payload for a CAN ID. Returns nil if no frame received for that ID yet. |
+| `can_recv_raw(bus, msg_id [, timeout_ms])` | bytes \| nil | Last payload for a CAN ID. Default 1000 ms timeout — blocks up to 1 s for initial data. Pass 0 for instant return. |
 | `timer_after(ms, fn)` | handle | Fire fn once after ms |
 | `timer_every(ms, fn)` | handle | Fire fn every ms |
 | `timer_cancel(handle)` | — | Cancel a timer by handle |

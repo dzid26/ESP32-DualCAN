@@ -42,9 +42,9 @@ void     can_set_raw_observer(can_raw_observer_t cb);
 uint32_t can_last_rx_ms(int bus_id);  /* ms timestamp of last received frame, 0 if none */
 uint16_t can_bus_rx_rate(int bus_id); /* RX frames/sec over last ~1 s, 0 when idle */
 
-/* Read the latest received frame data for a CAN ID from the frame cache.
- * Returns message index (>=0) on success, <0 if no frame received for this ID. */
-int  can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc);
+/* Non-blocking (timeout_ms == 0) or blocking read (default 1000 ms):
+ * ensure msg_id slot exists, returns last frame data when available or -1. */
+int  can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc, uint32_t timeout_ms);
 
 /* Send a raw CAN frame. Rate-limited per ID. */
 int  can_send(can_t *c, uint32_t id, const uint8_t *data, uint8_t dlc);

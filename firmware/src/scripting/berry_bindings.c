@@ -461,9 +461,12 @@ static int l_can_send_raw(bvm *vm)
     be_return_nil(vm);
 }
 
-/* can_recv_raw(bus:int, msg_id:int) -> bytes | nil
- * Returns the latest received payload bytes for a CAN ID, or nil
- * if no frame has been received for that ID yet. */
+/* can_recv_raw(bus:int, msg_id:int [, timeout_ms:int]) -> bytes | nil
+ * Returns the last payload for a CAN ID.  Default timeout is 1000 ms —
+ * the first read blocks up to 1 s waiting for initial data.  Pass an
+ * explicit timeout to override, or 0 for instant return.
+ * Stalls the Berry VM while blocking.
+ * waits, never inside a timer callback. */
 static int l_can_recv_raw(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -474,8 +477,9 @@ static int l_can_recv_raw(bvm *vm)
     can_t *c = get_bus(bus);
     if (!c) be_return_nil(vm);
 
+    uint32_t timeout = be_top(vm) >= 3 ? (uint32_t)be_toint(vm, 3) : 1000;
     uint8_t data[8], dlc;
-    if (can_read(c, msg_id, data, &dlc) >= 0) {
+    if (can_read(c, msg_id, data, &dlc, timeout) >= 0) {
         be_pushbytes(vm, data, dlc);
         be_return(vm);
     }
@@ -499,7 +503,7 @@ static int l_can_msg_get(bvm *vm)
     if (!eng) be_return_nil(vm);
 
     uint8_t data[8], dlc;
-    if (can_read(eng, msg_id, data, &dlc) < 0) be_return_nil(vm);
+    if (can_read(eng, msg_id, data, &dlc, 0) < 0) be_return_nil(vm);
 
     // https://berry.readthedocs.io/en/latest/source/en/FFI-Example.html#instantiate-a-list-object-in-a-native-function
     be_getglobal(vm, "map");
