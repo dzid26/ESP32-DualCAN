@@ -85,12 +85,8 @@ static void cache_update(msg_ring_t *cache, const twai_message_t *rx)
 
 static const twai_message_t *cache_read(msg_ring_t *cache, uint32_t msg_id)
 {
-    int i = cache_find(cache, msg_id);
-    if (i < 0) {
-        i = cache_alloc(cache, msg_id);
+    int i = cache_alloc(cache, msg_id);
         if (i < 0) return NULL;
-        return NULL;
-    }
     return ring_latest(&cache[i]);
 }
 
