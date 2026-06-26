@@ -42,9 +42,43 @@
   let skipPreprocessedEffect = $state(false);
   let editorPaneEl = $state<HTMLDivElement | undefined>();
   let containerEl = $state<HTMLDivElement | undefined>();
-  let editorMinHeight = $state(0);
   let watermarkAngle = $state(45);
   let watermarkFontSize = $state(120);
+
+  // Drag-to-stretch state for mobile
+  let stretchOffset = $state(0);
+  let dragging = $state(false);
+  let dragStartY = $state(0);
+  let dragStartStretch = $state(0);
+
+  function onDragStart(e: PointerEvent) {
+    const t = e.target as HTMLElement;
+    // Don't intercept clicks/drags on interactive elements or scrollable text areas
+    if (t.closest('button, select, input, label, a, .cm-editor, .cm-scroller, .srow, .log-link, [role="button"]')) return;
+    
+    // Don't intercept if they are scrolling the Installed list itself
+    const frameList = t.closest('.frame');
+    if (frameList && frameList.scrollHeight > frameList.clientHeight) return;
+
+    dragging = true;
+    dragStartY = e.clientY;
+    dragStartStretch = stretchOffset;
+    if (containerEl) containerEl.setPointerCapture(e.pointerId);
+  }
+
+  function onDragMove(e: PointerEvent) {
+    if (!dragging) return;
+    // e.clientY decreases when dragging UP, so delta is positive
+    const delta = dragStartY - e.clientY;
+    stretchOffset = Math.max(0, Math.min(250, dragStartStretch + delta));
+  }
+
+  function onDragEnd(e: PointerEvent) {
+    dragging = false;
+    if (containerEl && containerEl.hasPointerCapture(e.pointerId)) {
+      containerEl.releasePointerCapture(e.pointerId);
+    }
+  }
 
   $effect(() => {
     const el = editorPaneEl;
@@ -60,22 +94,6 @@
     ro.observe(el);
     return () => ro.disconnect();
   });
-
-  /* Measure the scripts-container height so the editor frame scales to ~70%
-     on mobile — leaves room to scroll SectionHead/file-list away while keeping
-     the save button visible. */
-  $effect(() => {
-    if (!isMobile) { editorMinHeight = 0; return; }
-    const el = containerEl;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      const h = entry.contentRect.height;
-      if (h > 0) editorMinHeight = Math.round(h * 0.7);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  });
-
 
   let gotoLine = $state<number | null>(null);
   let preprocessedGotoLine = $state<number | null>(null);
@@ -399,39 +417,50 @@
   }
 </script>
 
-<div bind:this={containerEl} class="scripts-container" style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px"   style:overflow-y={isMobile ? 'auto' : 'visible'}>
-  <SectionHead
-    title="Automations"
-    sub="Berry scripts that run on their own — timers, event handlers, callbacks"
-  >
-    {#snippet actions()}
-      <button class="btn btn--sm" onclick={() => showGuide = true} title="Scripting guide — writing and using scripts" style="flex: 1 1 30px; overflow: hidden; justify-content: center">
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink: 0">
-          <path d="M2 3h10M2 7h10M2 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scripting Guide</span>
-      </button>
-      <button class="btn btn--sm" style="flex-shrink: 0" onclick={newScript}><Icon name="up" size={13} />New</button>
-      <select
-        class="sel"
-        onchange={loadExample}
-        title="Load a bundled Berry example into the editor (firmware/scripts_examples)"
-        style="flex: 1 1 auto; flex-shrink: 0; min-width: 80px; max-width: 160px; padding-right: 24px"
-      >
-        <option value="">Load example…</option>
-        {#each examples as ex}
-          <option value={ex.filename}>{ex.name}</option>
-        {/each}
-      </select>
-      <label class="btn btn--sm btn--info" style="flex-shrink: 0" title="Read a .be file from disk into the editor">
-        Import
-        <input type="file" accept=".be;text/plain" onchange={importFile} style="display: none" />
-      </label>
-    {/snippet}
-  </SectionHead>
+<div
+  bind:this={containerEl}
+  class="scripts-container"
+  style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px; touch-action: {isMobile ? 'none' : 'auto'}"
+  style:overflow-y={isMobile ? 'hidden' : 'visible'}
+  onpointerdown={onDragStart}
+  onpointermove={onDragMove}
+  onpointerup={onDragEnd}
+  onpointercancel={onDragEnd}
+>
+  <div style="overflow: hidden; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; max-height: {Math.max(0, 100 - stretchOffset)}px; opacity: {Math.max(0, 1 - stretchOffset/60)}; margin-bottom: {Math.max(-20, -10 - Math.max(0, stretchOffset - 90))}px">
+    <SectionHead
+      title="Automations"
+      sub="Berry scripts that run on their own — timers, event handlers, callbacks"
+    >
+      {#snippet actions()}
+        <button class="btn btn--sm" onclick={() => showGuide = true} title="Scripting guide — writing and using scripts" style="flex: 1 1 30px; overflow: hidden; justify-content: center">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style="flex-shrink: 0">
+            <path d="M2 3h10M2 7h10M2 11h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap">Scripting Guide</span>
+        </button>
+        <button class="btn btn--sm" style="flex-shrink: 0" onclick={newScript}><Icon name="up" size={13} />New</button>
+        <select
+          class="sel"
+          onchange={loadExample}
+          title="Load a bundled Berry example into the editor (firmware/scripts_examples)"
+          style="flex: 1 1 auto; flex-shrink: 0; min-width: 80px; max-width: 160px; padding-right: 24px"
+        >
+          <option value="">Load example…</option>
+          {#each examples as ex}
+            <option value={ex.filename}>{ex.name}</option>
+          {/each}
+        </select>
+        <label class="btn btn--sm btn--info" style="flex-shrink: 0" title="Read a .be file from disk into the editor">
+          Import
+          <input type="file" accept=".be;text/plain" onchange={importFile} style="display: none" />
+        </label>
+      {/snippet}
+    </SectionHead>
 
-  {#if listError}
-    <div class="empty" style="border-color: var(--dc-err-border); color: var(--dc-err-text)">{listError}</div>
-  {/if}
+    {#if listError}
+      <div class="empty" style="border-color: var(--dc-err-border); color: var(--dc-err-text)">{listError}</div>
+    {/if}
+  </div>
 
   <div
     style:display={isMobile ? 'flex' : 'grid'}
@@ -447,8 +476,10 @@
       class="frame"
       style="display: flex; flex-direction: column; overflow: hidden"
       style:min-height={isMobile ? '0' : '130px'}
-      style:max-height={isMobile ? '123px' : 'none'}
+      style:max-height={isMobile ? Math.max(0, 123 - Math.max(0, stretchOffset - 80)) + 'px' : 'none'}
+      style:opacity={isMobile ? Math.max(0, 1 - Math.max(0, stretchOffset - 80) / 100) : 1}
       style:flex-shrink={isMobile ? '0' : undefined}
+      style:margin-bottom={isMobile ? Math.max(-10, -Math.max(0, stretchOffset - 193)) + 'px' : '0'}
     >
       <div class="frame__head">
         Installed <span class="ghost mono">{scripts.length}</span>
@@ -509,9 +540,9 @@
 
     <div
       class="frame"
-      style="display: flex; flex-direction: column; min-height: 0; overflow: hidden; position: relative"
+      style="display: flex; flex-direction: column; overflow: hidden; position: relative"
       style:flex={isMobile ? '1' : undefined}
-      style:max-height={isMobile && editorMinHeight ? editorMinHeight + 'px' : 'none'}
+      style:min-height={isMobile ? '180px' : undefined}
     >
       {#if isMobile}
         <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border); touch-action: pan-y;">
