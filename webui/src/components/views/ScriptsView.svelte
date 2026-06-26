@@ -162,8 +162,8 @@
   async function save(): Promise<void> {
     const fn = normalizeScriptFilename((selFn ?? editorFilename).trim());
     if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
-    const wasEnabled = scripts.find(s => s.filename === fn)?.enabled ?? false;
     busy = true;
+    const wasEnabled = !!scripts.find(s => s.filename === fn)?.enabled;
     try {
       const codeChanged = code !== savedCode;
       // Upload .be immediately so the save feels fast.
@@ -174,6 +174,7 @@
       app.setLastScriptFilename(fn);
       app.pushLog(`scripts: saved ${fn}`, 'info', 'scripts');
       await refresh();
+      busy = false;
 
       // Then preprocess and upload .bep in the background if needed.
       const result = preprocessScript(code, getFullMessages());
@@ -200,6 +201,11 @@
     } finally {
       busy = false;
     }
+  }
+
+  async function saveAndEnable(): Promise<void> {
+    await save();
+    if (selFn) await enable(selFn);
   }
 
   async function enable(filename: string): Promise<void> {
@@ -545,7 +551,7 @@
       style:min-height={isMobile ? '180px' : undefined}
     >
       {#if isMobile}
-        <div class="row-flex" style="flex-wrap: wrap; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border); touch-action: pan-y;">
+        <div class="row-flex" style="flex-wrap: wrap; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--dc-border); touch-action: pan-y;">
           <button class="btn btn--sm" style="touch-action: pan-y;"
             onclick={() => { app.pendingAiScript = { filename: selFn ?? editorFilename, code }; app.setView('ai'); }}
             title="Send this script to the AI assistant for editing">
@@ -553,6 +559,9 @@
           </button>
           <button class="btn btn--sm" style="touch-action: pan-y;" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save
+          </button>
+          <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
+            <Icon name="up" size={13} />Save & enable
           </button>
           <button class="btn btn--sm" style="touch-action: pan-y;" onclick={revert} disabled={!dirty}>Revert</button>
         </div>
@@ -593,6 +602,9 @@
           </button>
           <button class="btn btn--sm" onclick={save} disabled={!app.connected || busy} title="Upload and preprocess">
             <Icon name="up" size={13} />Save
+          </button>
+          <button class="btn btn--sm btn--primary" onclick={saveAndEnable} disabled={!app.connected || busy} title="Save and enable">
+            <Icon name="up" size={13} />Save & enable
           </button>
           <button class="btn btn--sm" onclick={revert} disabled={!dirty}>Revert</button>
         </span>
