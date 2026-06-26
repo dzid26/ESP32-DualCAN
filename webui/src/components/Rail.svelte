@@ -1,12 +1,12 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
   import { NAV_ITEMS } from '../lib/nav';
-  import { modKey, isTouch } from '../lib/platform';
+  import { modKey, isMobile } from '../lib/platform';
   import Icon from './Icon.svelte';
 
-  let { onPalette, onToggleLog }: { onPalette: () => void; onToggleLog: () => void } = $props();
+  let { onToggleLog }: { onToggleLog: () => void } = $props();
 
-  const canInstall = $derived(!isTouch && !!app.installPrompt && !app.isInstalled);
+  const canInstall = $derived(!isMobile && !!app.installPrompt && !app.isInstalled);
 
   $effect(() => {
     if (app.logOpen) app.logAttention = false;
@@ -65,15 +65,10 @@
   </div>
 
   <div class="rail__foot">
-    <button class="railItem" onclick={onPalette} title="Command palette ({modKey}K)">
-      <Icon name="search" size={18} />
-      <span class="railItem__label">Search</span>
-      <span class="tt">Search / commands{isTouch ? '' : ` · ${modKey}K`}</span>
-    </button>
-    <button class="railItem" class:railItem--attention={app.logAttention} onclick={onToggleLog} title="Logs">
+    <button class="railItem" class:railItem--attention={app.logAttention} onclick={onToggleLog} title="Log">
       <Icon name="log" size={18} />
-      <span class="railItem__label">Logs</span>
-      <span class="tt">Device logs</span>
+      <span class="railItem__label">Log</span>
+      <span class="tt">Device log</span>
     </button>
   </div>
 </aside>

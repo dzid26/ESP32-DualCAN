@@ -278,8 +278,10 @@ button { font: inherit; color: inherit; }
 
 @media (max-width: 720px) {
   .rail { flex: 0 0 auto; flex-direction: row; width: 100%; border-right: none; border-top: 1px solid var(--dc-border); }
-  .rail__brand, .rail__foot { display: none; }
-  .rail__list { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 0; height: 56px; }
+  .rail__brand { display: none; }
+  .rail__list { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 0; height: 56px; flex: 1; }
+  .rail__foot { display: flex; flex-direction: row; border-top: none; border-left: 1px solid var(--dc-border); padding: 0; }
+  .rail__foot .railItem { flex: 0 0 56px; height: 56px; }
   .railItem { flex: 1 0 64px; height: 56px; flex-direction: column; gap: 2px; font-size: 10px; }
   .railItem--active::before { left: 8px; right: 8px; top: 0; bottom: auto; height: 2px; width: auto; border-radius: 0 0 2px 2px; }
   .tt { display: none; }

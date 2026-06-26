@@ -25,10 +25,7 @@
 </script>
 
 <div class="shell">
-  <Rail
-    onPalette={() => (app.paletteOpen = true)}
-    onToggleLog={() => (app.logOpen = !app.logOpen)}
-  />
+  <Rail onToggleLog={() => (app.logOpen = !app.logOpen)} />
 
   <div class="shell__main">
     <StatusStrip onPalette={() => (app.paletteOpen = true)} />
