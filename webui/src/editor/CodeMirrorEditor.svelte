@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount, untrack } from 'svelte';
   import { acceptCompletion, completionKeymap } from '@codemirror/autocomplete';
-  import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+  import { defaultKeymap, history, historyKeymap, indentWithTab, redo } from '@codemirror/commands';
   import { EditorState, EditorSelection, StateEffect, StateField } from '@codemirror/state';
   import { Decoration, EditorView, keymap } from '@codemirror/view';
   import { searchKeymap } from '@codemirror/search';
@@ -88,6 +88,7 @@
             { key: 'Tab', run: acceptCompletion },
             indentWithTab,
             ...completionKeymap,
+            { key: 'Mod-Shift-z', run: redo, preventDefault: true },
             ...historyKeymap,
             ...defaultKeymap,
             ...searchKeymap,
