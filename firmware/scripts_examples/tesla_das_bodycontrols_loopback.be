@@ -1,6 +1,6 @@
 # @name Tesla DAS_bodyControls round-trip test
 # @description Builds a DAS_bodyControls message via msg_sig_set, verifies
-#              every signal with signal_decode, modifies and re-verifies.
+#              every signal with msg_sig_get, modifies and re-verifies.
 # @bus 0
 #
 # Requires: Tesla Model 3/Y Vehicle DBC loaded on bus 0.
@@ -38,16 +38,16 @@ def run_test()
   # ---- Phase 2: Verify ----
   print("\n2: Verify every signal")
 
-  var v = signal_decode(msg["data"], 0, 2, false, false, 1, 0)
+  var v = msg_sig_get(msg, 0, 2, false, false, 1, 0)
   errors += check("headlightRequest", v, 2)
 
-  v = signal_decode(msg["data"], 2, 2, false, false, 1, 0)
+  v = msg_sig_get(msg, 2, 2, false, false, 1, 0)
   errors += check("hazardLightRequest", v, 1)
 
-  v = signal_decode(msg["data"], 4, 4, false, false, 1, 0)
+  v = msg_sig_get(msg, 4, 4, false, false, 1, 0)
   errors += check("wiperSpeed", v, 9)
 
-  v = signal_decode(msg["data"], 52, 4, false, false, 1, 0)
+  v = msg_sig_get(msg, 52, 4, false, false, 1, 0)
   errors += check("counter", v, 5)
 
   # ---- Phase 3: Send ----
@@ -65,16 +65,16 @@ def run_test()
   # ---- Phase 5: Re-verify ----
   print("\n5: Re-verify after modification")
 
-  v = signal_decode(msg["data"], 0, 2, false, false, 1, 0)
+  v = msg_sig_get(msg, 0, 2, false, false, 1, 0)
   errors += check("mod headlightRequest", v, 1)
 
-  v = signal_decode(msg["data"], 2, 2, false, false, 1, 0)
+  v = msg_sig_get(msg, 2, 2, false, false, 1, 0)
   errors += check("mod hazardLightRequest", v, 0)
 
-  v = signal_decode(msg["data"], 4, 4, false, false, 1, 0)
+  v = msg_sig_get(msg, 4, 4, false, false, 1, 0)
   errors += check("mod wiperSpeed", v, 3)
 
-  v = signal_decode(msg["data"], 52, 4, false, false, 1, 0)
+  v = msg_sig_get(msg, 52, 4, false, false, 1, 0)
   errors += check("mod counter", v, 6)
 
   # ---- Phase 6: Re-send ----

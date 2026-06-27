@@ -638,38 +638,61 @@ static int l_bit_insert(bvm *vm)
     be_return(vm);
 }
 
-/* signal_decode(data:bytes, start_bit:int, bit_length:int, big_endian:bool,
- *               is_signed:bool, scale:real, offset:real) -> real
- * Decode a DBC signal from raw bytes: extract the bit field, apply sign
- * extension, multiply by scale, add offset. Returns the physical value. */
-static int l_signal_decode(bvm *vm)
+/* msg_sig_get(draft, start_bit:int, bit_length:int, big_endian:bool,
+ *             is_signed:bool, scale:real, offset:real) -> real
+ * Decode a DBC signal from a message draft: extracts draft.data bytes,
+ * reads the bitfield, applies sign, scale, offset. Returns physical value. */
+static int l_msg_sig_get(bvm *vm)
 {
     CHECK_ARITY(vm, 7);
-    CHECK_TYPE(vm, 1, be_isbytes(vm, 1), "bytes");
-    size_t len = 0;
-    const uint8_t *data = be_tobytes(vm, 1, &len);
+    if (!be_isinstance(vm, 1)) be_return_nil(vm);
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int");
+    CHECK_TYPE(vm, 3, be_isint(vm, 3), "int");
+    CHECK_TYPE(vm, 4, be_isbool(vm, 4), "bool");
+    CHECK_TYPE(vm, 5, be_isbool(vm, 5), "bool");
+
     uint8_t start_bit = (uint8_t)be_toint(vm, 2);
     uint8_t bit_length = (uint8_t)be_toint(vm, 3);
     bool big_endian = be_tobool(vm, 4);
     bool is_signed = be_tobool(vm, 5);
     float scale = (float)be_toreal(vm, 6);
     float offset = (float)be_toreal(vm, 7);
+
+    /* Berry class instances store internal data under a hidden `.p` member.
+     * be_getmember gets it, then be_getindex looks up "data" within it
+     * (same pattern as be_maplib.c:m_item for map["key"]). */
+    be_getmember(vm, 1, ".p");
+    be_pushstring(vm, "data");
+    be_getindex(vm, -2);
+    if (!be_isbytes(vm, -1)) {
+        be_pop(vm, 1);
+        be_return_nil(vm);
+    }
+    size_t len = 0;
+    const uint8_t *data = be_tobytes(vm, -1, &len);
+    be_pop(vm, 1);
+
     float val = signal_decode(data, start_bit, bit_length, big_endian, is_signed, scale, offset);
     be_pushreal(vm, (breal)val);
     be_return(vm);
 }
 
-/* signal_encode(data:bytes, start_bit:int, bit_length:int, big_endian:bool,
- *               is_signed:bool, scale:real, offset:real, value:real) -> bytes
- * Encode a physical value into a DBC signal bit field: subtract offset,
- * divide by scale, clamp, insert into a copy of data. Returns new bytes.
- * Used by the preprocessor-generated msg_sig_set body. */
-static int l_signal_encode(bvm *vm)
+/* msg_sig_set(draft, start_bit:int, bit_length:int, big_endian:bool,
+ *             is_signed:bool, scale:real, offset:real, value:real) -> nil
+ * Encode a physical value into a message draft: converts to raw, writes
+ * the bitfield in draft.data bytes in-place. No return value. */
+static int l_msg_sig_set(bvm *vm)
 {
     CHECK_ARITY(vm, 8);
-    CHECK_TYPE(vm, 1, be_isbytes(vm, 1), "bytes");
-    size_t len = 0;
-    const uint8_t *src = be_tobytes(vm, 1, &len);
+    if (!be_isinstance(vm, 1)) {
+        ESP_LOGW(TAG_BB, "msg_sig_set: draft is nil");
+        be_return_nil(vm);
+    }
+    CHECK_TYPE(vm, 2, be_isint(vm, 2), "int");
+    CHECK_TYPE(vm, 3, be_isint(vm, 3), "int");
+    CHECK_TYPE(vm, 4, be_isbool(vm, 4), "bool");
+    CHECK_TYPE(vm, 5, be_isbool(vm, 5), "bool");
+
     uint8_t start_bit = (uint8_t)be_toint(vm, 2);
     uint8_t bit_length = (uint8_t)be_toint(vm, 3);
     bool big_endian = be_tobool(vm, 4);
@@ -677,11 +700,22 @@ static int l_signal_encode(bvm *vm)
     float scale = (float)be_toreal(vm, 6);
     float offset = (float)be_toreal(vm, 7);
     float value = (float)be_toreal(vm, 8);
-    uint8_t buf[8];
-    memcpy(buf, src, len > 8 ? 8 : len);
-    signal_encode(buf, start_bit, bit_length, big_endian, is_signed, scale, offset, value);
-    be_pushbytes(vm, buf, len > 8 ? 8 : len);
-    be_return(vm);
+
+    /* Same `.p` + getindex pattern as l_msg_sig_get. */
+    be_getmember(vm, 1, ".p");
+    be_pushstring(vm, "data");
+    be_getindex(vm, -2);
+    if (!be_isbytes(vm, -1)) {
+        be_pop(vm, 1);
+        ESP_LOGW(TAG_BB, "msg_sig_set: draft has no data bytes");
+        be_return_nil(vm);
+    }
+    size_t len = 0;
+    uint8_t *data = (uint8_t *)be_tobytes(vm, -1, &len);
+    signal_encode(data, start_bit, bit_length, big_endian, is_signed, scale, offset, value);
+    be_pop(vm, 1);
+
+    be_return_nil(vm);
 }
 
 /* ---- LED ---- */
@@ -785,8 +819,8 @@ void berry_register_bindings(bvm *vm)
     /* CAN bit-level utilities: used by preprocessor-generated code */
     be_regfunc(vm, "bit_extract",    l_bit_extract);
     be_regfunc(vm, "bit_insert",     l_bit_insert);
-    be_regfunc(vm, "signal_decode",  l_signal_decode);
-    be_regfunc(vm, "signal_encode",  l_signal_encode);
+    be_regfunc(vm, "msg_sig_get", l_msg_sig_get);
+    be_regfunc(vm, "msg_sig_set", l_msg_sig_set);
 
     /* On-board RGB LED */
     be_regfunc(vm, "led_set", l_led_set);

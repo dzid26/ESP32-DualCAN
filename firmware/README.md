@@ -120,9 +120,9 @@ function name, or inline code.
 | `can_msg_new(name)` | draft \| nil | arg resolve | Zeroed draft from DBC name *(ID+DLC baked in)* |
 | `can_msg_new(id, dlc)` | draft \| nil | no | Zeroed draft from numeric ID |
 | `can_msg_get(bus, id \| name)` | draft \| nil | arg resolve | Latest rx frame as a draft
-| `msg_sig_set(draft, sig, val)` | — | **rewritten** | Becomes `draft["data"].setbits(sb, len, val)` |
+| `msg_sig_set(draft, sig, val)` | — | **rewritten** | Becomes `msg_sig_set(draft, sb, len, be, signed, scale, offset, val)` |
 | `can_msg_send(bus, draft)` | — | no | Transmit draft (auto checksum/counter) |
-| `msg_sig_get(draft, sig)` | int | **inlined** | Becomes `draft["data"].getbits(sb, len)` |
+| `msg_sig_get(draft, sig)` | int | **inlined** | Becomes `msg_sig_get(draft, sb, len, be, signed, scale, offset)` |
 | `can_send_raw(bus, id, data)` | — | no | Send raw CAN frame (no DBC) |
 | `can_recv_raw(bus, msg_id [, timeout])` | bytes \| nil | no | Last payload for a CAN ID. Default 1 s timeout blocks for initial data. |
 | `timer_after(ms, fn)` | handle | no | One-shot timer |

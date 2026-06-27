@@ -7,8 +7,8 @@
  * Conversion rules:
  *   can_msg_get(bus, "msg")         → can_msg_get(bus, 0xID)
  *   can_msg_new("msg")              → can_msg_new(0xID, dlc)
- *   msg_sig_set(draft, "sig", val)  → draft["data"] = signal_encode(draft["data"], sb, len, be, signed, scale, offset, val)
- *   msg_sig_get(draft, "sig")    → signal_decode(draft["data"], sb, len, be, signed, scale, offset)
+ *   msg_sig_get(draft, "sig")    → msg_sig_get(draft, sb, len, be, signed, scale, offset)
+ *   msg_sig_set(draft, "sig", val)  → msg_sig_set(draft, sb, len, be, signed, scale, offset, val)
  * Missing signals/messages → raise("key_error", "...")
  */
 
@@ -124,9 +124,9 @@ export function preprocessScript(
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
-  /* ---- Pattern 2: msg_sig_get(draft, "sig") -> signal_decode(draft["data"], sb, len, be, signed, scale, offset) ---- */
-  // Decodes a DBC signal from a message draft bytes. Handles scale, offset,
-  // signedness, and byte order via the native signal_decode C binding.
+  /* ---- Pattern 2: msg_sig_get(draft, "sig") -> msg_sig_get(draft, sb, len, be, signed, scale, offset) ---- */
+  // Decodes a DBC signal from a message draft. The native C binding reads
+  // draft.data internally and handles scale, offset, signedness, byte order.
   const canSigGetPattern = /msg_sig_get\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*\)/g;
   while ((match = canSigGetPattern.exec(code)) !== null) {
     const draftExpr = match[1].trim();
@@ -144,13 +144,13 @@ export function preprocessScript(
       continue;
     }
 
-    const replacement = `signal_decode(${draftExpr}["data"], ${sigMeta(sig)})`;
+    const replacement = `msg_sig_get(${draftExpr}, ${sigMeta(sig)})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
-  /* ---- Pattern 4: msg_sig_set(draft, "sig", value) -> draft["data"] = signal_encode(...) ---- */
-  // Encodes a physical value into a DBC signal bit field. The native
-  // signal_encode handles scale, offset, signedness, and byte order.
+  /* ---- Pattern 4: msg_sig_set(draft, "sig", value) -> msg_sig_set(draft, sb, len, be, signed, scale, offset, val) ---- */
+  // Encodes a physical value into a message draft. The native C binding
+  // writes draft.data in-place and handles scale, offset, signedness, byte order.
   const canMsgSetPattern =
     /msg_sig_set\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*([^)]+)\)/g;
   while ((match = canMsgSetPattern.exec(code)) !== null) {
@@ -170,7 +170,7 @@ export function preprocessScript(
       continue;
     }
 
-    const replacement = `${draftExpr}["data"] = signal_encode(${draftExpr}["data"], ${sigMeta(sig)}, ${valueExpr})`;
+    const replacement = `msg_sig_set(${draftExpr}, ${sigMeta(sig)}, ${valueExpr})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 

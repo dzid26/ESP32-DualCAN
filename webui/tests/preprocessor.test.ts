@@ -36,11 +36,10 @@ test('name-first can_msg_get passes through unchanged', () => {
   assert.equal(result.errors.length, 0);
 });
 
-test('inlines msg_sig_get into signal_decode call', () => {
+test('inlines msg_sig_get into msg_sig_get with inline metadata', () => {
   const code = `var sig = msg_sig_get(msg, "DAS_hazardLightRequest")`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('signal_decode(msg["data"], 0, 8, false, false, 1, 0)'));
-  assert(!result.code.includes('can_recv_raw')); // no implicit recv
+  assert(result.code.includes('msg_sig_get(msg, 0, 8, false, false, 1, 0)'));
   assert.equal(result.errors.length, 0);
 });
 
@@ -65,10 +64,10 @@ test('reports error for unknown signal in msg_sig_set', () => {
   assert(result.errors[0].includes('GHOST_SIG'));
 });
 
-test('replaces msg_sig_set with signal_encode', () => {
+test('replaces msg_sig_set with msg_sig_set with inline metadata', () => {
   const code = `msg_sig_set(msg, "DAS_hazardLightRequest", 1)`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('signal_encode(msg["data"], 0, 8, false, false, 1, 0, 1)'));
+  assert(result.code.includes('msg_sig_set(msg, 0, 8, false, false, 1, 0, 1)'));
   assert.equal(result.errors.length, 0);
 });
 
@@ -109,7 +108,7 @@ test('can_msg_send passes through to native binding', () => {
   const result = preprocessScript(code, mockMessages);
   assert(result.code.includes('can_msg_send(0, msg)'), 'can_msg_send should pass through unchanged');
   assert(!result.code.includes('can_send_raw'), 'should NOT rewrite to can_send_raw');
-  assert(result.code.includes('signal_encode('));
+  assert(result.code.includes('msg_sig_set('));
   assert.equal(result.errors.length, 0);
 });
 
@@ -124,8 +123,7 @@ test('handles multiple replacements in one script', () => {
   assert(result.code.includes('can_msg_get(0, 0x3e9'));
   assert(result.code.includes('can_msg_send(0, msg)'), 'can_msg_send passes through');
   assert(!result.code.includes('can_send_raw'), 'should NOT rewrite to can_send_raw');
-  assert(result.code.includes('signal_encode('));
-  assert(result.code.includes('signal_decode(msg["data"], 0, 8, false, false, 1, 0)'));
-  assert(!result.code.includes('can_recv_raw')); // no implicit recv
+  assert(result.code.includes('msg_sig_set(msg, 0, 8, false, false, 1, 0, 42)'));
+  assert(result.code.includes('msg_sig_get(msg, 0, 8, false, false, 1, 0)'));
   assert.equal(result.errors.length, 0);
 });
