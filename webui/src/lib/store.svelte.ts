@@ -120,6 +120,9 @@ class AppState {
   bus0Rate = $state(0);
   bus1Rate = $state(0);
 
+  /** Total FreeRTOS CPU load percentage pushed from firmware. */
+  cpuLoad = $state(0);
+
   car = $state<Car | null>(loadCar());
   carPickerOpen = $state(false);
   paletteOpen = $state(false);
@@ -277,6 +280,7 @@ class AppState {
     });
     this.proto.onBusStatus((u) => this.noteBusStatus(u.bus, u.status, u.rate));
     this.proto.onScriptUpdate(() => { this.scriptsVersion++; });
+    this.proto.onCpuStatus((u) => { this.cpuLoad = u.load; });
     this.proto.onStall(() => this.recoverStalledTransport());
 
     if (typeof window !== 'undefined') {
@@ -395,6 +399,7 @@ class AppState {
       this.wifiIp = null;
       this.bus0Rate = 0;
       this.bus1Rate = 0;
+      this.cpuLoad = 0;
       this.resetOtaState();
       this.pushLog('disconnected', 'warn', 'ble');
       return;

@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "freertos/task.h"
 
 #include "esp_timer.h"
 
@@ -261,6 +262,52 @@ static void push_bus_status(int bus, bus_status_t status, uint16_t rate)
     cJSON_AddNumberToObject(push, "bus", bus);
     cJSON_AddStringToObject(push, "status", BUS_STATUS_STR[status]);
     cJSON_AddNumberToObject(push, "rate", rate);
+    send_frame(push);
+    cJSON_Delete(push);
+}
+
+#define MAX_TASKS 16
+
+static void push_cpu_status(void)
+{
+    static TaskStatus_t s_task_status[MAX_TASKS];
+    uint32_t total_runtime;
+    UBaseType_t count = uxTaskGetSystemState(s_task_status, MAX_TASKS, &total_runtime);
+    if (count == 0 || count > MAX_TASKS) return;
+
+    uint32_t idle_runtime = 0;
+    for (UBaseType_t i = 0; i < count; i++) {
+        if (strcmp(s_task_status[i].pcTaskName, "IDLE") == 0 ||
+            strcmp(s_task_status[i].pcTaskName, "IDLE0") == 0) {
+            idle_runtime = s_task_status[i].ulRunTimeCounter;
+            break;
+        }
+    }
+
+    static uint32_t s_prev_total = 0;
+    static uint32_t s_prev_idle = 0;
+
+    if (s_prev_total == 0) {
+        s_prev_total = total_runtime;
+        s_prev_idle = idle_runtime;
+        return;
+    }
+
+    uint32_t delta_total = total_runtime - s_prev_total;
+    uint32_t delta_idle = idle_runtime - s_prev_idle;
+    s_prev_total = total_runtime;
+    s_prev_idle = idle_runtime;
+
+    int load = 0;
+    if (delta_total > 0) {
+        load = 100 - (int)(delta_idle * 100ULL / delta_total);
+        if (load < 0) load = 0;
+        if (load > 100) load = 100;
+    }
+
+    cJSON *push = cJSON_CreateObject();
+    cJSON_AddStringToObject(push, "type", "cpu_status");
+    cJSON_AddNumberToObject(push, "load", load);
     send_frame(push);
     cJSON_Delete(push);
 }
@@ -1108,6 +1155,14 @@ void protocol_tick(void)
             }
         }
         if (s_connect_pushes > 0) s_connect_pushes--;
+    }
+
+    /* CPU status push every ~5 s */
+    #define CPU_PUSH_INTERVAL_MS 5000
+    static uint32_t s_cpu_ms = 0;
+    if (ble_up && (now - s_cpu_ms) >= CPU_PUSH_INTERVAL_MS) {
+        s_cpu_ms = now;
+        push_cpu_status();
     }
 }
 

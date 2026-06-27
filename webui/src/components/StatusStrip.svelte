@@ -5,6 +5,7 @@
   import VersionPip from './VersionPip.svelte';
   import BusPip from './BusPip.svelte';
   import CarPip from './CarPip.svelte';
+  import CpuPip from './CpuPip.svelte';
   import { onMount } from 'svelte';
 
   let { onPalette }: { onPalette: () => void } = $props();
@@ -92,6 +93,10 @@
     <BusPip id={0} name="VehicleCAN" status={app.bus0Status} rate={app.bus0Rate} />
     <BusPip id={1} name="ChassisCAN" status={app.bus1Status} rate={app.bus1Rate} />
   </div>
+
+  {#if app.connected}
+    <CpuPip load={app.cpuLoad} />
+  {/if}
 
   <span class="spacer"></span>
 

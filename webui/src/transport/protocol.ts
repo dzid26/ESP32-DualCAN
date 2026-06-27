@@ -57,6 +57,11 @@ export interface ScriptUpdate {
   error?: string;
 }
 
+export interface CpuStatus {
+  /** Total FreeRTOS CPU load percentage (0–100). */
+  load: number;
+}
+
 type Pending = {
   resolve: (value: any) => void;
   reject: (err: Error) => void;
@@ -83,6 +88,7 @@ export class Protocol {
   private signalCallback: ((s: SignalUpdate) => void) | null = null;
   private busStatusCallback: ((u: BusStatusUpdate) => void) | null = null;
   private scriptUpdateCallback: ((u: ScriptUpdate) => void) | null = null;
+  private cpuStatusCallback: ((u: CpuStatus) => void) | null = null;
 
   /** Register a callback for device log pushes (ESP_LOG and Berry print). */
   onLog(cb: (entry: LogPush) => void) { this.logCallback = cb; }
@@ -98,6 +104,9 @@ export class Protocol {
 
   /** Register a callback for script_update push frames from the device. */
   onScriptUpdate(cb: ((u: ScriptUpdate) => void) | null) { this.scriptUpdateCallback = cb; }
+
+  /** Register a callback for cpu_status push frames from the device. */
+  onCpuStatus(cb: ((u: CpuStatus) => void) | null) { this.cpuStatusCallback = cb; }
 
   // Per-write chunk size for the underlying transport. The firmware
   // requests an ATT_MTU of 512 and Chrome/desktop hosts typically settle
@@ -288,6 +297,10 @@ export class Protocol {
               enabled: !!resp.script?.enabled,
               errored: !!resp.script?.errored,
               error: resp.script?.error,
+            });
+          } else if (resp.type === 'cpu_status') {
+            if (this.cpuStatusCallback) this.cpuStatusCallback({
+              load: resp.load ?? 0,
             });
           }
           continue;
