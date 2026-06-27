@@ -165,7 +165,6 @@
     busy = true;
     const wasEnabled = !!scripts.find(s => s.filename === fn)?.enabled;
     try {
-      const codeChanged = code !== savedCode;
       // Upload .be immediately so the save feels fast.
       await app.proto.writeScript(fn, code, undefined);
       savedCode = code;
@@ -176,21 +175,13 @@
       await refresh();
       busy = false;
 
-      // Then preprocess and upload .bep in the background if needed.
+      // Then preprocess and upload .bep
       const result = preprocessScript(code, getFullMessages());
       if (result.errors.length > 0) {
         const errMsg = result.errors.join('; ');
         app.pushLog(`scripts: preprocessing warnings — ${errMsg}`, 'warn', 'scripts');
       }
-      if (result.code !== code) {
-        await app.proto.writeScript(fn, code, result.code);
-        if (result.errors.length === 0) {
-          app.pushLog(`scripts: preprocessed runtime updated`, 'info', 'scripts');
-        }
-      } else if (!codeChanged && deviceBepCode !== null) {
-        // No DBC and source unchanged — preserve the existing .bep from device
-        await app.proto.writeScript(fn, code, deviceBepCode);
-      }
+      await app.proto.writeScript(fn, code, result.code);
       // Reload the saved script from device to confirm clean state.
       await loadScript(fn);
       // Re-enable if it was running before editing.
