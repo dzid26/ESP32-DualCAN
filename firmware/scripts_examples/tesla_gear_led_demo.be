@@ -1,12 +1,12 @@
 # @name Tesla gear LED demo
-# @description Polls live vehicle signals with can_signal_get every 250 ms and
+# @description Polls live vehicle signals with msg_sig_get every 250 ms and
 #              changes the onboard RGB LED colour by gear (P=white, R=red,
 #              N=yellow, D=green). Also registers a tile to flash hazards.
 # @bus 0
 #
 # Requires: Tesla Model 3/Y DBC loaded on bus 0.
 #
-# Reads from DI_systemStatus (ID 0x118 / 280) via can_signal_get:
+# Reads from DI_systemStatus (ID 0x118 / 280) via msg_sig_get:
 #   DI_gear:         1=P  2=R  3=N  4=D
 #   DI_accelPedalPos: 0-100 %
 #
@@ -28,19 +28,24 @@ def gear_led(gear)
 end
 
 def poll()
-  var gear_sig  = can_signal_get("DI_systemStatus", "DI_gear", 0)
-  var pedal_sig = can_signal_get("DI_systemStatus", "DI_accelPedalPos", 0)
-
-  if gear_sig == nil
-    return  # DBC not loaded or no frames seen yet
+  var msg = can_msg_get(0, "DI_systemStatus")
+  var gear_sig = nil
+  var pedal_sig = nil
+  if msg != nil
+    gear_sig = msg_sig_get(msg, "DI_gear")
+    pedal_sig = msg_sig_get(msg, "DI_accelPedalPos")
   end
 
-  gear_led(int(gear_sig['value']))
+  if gear_sig == nil
+    return  # no frames seen yet
+  end
 
-  if pedal_sig != nil && pedal_sig['changed']
-    var pct = int(pedal_sig['value'])
+  gear_led(int(gear_sig))
+
+  if pedal_sig != nil && pedal_sig > 5
+    var pct = int(pedal_sig * 0.4)
     if pct > 5
-      print("Pedal " .. str(pct) .. "%  gear=" .. str(int(gear_sig['value'])))
+      print("Pedal " .. str(pct) .. "%  gear=" .. str(int(gear_sig)))
     end
   end
 end
@@ -49,18 +54,18 @@ def hazards_on()
   led_set(255, 200, 0)
   timer_after(150, /-> led_off())
 
-  var msg = can_msg_get("DAS_bodyControls", 0)
+  var msg = can_msg_get(0, "DAS_bodyControls")
   if msg == nil msg = can_msg_new("DAS_bodyControls", 0) end
-  can_msg_set(msg, "DAS_hazardLightRequest", 1)
+  msg_sig_set(msg, "DAS_hazardLightRequest", 1)
   can_msg_send(0, msg)
   print("Hazards ON")
 
   timer_after(3000, def()
-    var m2 = can_msg_get("DAS_bodyControls", 0)
+    var m2 = can_msg_get(0, "DAS_bodyControls")
     if m2 == nil
       m2 = can_msg_new("DAS_bodyControls", 0)
     end
-    can_msg_set(m2, "DAS_hazardLightRequest", 0)
+    msg_sig_set(m2, "DAS_hazardLightRequest", 0)
     can_msg_send(0, m2)
     print("Hazards OFF")
   end)

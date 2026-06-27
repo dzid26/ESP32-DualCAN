@@ -22,58 +22,54 @@ const mockMessages = [
   }
 ];
 
-test('preprocesses can_msg_get with string message name', () => {
-  const code = `can_msg_get("DAS_bodyControls", 0)`;
+test('preprocesses can_msg_get with bus-first order', () => {
+  const code = `can_msg_get(0, "DAS_bodyControls")`;
   const result = preprocessScript(code, mockMessages);
   assert(result.code.includes('can_msg_get(0, 0x3e9'));
   assert.equal(result.errors.length, 0);
 });
 
-test('preprocesses can_signal_get into __sig_get call', () => {
-  const code = `can_signal_get("DAS_bodyControls", "DAS_hazardLightRequest")`;
+test('name-first can_msg_get passes through unchanged', () => {
+  const code = `can_msg_get("DAS_bodyControls", 0)`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('__sig_get'));
-  assert(result.code.includes('0x3e9'));
-  assert(result.code.includes('0, 8, false, false, 1, 0'));
+  assert.equal(result.code, code);
   assert.equal(result.errors.length, 0);
 });
 
-test('preprocesses on_can_signal into __watch_sig call', () => {
-  const code = `on_can_signal("DAS_bodyControls", "DAS_hazardLightRequest", my_fn)`;
+test('inlines msg_sig_get into signal_decode call', () => {
+  const code = `var sig = msg_sig_get(msg, "DAS_hazardLightRequest")`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('__watch_sig'));
-  assert(result.code.includes('0x3e9'));
-  assert(result.code.includes('my_fn'));
+  assert(result.code.includes('signal_decode(msg["data"], 0, 8, false, false, 1, 0)'));
+  assert(!result.code.includes('can_recv_raw')); // no implicit recv
   assert.equal(result.errors.length, 0);
 });
 
-test('reports error for unknown message', () => {
-  const code = `can_msg_get("UNKNOWN_MSG", 0)`;
+test('reports error for unknown message in can_msg_get', () => {
+  const code = `can_msg_get(0, "UNKNOWN_MSG")`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
   assert(result.errors[0].includes('UNKNOWN_MSG'));
 });
 
-test('reports error for unknown signal', () => {
-  const code = `can_signal_get("DAS_bodyControls", "UNKNOWN_SIG")`;
+test('reports error for unknown signal in msg_sig_get', () => {
+  const code = `var x = msg_sig_get(msg, "UNKNOWN_SIG")`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
   assert(result.errors[0].includes('UNKNOWN_SIG'));
 });
 
-test('replaces can_msg_set with signal_encode inline', () => {
-  const code = `can_msg_set(msg, "DAS_hazardLightRequest", 1)`;
-  const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('signal_encode'));
-  assert(result.code.includes('msg["data"] ='));
-  assert.equal(result.errors.length, 0);
-});
-
-test('reports error for unknown signal in can_msg_set', () => {
-  const code = `can_msg_set(msg, "GHOST_SIG", 1)`;
+test('reports error for unknown signal in msg_sig_set', () => {
+  const code = `msg_sig_set(msg, "GHOST_SIG", 1)`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
   assert(result.errors[0].includes('GHOST_SIG'));
+});
+
+test('replaces msg_sig_set with signal_encode', () => {
+  const code = `msg_sig_set(msg, "DAS_hazardLightRequest", 1)`;
+  const result = preprocessScript(code, mockMessages);
+  assert(result.code.includes('signal_encode(msg["data"], 0, 8, false, false, 1, 0, 1)'));
+  assert.equal(result.errors.length, 0);
 });
 
 test('preprocesses can_msg_new with string message name', () => {
@@ -104,17 +100,32 @@ test('reports error for unknown message in can_msg_new', () => {
   assert(result.errors[0].includes('UNKNOWN_MSG'));
 });
 
-test('handles multiple replacements in one script', () => {
+test('can_msg_send passes through to native binding', () => {
   const code = [
-    'on_can_signal("DAS_bodyControls", "DAS_hazardLightRequest", fn)',
-    'can_signal_get("DAS_bodyControls", "DAS_hazardLightRequest")',
-    'can_msg_get("VCLEFT_doorStatus", 0)',
-    'can_msg_set(msg, "DAS_hazardLightRequest", 42)',
+    'var msg = can_msg_get(0, "DAS_bodyControls")',
+    'msg_sig_set(msg, "DAS_hazardLightRequest", 1)',
+    'can_msg_send(0, msg)',
   ].join('\n');
   const result = preprocessScript(code, mockMessages);
-  assert(result.code.includes('__watch_sig'));
-  assert(result.code.includes('__sig_get'));
-  assert(result.code.includes('can_msg_get(0, 0x102'));
-  assert(result.code.includes('signal_encode'));
+  assert(result.code.includes('can_msg_send(0, msg)'), 'can_msg_send should pass through unchanged');
+  assert(!result.code.includes('can_send_raw'), 'should NOT rewrite to can_send_raw');
+  assert(result.code.includes('signal_encode('));
+  assert.equal(result.errors.length, 0);
+});
+
+test('handles multiple replacements in one script', () => {
+  const code = [
+    'var msg = can_msg_get(0, "DAS_bodyControls")',
+    'msg_sig_set(msg, "DAS_hazardLightRequest", 42)',
+    'can_msg_send(0, msg)',
+    'var sig = msg_sig_get(msg, "DAS_hazardLightRequest")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert(result.code.includes('can_msg_get(0, 0x3e9'));
+  assert(result.code.includes('can_msg_send(0, msg)'), 'can_msg_send passes through');
+  assert(!result.code.includes('can_send_raw'), 'should NOT rewrite to can_send_raw');
+  assert(result.code.includes('signal_encode('));
+  assert(result.code.includes('signal_decode(msg["data"], 0, 8, false, false, 1, 0)'));
+  assert(!result.code.includes('can_recv_raw')); // no implicit recv
   assert.equal(result.errors.length, 0);
 });

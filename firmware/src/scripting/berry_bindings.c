@@ -489,7 +489,7 @@ static int l_can_recv_raw(bvm *vm)
 /* can_msg_get(bus:int, msg_id:int) -> draft | nil
  * Returns the latest received frame for msg_id as a message draft (map
  * instance with keys: id, data, dlc). Returns nil if no matching frame has
- * been received. The draft can be modified with can_msg_set and transmitted
+ * been received. The draft can be modified with msg_sig_set and transmitted
  * via can_msg_send. bus is first for consistency with can_send_raw/
  * can_recv_raw. */
 static int l_can_msg_get(bvm *vm)
@@ -554,7 +554,7 @@ static int l_can_msg_new(bvm *vm)
  * draft map instance via dot-member access. bus is first for consistency
  * with can_send_raw/can_recv_raw. The draft is kept bus-agnostic — pass the
  * bus at send time. Signal encoding and counter/checksum update must be done
- * in Berry before calling (use can_msg_set). */
+ * in Berry before calling (use msg_sig_set). */
 static int l_can_msg_send(bvm *vm)
 {
     CHECK_ARITY(vm, 2);
@@ -616,7 +616,7 @@ static int l_bit_extract(bvm *vm)
 /* bit_insert(data:bytes, start_bit:int, bit_length:int, big_endian:bool, raw:int) -> bytes
  * Returns a new bytes object with the raw integer value inserted at the
  * specified bit position. Berry bytes are immutable so this allocates a new
- * copy (8 bytes max). Used by the preprocessor for can_msg_set. */
+ * copy (8 bytes max). Used by the preprocessor for msg_sig_set. */
 static int l_bit_insert(bvm *vm)
 {
     CHECK_ARITY(vm, 5);
@@ -663,7 +663,7 @@ static int l_signal_decode(bvm *vm)
  *               is_signed:bool, scale:real, offset:real, value:real) -> bytes
  * Encode a physical value into a DBC signal bit field: subtract offset,
  * divide by scale, clamp, insert into a copy of data. Returns new bytes.
- * Used by the preprocessor-generated can_msg_set body. */
+ * Used by the preprocessor-generated msg_sig_set body. */
 static int l_signal_encode(bvm *vm)
 {
     CHECK_ARITY(vm, 8);

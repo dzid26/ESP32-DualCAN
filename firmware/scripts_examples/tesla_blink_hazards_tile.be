@@ -15,11 +15,11 @@ def flash_yellow(dur_ms)
 end
 
 def hazards_off()
-  var msg = can_msg_get("DAS_bodyControls", 0)
+  var msg = can_msg_get(0, "DAS_bodyControls")
   if msg == nil
     msg = can_msg_new("DAS_bodyControls", 0)
   end
-  can_msg_set(msg, "DAS_hazardLightRequest", 0)
+  msg_sig_set(msg, "DAS_hazardLightRequest", 0)
   can_msg_send(0, msg)
   print("Hazards off requested")
 end
@@ -27,11 +27,11 @@ end
 def hazards_on()
   flash_yellow(150)
 
-  var msg = can_msg_get("DAS_bodyControls", 0)
+  var msg = can_msg_get(0, "DAS_bodyControls")
   if msg == nil
     msg = can_msg_new("DAS_bodyControls", 0)
   end
-  can_msg_set(msg, "DAS_hazardLightRequest", 1)
+  msg_sig_set(msg, "DAS_hazardLightRequest", 1)
   can_msg_send(0, msg)
   print("Hazards on requested")
 

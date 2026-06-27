@@ -7,15 +7,15 @@
 
 def fold()
   print("=== fold ===")
-  var msg = can_msg_get("UI_vehicleControl", 0)
+  var msg = can_msg_get(0, "UI_vehicleControl")
   print("  can_msg_get -> " .. str(msg))
   if msg == nil
-    msg = can_msg_new("UI_vehicleControl", 0)
+    msg = can_msg_new("UI_vehicleControl")
     print("  can_msg_new -> " .. str(msg))
   end
   print("  msg type: " .. type(msg))
-  can_msg_set(msg, "UI_mirrorFoldRequest", 1)
-  print("  can_msg_set OK")
+  msg_sig_set(msg, "UI_mirrorFoldRequest", 1)
+  print("  msg_sig_set OK")
   can_msg_send(0, msg)
   print("  can_msg_send OK")
   led_set(0,0,40)
@@ -24,11 +24,11 @@ end
 
 def unfold()
   print("=== unfold ===")
-  var msg = can_msg_get("UI_vehicleControl", 0)
+  var msg = can_msg_get(0, "UI_vehicleControl")
   if msg == nil
-    msg = can_msg_new("UI_vehicleControl", 0)
+    msg = can_msg_new("UI_vehicleControl")
   end
-  can_msg_set(msg, "UI_mirrorFoldRequest", 2)
+  msg_sig_set(msg, "UI_mirrorFoldRequest", 2)
   can_msg_send(0, msg)
   led_set(0,0,40)
   timer_after(150, /-> led_off())

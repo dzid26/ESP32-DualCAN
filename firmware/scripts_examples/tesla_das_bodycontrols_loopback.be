@@ -1,5 +1,5 @@
 # @name Tesla DAS_bodyControls round-trip test
-# @description Builds a DAS_bodyControls message via can_msg_set, verifies
+# @description Builds a DAS_bodyControls message via msg_sig_set, verifies
 #              every signal with signal_decode, modifies and re-verifies.
 # @bus 0
 #
@@ -29,10 +29,10 @@ def run_test()
   print("1: Build message")
   var msg = can_msg_new("DAS_bodyControls", 0)
 
-  can_msg_set(msg, "DAS_headlightRequest", 2)
-  can_msg_set(msg, "DAS_hazardLightRequest", 1)
-  can_msg_set(msg, "DAS_wiperSpeed", 9)
-  can_msg_set(msg, "DAS_bodyControlsCounter", 5)
+  msg_sig_set(msg, "DAS_headlightRequest", 2)
+  msg_sig_set(msg, "DAS_hazardLightRequest", 1)
+  msg_sig_set(msg, "DAS_wiperSpeed", 9)
+  msg_sig_set(msg, "DAS_bodyControlsCounter", 5)
   print("   encoded: " .. str(msg["data"]))
 
   # ---- Phase 2: Verify ----
@@ -56,10 +56,10 @@ def run_test()
 
   # ---- Phase 4: Modify ----
   print("\n4: Modify signals")
-  can_msg_set(msg, "DAS_hazardLightRequest", 0)
-  can_msg_set(msg, "DAS_headlightRequest", 1)
-  can_msg_set(msg, "DAS_wiperSpeed", 3)
-  can_msg_set(msg, "DAS_bodyControlsCounter", 6)
+  msg_sig_set(msg, "DAS_hazardLightRequest", 0)
+  msg_sig_set(msg, "DAS_headlightRequest", 1)
+  msg_sig_set(msg, "DAS_wiperSpeed", 3)
+  msg_sig_set(msg, "DAS_bodyControlsCounter", 6)
   print("   modified: " .. str(msg["data"]))
 
   # ---- Phase 5: Re-verify ----

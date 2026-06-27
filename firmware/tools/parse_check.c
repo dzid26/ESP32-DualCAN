@@ -22,7 +22,7 @@ static const char *BINDING_NAMES[] = {
     "signal_decode", "signal_encode",
     /* Legacy API names — replaced at preprocess time. Kept here so
      * un-preprocessed .be source files parse correctly in CI checks. */
-    "can_signal_get", "on_can_signal", "can_msg_set",
+    "msg_sig_get", "on_can_signal", "msg_sig_set",
     "led_set", "led_off",
     "state_set", "state_get", "state_remove",
     "timer_after", "timer_every", "timer_cancel",

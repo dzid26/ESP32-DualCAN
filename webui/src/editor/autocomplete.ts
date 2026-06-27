@@ -23,8 +23,8 @@ interface BindingDoc {
  *
  * Naming hierarchy: can_<level>_<verb>
  *   raw frame:  can_send_raw, can_recv_raw   (no DBC, no encoding)
- *   message:    can_msg_get, can_msg_set, can_msg_send   (decoded, by id)
- *   signal:     can_signal_get, on_can_signal   (scoped by message name) */
+ *   message:    can_msg_get, msg_sig_set, can_msg_send   (decoded, by id)
+ *   signal:     msg_sig_get, on_can_signal   (scoped by message name) */
 const API: BindingDoc[] = [
   { label: 'can_send_raw',
     detail: 'can_send_raw(bus:int, id:int, data:bytes)',
@@ -34,26 +34,26 @@ const API: BindingDoc[] = [
     detail: 'can_recv_raw(bus:int, msg_id:int [, timeout_ms:int]) -> bytes | nil',
     documentation: 'Returns last payload for a CAN ID. Default 1000 ms timeout — first read blocks up to 1 s for initial data. Pass 0 for instant return. Blocking stalls Berry VM, only use in setup().',
     snippet: 'can_recv_raw(${bus}, ${msg_id})' },
-  { label: 'can_signal_get',
-    detail: 'can_signal_get(msg:str, sig:str [, bus:int]) -> {value, prev, changed} | nil',
-    documentation: 'Read the current decoded value of a DBC signal. Scoped by message — DBC signal names are unique only within a message.',
-    snippet: 'can_signal_get("${msg}", "${sig}")' },
+  { label: 'msg_sig_get',
+    detail: 'msg_sig_get(draft, sig:str) -> int',
+    documentation: 'Extract a raw integer bitfield from a pre-read message draft. Nil-guard the draft before calling.',
+    snippet: 'msg_sig_get(${msg}, "${sig}")' },
   { label: 'on_can_signal',
     detail: 'on_can_signal(msg:str, sig:str, fn(sig) [, bus:int])',
     documentation: 'Invoke fn(sig) whenever the signal changes. sig is {value, prev, sig_idx}. Scoped by message — DBC signal names collide across messages.',
     snippet: 'on_can_signal("${msg}", "${sig}", def(s)\n  ${body}\nend)' },
   { label: 'can_msg_new',
     detail: 'can_msg_new(name:str) | can_msg_new(id:int, dlc:int) -> draft',
-    documentation: 'Create a fresh zeroed message draft. Name form auto-fills DLC from DBC. Use with can_msg_set, then can_msg_send.',
+    documentation: 'Create a fresh zeroed message draft. Name form auto-fills DLC from DBC. Use with msg_sig_set, then can_msg_send.',
     snippet: 'can_msg_new("${msg}")' },
   { label: 'can_msg_get',
     detail: 'can_msg_get(bus:int, id:int | name:str) -> draft | nil',
     documentation: 'Take a draft of the latest rx for this message id or DBC message name. bus is always first. Returns nil if no frame received — use can_msg_new for a fresh draft.',
     snippet: 'can_msg_get(${bus}, "${msg}")' },
-  { label: 'can_msg_set',
-    detail: 'can_msg_set(draft, sig:str, value)',
+  { label: 'msg_sig_set',
+    detail: 'msg_sig_set(draft, sig:str, value)',
     documentation: 'Modify one signal in the draft, leaving other bits intact. Signal lookup is scoped to the draft\'s message.',
-    snippet: 'can_msg_set(${msg}, "${sig}", ${value})' },
+    snippet: 'msg_sig_set(${msg}, "${sig}", ${value})' },
   { label: 'can_msg_send',
     detail: 'can_msg_send(bus:int, draft) -> nil',
     documentation: 'Transmit a message draft on the given bus. bus is first for consistency with can_send_raw, can_recv_raw.',
@@ -125,9 +125,9 @@ export const BUILTINS = new Set([...API.map(b => b.label), ...BERRY_BUILTINS]);
 export const KEYWORD_SET = new Set(KEYWORDS);
 
 /* Functions that expect a DBC message name as the first string argument. */
-const DBC_MSG_FUNCS = new Set(['can_signal_get', 'on_can_signal', 'can_msg_get', 'can_msg_new']);
+const DBC_MSG_FUNCS = new Set(['on_can_signal', 'can_msg_get', 'can_msg_new']);
 /* Functions that also expect a DBC signal name as the second string argument. */
-const DBC_SIG_FUNCS = new Set(['can_signal_get', 'on_can_signal']);
+const DBC_SIG_FUNCS = new Set(['msg_sig_get', 'on_can_signal']);
 
 const berryCompletions: Completion[] = [
   ...API.map(binding => snippetCompletion(binding.snippet ?? binding.label, {

@@ -144,38 +144,41 @@ for (const fn of scriptFiles) {
 
 /* ---- Spot-check specific preprocessor output ---- */
 
-test('tesla_blink_hazards_tile .bep contains signal_encode and hex ID', () => {
+test('tesla_blink_hazards_tile .bep uses can_msg_get with hex id', () => {
   const code = readFileSync(join(examplesDir, 'tesla_blink_hazards_tile.be'), 'utf-8');
   const result = preprocessScript(code, messages);
-  assert(result.code.includes('signal_encode'), 'should contain signal_encode');
   assert(result.code.includes('0x3e9'), 'should contain hex message ID');
+  assert(result.code.includes('signal_encode('), 'should contain signal_encode() calls');
   assert(!result.code.includes('"DAS_bodyControls"'), 'message name should be replaced');
+  assert(result.code.includes('can_msg_send('), 'can_msg_send should pass through');
 });
 
-test('tesla_gear_led_demo .bep contains __sig_get helpers', () => {
+test('tesla_gear_led_demo .bep inlines msg_sig_get into signal_decode', () => {
   const code = readFileSync(join(examplesDir, 'tesla_gear_led_demo.be'), 'utf-8');
   const result = preprocessScript(code, messages);
-  assert(result.code.includes('__sig_get'), 'should contain __sig_get');
   assert(result.code.includes('0x118'), 'should contain DI_systemStatus hex ID');
-  assert(result.code.includes('21, 3, false, false, 1, 0'), 'DI_gear metadata should be inlined');
-  assert(result.code.includes('32, 8, false, false, 0.4, 0'), 'DI_accelPedalPos metadata should be inlined');
+  assert(result.code.includes('can_msg_get(0, 0x118)'), 'should contain can_msg_get for DI_systemStatus');
+  assert(result.code.includes('signal_decode('), 'should contain signal_decode() calls');
 });
 
-test('window_drop_on_handle_pull .bep contains __watch_sig helpers', () => {
+test('window_drop_on_handle_pull .bep uses signal_decode', () => {
   const code = readFileSync(join(examplesDir, 'window_drop_on_handle_pull.be'), 'utf-8');
   const result = preprocessScript(code, messages);
-  assert(result.code.includes('__watch_sig'), 'should contain __watch_sig');
+  assert(result.code.includes('can_msg_send('), 'can_msg_send should pass through');
+  assert(result.code.includes('0x294'), 'should contain UI_vehicleControl3 hex ID');
+  assert(result.code.includes('0x102'), 'should contain VCLEFT_doorStatus hex ID');
   assert(result.code.includes('0x103'), 'should contain VCRIGHT_doorStatus hex ID');
-  assert(result.code.includes('VCRIGHT_frontHandlePulled'), 'signal name used as key in __watch_sig');
+  assert(result.code.includes('can_msg_get(0, 0x102)'), 'should contain can_msg_get for VCLEFT');
+  assert(result.code.includes('can_msg_get(0, 0x103)'), 'should contain can_msg_get for VCRIGHT');
+  assert(result.code.includes('signal_decode('), 'should contain signal_decode() calls');
 });
 
 test('tesla_das_bodycontrols_loopback .bep has all signal_encode calls', () => {
   const code = readFileSync(join(examplesDir, 'tesla_das_bodycontrols_loopback.be'), 'utf-8');
   const result = preprocessScript(code, messages);
-  // Count signal_encode calls — each can_msg_set generates one
-  const matches = result.code.match(/signal_encode/g);
-  assert.ok(matches, 'should contain signal_encode calls');
-  assert.equal(matches.length, 8, 'tesla_das_bodycontrols_loopback has 8 can_msg_set calls');
+  const matches = result.code.match(/signal_encode\(/g);
+  assert.ok(matches, 'should contain signal_encode() calls');
+  assert.equal(matches.length, 8, 'tesla_das_bodycontrols_loopback has 8 msg_sig_set calls');
 });
 
 test('raw CAN scripts pass through unchanged', () => {

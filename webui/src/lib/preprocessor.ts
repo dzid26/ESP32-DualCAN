@@ -5,20 +5,16 @@
  * All signal metadata is inlined as Berry code by the preprocessor.
  *
  * Conversion rules:
- *   can_msg_new("msg" [, bus])      → can_msg_new(0xID, dlc)  (bus dropped)
- *   can_msg_get("msg" [, bus])      → can_msg_get(bus, 0xID)
- *   can_signal_get("msg", "sig" [, bus])
- *     → __sig_get(msg_id, sb, len, be, sg, sc, off [, bus])
- *   on_can_signal("msg", "sig", fn [, bus])
- *     → __watch_sig(msg_id, sb, len, be, sg, sc, off [, bus], fn)
- *   can_msg_set(draft, "sig", value)
- *     → draft.data = signal_encode(draft.data, sb, len, be, sg, sc, off, value)
+ *   can_msg_get(bus, "msg")         → can_msg_get(bus, 0xID)
+ *   can_msg_new("msg")              → can_msg_new(0xID, dlc)
+ *   msg_sig_set(draft, "sig", val)  → draft["data"] = signal_encode(draft["data"], sb, len, be, signed, scale, offset, val)
+ *   msg_sig_get(draft, "sig")    → signal_decode(draft["data"], sb, len, be, signed, scale, offset)
  * Missing signals/messages → raise("key_error", "...")
  */
 
 import type { Message, Signal } from '../dbc/parser';
 
-/* Build a Berry signal-metadata key from a Signal. */
+/* Build signal-decode/encode arg list from a Signal. */
 function sigMeta(s: Signal): string {
   return [
     s.startBit,
@@ -28,59 +24,6 @@ function sigMeta(s: Signal): string {
     s.scale,
     s.offset,
   ].join(', ');
-}
-
-/* ---- Helper-function generation ---- */
-
-let helperSigGet: string | null = null;
-let helperWatchSig: string | null = null;
-let helperTimer: string | null = null;
-
-function ensureHelperSigGet(): void {
-  if (helperSigGet) return;
-  helperSigGet = [
-    'def __sig_get(msg_id, sb, len, be, sg, sc, off, bus)',
-    '  var f = can_msg_get(bus, msg_id)',
-    '  if f != nil',
-    '    return signal_decode(f.data, sb, len, be, sg, sc, off)',
-    '  end',
-    '  return nil',
-    'end',
-  ].join('\n');
-}
-
-function ensureHelperWatchSig(): void {
-  if (helperWatchSig) return;
-  helperWatchSig = [
-    'def __watch_sig(msg_id, sb, len, be, sg, sc, off, bus, fn)',
-    '  var _key = str(msg_id) + ":" + str(sb) + ":" + str(len)',
-    '  if var __subs && __subs.find(_key) return end',
-    '  if !var __subs __subs = {} end',
-    '  __subs[_key] = {prev: nil, fn: fn, msg_id: msg_id, sb: sb, len: len, be: be, sg: sg, sc: sc, off: off, bus: bus}',
-    '  if !var __poll_timer',
-    '    __poll_timer = timer.every(50, def()',
-    '      for var k : __subs.keys()',
-    '        var s = __subs[k]',
-    '        var f = can_msg_get(s.bus, s.msg_id)',
-    '        if f != nil',
-    '          var v = signal_decode(f.data, s.sb, s.len, s.be, s.sg, s.sc, s.off)',
-    '          if v != s.prev',
-    '            s.fn({value: v, prev: s.prev, changed: s.prev != nil})',
-    '            s.prev = v',
-    '          end',
-    '        end',
-    '      end',
-    '    end)',
-    '  end',
-    'end',
-  ].join('\n');
-}
-
-function buildHelpers(): string {
-  const parts: string[] = [];
-  if (helperSigGet) parts.push(helperSigGet);
-  if (helperWatchSig) parts.push(helperWatchSig);
-  return parts.length ? '\n\n' + parts.join('\n\n') + '\n\n' : '';
 }
 
 /* ---- Replace-at helper (end-to-start offset-safe) ---- */
@@ -99,13 +42,8 @@ export function preprocessScript(
   let code = sourceCode;
 
   const replacements: Array<{ start: number; end: number; replacement: string }> = [];
-  const missingSignals = new Set<string>();
   const missingMessages = new Set<string>();
-
-  helperSigGet = null;
-  helperWatchSig = null;
-
-  /* ---- Helpers to look up signals and messages ---- */
+  const missingSignals = new Set<string>();
 
   function findSigInMsg(msgName: string, sigName: string): { msg: Message; sig: Signal; idx: number } | null {
     for (const msg of messages) {
@@ -137,14 +75,14 @@ export function preprocessScript(
     return null;
   }
 
-  /* ---- Pattern 1: can_msg_get("msg" [, bus]) ---- */
-  // Matches: can_msg_get("msg") or can_msg_get("msg", bus)
-  // Reorders to can_msg_get(bus, 0xID) — bus is always first.
-  const canMsgGetPattern = /can_msg_get\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
+  /* ---- Pattern 1: can_msg_get(bus, "msg") ---- */
+  // Bus is always first and required. Rewrites to can_msg_get(bus, 0xID)
+  // which returns a draft map {id, data, dlc} via the C binding.
+  const canMsgGetPattern = /can_msg_get\s*\(\s*(\d+)\s*,\s*"([^"]+)"\s*\)/g;
   let match: RegExpExecArray | null;
   while ((match = canMsgGetPattern.exec(code)) !== null) {
-    const msgName = match[1];
-    const trailing = match[2]; // e.g. ", 1" or ""
+    const bus = match[1];
+    const msgName = match[2];
     const fullMatch = match[0];
     const matchStart = match.index;
     const matchEnd = matchStart + fullMatch.length;
@@ -158,15 +96,13 @@ export function preprocessScript(
       continue;
     }
 
-    const bus = trailing ? trailing.trim().replace(/^,\s*/, '') : '0';
     const replacement = `can_msg_get(${bus}, 0x${msgId.toString(16)})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
   /* ---- Pattern 1b: can_msg_new("msg" [, bus]) ---- */
-  // Resolves message name to ID + DLC from DBC; passes through to the
-  // on-device `can_msg_new(id, dlc)` C binding. Bus is ignored — the draft
-  // is bus-agnostic; pass it at send time via can_msg_send(bus, draft).
+  // Resolves message name to ID + DLC; emits can_msg_new(0xID, dlc)
+  // which returns a draft map {id, data, dlc} with zeroed data.
   const canMsgNewNamePattern = /can_msg_new\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
   while ((match = canMsgNewNamePattern.exec(code)) !== null) {
     const msgName = match[1];
@@ -188,63 +124,35 @@ export function preprocessScript(
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
-  /* ---- Pattern 2: can_signal_get("msg", "sig" [, bus]) ---- */
-  const canSigGetPattern =
-    /can_signal_get\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
+  /* ---- Pattern 2: msg_sig_get(draft, "sig") -> signal_decode(draft["data"], sb, len, be, signed, scale, offset) ---- */
+  // Decodes a DBC signal from a message draft bytes. Handles scale, offset,
+  // signedness, and byte order via the native signal_decode C binding.
+  const canSigGetPattern = /msg_sig_get\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*\)/g;
   while ((match = canSigGetPattern.exec(code)) !== null) {
-    const msgName = match[1];
+    const draftExpr = match[1].trim();
     const sigName = match[2];
-    const trailing = match[3]; // ", bus" or ""
     const fullMatch = match[0];
     const matchStart = match.index;
     const matchEnd = matchStart + fullMatch.length;
 
-    const ref = findSigInMsg(msgName, sigName);
-    if (!ref) {
-      missingSignals.add(`${msgName}.${sigName}`);
-      errors.push(`can_signal_get: signal '${msgName}.${sigName}' not found`);
-      const replacement = `raise("key_error", "can_signal_get: signal '${msgName}.${sigName}' not found")`;
+    const sig = findSignalByName(sigName);
+    if (!sig) {
+      missingSignals.add(sigName);
+      errors.push(`msg_sig_get: signal '${sigName}' not found`);
+      const replacement = `raise("key_error", "msg_sig_get: signal '${sigName}' not found")`;
       replacements.push({ start: matchStart, end: matchEnd, replacement });
       continue;
     }
 
-    ensureHelperSigGet();
-    const busArg = trailing ? trailing.trim() : '0';
-    const replacement = `__sig_get(0x${ref.msg.id.toString(16)}, ${sigMeta(ref.sig)}, ${busArg})`;
+    const replacement = `signal_decode(${draftExpr}["data"], ${sigMeta(sig)})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
-  /* ---- Pattern 3: on_can_signal("msg", "sig", fn [, bus]) ---- */
-  // Matches: on_can_signal("msg", "sig", fn) or on_can_signal("msg", "sig", fn, bus)
-  const onCanSignalPattern =
-    /on_can_signal\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*([^,]+)\s*((?:,\s*\d+\s*)?)\)/g;
-  while ((match = onCanSignalPattern.exec(code)) !== null) {
-    const msgName = match[1];
-    const sigName = match[2];
-    const fnExpr = match[3].trim();
-    const trailing = match[4]; // ", bus" or ""
-    const fullMatch = match[0];
-    const matchStart = match.index;
-    const matchEnd = matchStart + fullMatch.length;
-
-    const ref = findSigInMsg(msgName, sigName);
-    if (!ref) {
-      missingSignals.add(`${msgName}.${sigName}`);
-      errors.push(`on_can_signal: signal '${msgName}.${sigName}' not found`);
-      const replacement = `raise("key_error", "on_can_signal: signal '${msgName}.${sigName}' not found")`;
-      replacements.push({ start: matchStart, end: matchEnd, replacement });
-      continue;
-    }
-
-    ensureHelperWatchSig();
-    const busArg = trailing ? trailing.trim() : '0';
-    const replacement = `__watch_sig(0x${ref.msg.id.toString(16)}, ${sigMeta(ref.sig)}, ${busArg}, ${fnExpr})`;
-    replacements.push({ start: matchStart, end: matchEnd, replacement });
-  }
-
-  /* ---- Pattern 4: can_msg_set(draft, "sig", value) ---- */
+  /* ---- Pattern 4: msg_sig_set(draft, "sig", value) -> draft["data"] = signal_encode(...) ---- */
+  // Encodes a physical value into a DBC signal bit field. The native
+  // signal_encode handles scale, offset, signedness, and byte order.
   const canMsgSetPattern =
-    /can_msg_set\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*([^)]+)\)/g;
+    /msg_sig_set\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*([^)]+)\)/g;
   while ((match = canMsgSetPattern.exec(code)) !== null) {
     const draftExpr = match[1].trim();
     const sigName = match[2];
@@ -256,8 +164,8 @@ export function preprocessScript(
     const sig = findSignalByName(sigName);
     if (!sig) {
       missingSignals.add(sigName);
-      errors.push(`can_msg_set: signal '${sigName}' not found`);
-      const replacement = `raise("key_error", "can_msg_set: signal '${sigName}' not found")`;
+      errors.push(`msg_sig_set: signal '${sigName}' not found`);
+      const replacement = `raise("key_error", "msg_sig_set: signal '${sigName}' not found")`;
       replacements.push({ start: matchStart, end: matchEnd, replacement });
       continue;
     }
@@ -270,12 +178,6 @@ export function preprocessScript(
   replacements.sort((a, b) => b.start - a.start);
   for (const r of replacements) {
     code = replaceAt(code, r.start, r.end, r.replacement);
-  }
-
-  /* ---- Prepend Berry helper functions if needed ---- */
-  const helpers = buildHelpers();
-  if (helpers) {
-    code = code + helpers;
   }
 
   return { code, errors };
