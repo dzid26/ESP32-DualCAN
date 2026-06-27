@@ -14,11 +14,13 @@
 #define CAN_ERR_NO_FRAME (-203)
 
 /* Ring buffer of twai_message_t at fixed depth (CAN_FRAME_CACHE).
- * frames[0].identifier == 0 means a cache slot is free. */
+ * frames[0].identifier == 0 means a cache slot is free.
+ * last_us = esp_timer_get_time() at most recent push (microseconds). */
 typedef struct {
     twai_message_t frames[CAN_FRAME_CACHE]; // mini ring buffer
     uint8_t        head;     /* next write index */
     uint8_t        count;    /* frames stored (0..CAN_FRAME_CACHE) */
+    uint32_t       last_us;  /* μs timestamp of most recent push */
 } msg_ring_t;
 
 typedef struct {

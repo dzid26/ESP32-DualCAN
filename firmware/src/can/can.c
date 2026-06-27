@@ -1,12 +1,12 @@
 #include "can/can.h"
 #include "can/can_driver.h"
+#include "scripting/berry_bindings.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include <inttypes.h>
 
-#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -47,6 +47,7 @@ static void ring_push(msg_ring_t *ring, const twai_message_t *msg)
     ring->frames[ring->head] = *msg;
     ring->head = (ring->head + 1) % CAN_FRAME_CACHE;
     if (ring->count < CAN_FRAME_CACHE) ring->count++;
+    ring->last_us = (uint32_t)esp_timer_get_time();
 }
 
 static const twai_message_t *ring_latest(const msg_ring_t *ring)
@@ -75,6 +76,7 @@ static int cache_check(msg_ring_t *cache, uint32_t msg_id)
     cache[i].frames[0].identifier = msg_id;
     cache[i].head = 0;
     cache[i].count = 0;
+    cache[i].last_us = 0;
     return i;
 }
 
