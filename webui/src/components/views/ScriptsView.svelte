@@ -160,7 +160,7 @@
   }
 
   async function save(): Promise<void> {
-    const fn = normalizeScriptFilename((selFn ?? editorFilename).trim());
+    const fn = normalizeScriptFilename(editorFilename.trim());
     if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
     busy = true;
     const wasEnabled = !!scripts.find(s => s.filename === fn)?.enabled;
