@@ -568,20 +568,36 @@ static int l_can_msg_send(bvm *vm)
     can_t *eng = get_bus(bus);
     if (!eng) be_return_nil(vm);
 
-    be_getmember(vm, 2, "id");
+    /* Map class instances store key-value pairs in a hidden .p member.
+     * be_getmember only finds direct instance members (.p, methods) but
+     * NOT keys inside .p. Use be_getmember(".p") + be_getindex("key")
+     * to access them, matching Berry's own be_maplib.c pattern. */
+    be_getmember(vm, 2, ".p");
+    int p_idx = be_top(vm);
+
+    be_pushstring(vm, "id");
+    be_getindex(vm, p_idx);
     uint32_t id = (uint32_t)be_toint(vm, -1);
     be_pop(vm, 1);
 
-    be_getmember(vm, 2, "dlc");
+    be_pushstring(vm, "dlc");
+    be_getindex(vm, p_idx);
     int dlc = be_toint(vm, -1);
     be_pop(vm, 1);
 
-    be_getmember(vm, 2, "data");
+    be_pushstring(vm, "data");
+    be_getindex(vm, p_idx);
     size_t len = 0;
     const uint8_t *draft_data = be_tobytes(vm, -1, &len);
     uint8_t data[8];
-    memcpy(data, draft_data, len > 8 ? 8 : len);
+    if (draft_data) {
+        memcpy(data, draft_data, len > 8 ? 8 : len);
+    } else {
+        memset(data, 0, 8);
+        len = 0;
+    }
     be_pop(vm, 1);
+    be_pop(vm, 1); /* .p */
 
     can_send(eng, id, data, (uint8_t)dlc);
     be_return_nil(vm);
