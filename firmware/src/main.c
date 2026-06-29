@@ -24,6 +24,7 @@
 #include "wifi/wifi.h"
 #include "http_file_server/http_file_server.h"
 #include "ota/ota.h"
+#include "zmq_can/zmq_can.h"
 
 static const char *TAG = "dorky";
 
@@ -83,6 +84,8 @@ static void hw_init(void)
 
     fs_init();
     wifi_init();
+    zmq_can_init();
+    can_set_raw_observer(zmq_can_observer_cb);
     tesla_ble_init();
     tesla_vehicle_init();
 }

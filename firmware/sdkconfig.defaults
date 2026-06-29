@@ -58,3 +58,11 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 # stays idle.
 CONFIG_ESP_WIFI_ENABLED=y
 CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+
+# Size optimization: use -Os instead of -Og to shrink firmware and
+# reduce .flash_rodata_dummy MMU padding.
+# CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+# CONFIG_COMPILER_OPTIMIZATION_DEBUG is not set
+
+# Drop assertions for release builds (they bloat .text + .rodata).
+# CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE=y

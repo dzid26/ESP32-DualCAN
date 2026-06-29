@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { preprocessScript } from '../src/lib/preprocessor.ts';
+import { preprocessScript, buildVarToMsgMap, trackVarToMsgs } from '../src/lib/preprocessor.ts';
 
 const mockMessages = [
   {
@@ -176,4 +176,53 @@ test('allows signal from variable assigned to multiple message types — falls b
   const result = preprocessScript(code, mockMessages);
   assert.equal(result.errors.length, 0);
   assert(result.code.includes('msg_sig_get(msg, 0, 8, false, false, 1, 0)'));
+});
+
+/* ---- buildVarToMsgMap / trackVarToMsgs ---- */
+
+test('buildVarToMsgMap tracks a simple assignment', () => {
+  const code = 'var msg_r = can_msg_get(0, "VCRIGHT_doorStatus")';
+  const map = buildVarToMsgMap(code);
+  assert.equal(map.get('msg_r'), 'VCRIGHT_doorStatus');
+  assert.equal(map.size, 1);
+});
+
+test('buildVarToMsgMap excludes variables with multiple message types', () => {
+  const code = [
+    'var msg = can_msg_get(0, "DAS_bodyControls")',
+    'msg = can_msg_get(0, "VCLEFT_doorStatus")',
+  ].join('\n');
+  const map = buildVarToMsgMap(code);
+  assert(!map.has('msg'), 'msg should be excluded (assigned to 2 messages)');
+});
+
+test('buildVarToMsgMap tracks can_msg_new assignment', () => {
+  const code = 'var m = can_msg_new("UI_vehicleControl3")';
+  const map = buildVarToMsgMap(code);
+  assert.equal(map.get('m'), 'UI_vehicleControl3');
+});
+
+test('buildVarToMsgMap tracks across multiple lines', () => {
+  const code = [
+    'var msg_l = can_msg_get(0, "VCLEFT_doorStatus")',
+    'var msg_r = can_msg_get(0, "VCRIGHT_doorStatus")',
+    'var m = can_msg_new("UI_vehicleControl3")',
+  ].join('\n');
+  const map = buildVarToMsgMap(code);
+  assert.equal(map.get('msg_l'), 'VCLEFT_doorStatus');
+  assert.equal(map.get('msg_r'), 'VCRIGHT_doorStatus');
+  assert.equal(map.get('m'), 'UI_vehicleControl3');
+  assert.equal(map.size, 3);
+});
+
+test('buildVarToMsgMap does not false-match msg_sig_get', () => {
+  const code = 'msg_sig_get(msg_r, "VCLEFT_frontLatchStatus")';
+  const map = buildVarToMsgMap(code);
+  assert.equal(map.size, 0);
+});
+
+test('buildVarToMsgMap does not false-match == comparison', () => {
+  const code = 'if msg == nil msg = can_msg_new("DAS_bodyControls", 0) end';
+  const map = buildVarToMsgMap(code);
+  assert.equal(map.get('msg'), 'DAS_bodyControls', 'should match actual assignment but not ==');
 });
