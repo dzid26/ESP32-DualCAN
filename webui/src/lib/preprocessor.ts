@@ -37,6 +37,42 @@ function replaceAt(str: string, start: number, end: number, replacement: string)
   return str.substring(0, start) + replacement + str.substring(end);
 }
 
+/* ---- Track variable → message name mappings ---- */
+// Scans source for var X = can_msg_get(bus, "msg") / can_msg_new("msg")
+// assignments. Returns a map of variable name → set of message types it
+// was assigned from (may be >1, indicating a reused variable).
+export function trackVarToMsgs(source: string): Map<string, Set<string>> {
+  const varToMsgs = new Map<string, Set<string>>();
+  const varGetRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_get\s*\(\s*\d+\s*,\s*"([^"]+)"\s*\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = varGetRe.exec(source)) !== null) {
+    const varName = m[1];
+    const msgName = m[2];
+    if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
+    varToMsgs.get(varName)!.add(msgName);
+  }
+  const varNewRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_new\s*\(\s*"([^"]+)"\s*(?:,\s*\d+\s*)?\)/g;
+  while ((m = varNewRe.exec(source)) !== null) {
+    const varName = m[1];
+    const msgName = m[2];
+    if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
+    varToMsgs.get(varName)!.add(msgName);
+  }
+  return varToMsgs;
+}
+
+/** Like trackVarToMsgs but only returns variables with exactly one unique message. */
+export function buildVarToMsgMap(source: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const multiple = new Set<string>();
+  for (const [varName, msgs] of trackVarToMsgs(source)) {
+    if (msgs.size === 1 && !multiple.has(varName)) {
+      map.set(varName, msgs.values().next().value!);
+    }
+  }
+  return map;
+}
+
 /* ---- Main entry point ---- */
 
 export function preprocessScript(
@@ -78,6 +114,51 @@ export function preprocessScript(
       }
     }
     return null;
+  }
+
+  function findMsgContainingSignal(sigName: string): Message | null {
+    for (const msg of messages) {
+      for (const sig of msg.signals) {
+        if (sig.name === sigName) return msg;
+      }
+    }
+    return null;
+  }
+
+  const varToMsgs = trackVarToMsgs(sourceCode);
+
+  function resolveSignalInDraft(
+    draftExpr: string,
+    sigName: string,
+    context: string
+  ): { sig: Signal | null; error: string | null } {
+    const isSimpleVar = /^\w+$/.test(draftExpr);
+    const msgNames = isSimpleVar ? varToMsgs.get(draftExpr) : undefined;
+    const uniqueMsgName = msgNames && msgNames.size === 1 ? msgNames.values().next().value : null;
+
+    if (uniqueMsgName) {
+      // We know exactly which message this variable belongs to
+      const found = findSigInMsg(uniqueMsgName, sigName);
+      if (found) return { sig: found.sig, error: null };
+
+      // Signal not found in expected message — check if it belongs elsewhere
+      const owner = findMsgContainingSignal(sigName);
+      if (owner && owner.name !== uniqueMsgName) {
+        return {
+          sig: null,
+          error: `${context}: signal '${sigName}' belongs to '${owner.name}', not '${uniqueMsgName}'`
+        };
+      }
+      return {
+        sig: null,
+        error: `${context}: signal '${sigName}' not found in message '${uniqueMsgName}'`
+      };
+    }
+
+    // Untracked or multi-assigned variable — fall back to global search
+    const sig = findSignalByName(sigName);
+    if (!sig) return { sig: null, error: `${context}: signal '${sigName}' not found` };
+    return { sig, error: null };
   }
 
   /* ---- Pattern 1: can_msg_get(bus, "msg") ---- */
@@ -140,16 +221,16 @@ export function preprocessScript(
     const matchStart = match.index;
     const matchEnd = matchStart + fullMatch.length;
 
-    const sig = findSignalByName(sigName);
-    if (!sig) {
+    const resolved = resolveSignalInDraft(draftExpr, sigName, 'msg_sig_get');
+    if (!resolved.sig) {
       missingSignals.add(sigName);
-      errors.push(`msg_sig_get: signal '${sigName}' not found`);
-      const replacement = `raise("key_error", "msg_sig_get: signal '${sigName}' not found")`;
+      errors.push(resolved.error!);
+      const replacement = `raise("key_error", "${resolved.error!.replace(/"/g, '\\"')}")`;
       replacements.push({ start: matchStart, end: matchEnd, replacement });
       continue;
     }
 
-    const replacement = `msg_sig_get(${draftExpr}, ${sigMeta(sig)})`;
+    const replacement = `msg_sig_get(${draftExpr}, ${sigMeta(resolved.sig)})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 
@@ -166,16 +247,16 @@ export function preprocessScript(
     const matchStart = match.index;
     const matchEnd = matchStart + fullMatch.length;
 
-    const sig = findSignalByName(sigName);
-    if (!sig) {
+    const resolved = resolveSignalInDraft(draftExpr, sigName, 'msg_sig_set');
+    if (!resolved.sig) {
       missingSignals.add(sigName);
-      errors.push(`msg_sig_set: signal '${sigName}' not found`);
-      const replacement = `raise("key_error", "msg_sig_set: signal '${sigName}' not found")`;
+      errors.push(resolved.error!);
+      const replacement = `raise("key_error", "${resolved.error!.replace(/"/g, '\\"')}")`;
       replacements.push({ start: matchStart, end: matchEnd, replacement });
       continue;
     }
 
-    const replacement = `msg_sig_set(${draftExpr}, ${sigMeta(sig)}, ${valueExpr})`;
+    const replacement = `msg_sig_set(${draftExpr}, ${sigMeta(resolved.sig)}, ${valueExpr})`;
     replacements.push({ start: matchStart, end: matchEnd, replacement });
   }
 

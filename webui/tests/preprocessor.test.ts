@@ -19,6 +19,14 @@ const mockMessages = [
     signals: [
       { name: 'VCLEFT_frontLatchStatus', startBit: 0, bitLength: 2, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 }
     ]
+  },
+  {
+    id: 0x103,
+    name: 'VCRIGHT_doorStatus',
+    dlc: 8,
+    signals: [
+      { name: 'VCRIGHT_frontHandlePulled', startBit: 10, bitLength: 1, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 }
+    ]
   }
 ];
 
@@ -126,4 +134,46 @@ test('handles multiple replacements in one script', () => {
   assert(result.code.includes('msg_sig_set(msg, 0, 8, false, false, 1, 0, 42)'));
   assert(result.code.includes('msg_sig_get(msg, 0, 8, false, false, 1, 0)'));
   assert.equal(result.errors.length, 0);
+});
+
+test('errors when signal does not belong to the tracked message (msg_sig_get)', () => {
+  const code = `var msg_r = can_msg_get(0, "VCRIGHT_doorStatus")\nmsg_sig_get(msg_r, "VCLEFT_frontLatchStatus")`;
+  const result = preprocessScript(code, mockMessages);
+  const crossErr = result.errors.find(e => e.includes("belongs to"));
+  assert(crossErr, `expected a cross-message error, got: ${JSON.stringify(result.errors)}`);
+  assert(crossErr.includes("VCLEFT_doorStatus"));
+  assert(crossErr.includes("VCRIGHT_doorStatus"));
+});
+
+test('errors when signal does not belong to the tracked message (msg_sig_set)', () => {
+  const code = `var msg = can_msg_get(0, "VCLEFT_doorStatus")\nmsg_sig_set(msg, "DAS_hazardLightRequest", 1)`;
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.length > 0);
+  assert(result.errors[0].includes("belongs to 'DAS_bodyControls'"));
+  assert(result.errors[0].includes("not 'VCLEFT_doorStatus'"));
+});
+
+test('allows signal that belongs to the tracked message', () => {
+  const code = `var msg = can_msg_get(0, "VCLEFT_doorStatus")\nmsg_sig_get(msg, "VCLEFT_frontLatchStatus")`;
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert(result.code.includes('msg_sig_get(msg, 0, 2, false, false, 1, 0)'));
+});
+
+test('allows signal from untracked variable (no assignment seen) — falls back to global search', () => {
+  const code = `msg_sig_get(someParam, "DAS_hazardLightRequest")`;
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert(result.code.includes('msg_sig_get(someParam, 0, 8, false, false, 1, 0)'));
+});
+
+test('allows signal from variable assigned to multiple message types — falls back to global search', () => {
+  const code = [
+    'var msg = can_msg_get(0, "DAS_bodyControls")',
+    'msg = can_msg_get(0, "VCLEFT_doorStatus")',
+    'msg_sig_get(msg, "DAS_hazardLightRequest")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert(result.code.includes('msg_sig_get(msg, 0, 8, false, false, 1, 0)'));
 });
