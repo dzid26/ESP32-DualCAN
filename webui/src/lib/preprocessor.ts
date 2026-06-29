@@ -14,6 +14,11 @@
 
 import type { Message, Signal } from '../dbc/parser';
 
+/* ---- Scripting API version ---- */
+// The firmware reports scripting_api_version in system.info; the web UI warns
+// before uploading a script when versions don't match.
+export const SCRIPTING_API_VERSION = 1;
+
 /* Build signal-decode/encode arg list from a Signal. */
 function sigMeta(s: Signal): string {
   return [

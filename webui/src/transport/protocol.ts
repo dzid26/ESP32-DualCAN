@@ -322,7 +322,7 @@ export class Protocol {
     return this.call('ping');
   }
 
-  systemInfo(): Promise<{ fw_version: string; proto_version: number }> {
+  systemInfo(): Promise<{ fw_version: string; proto_version: number; scripting_api_version?: number }> {
     return this.call('system.info');
   }
 

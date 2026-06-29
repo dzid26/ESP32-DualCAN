@@ -334,6 +334,9 @@ static void handle_system_info(int id)
     /* Bumped when the JSON op set changes incompatibly. UI uses this to gate
      * features that the firmware doesn't recognise yet. */
     cJSON_AddNumberToObject(result, "proto_version", 6);
+    /* Bumped when Berry C binding set changes incompatibly. UI warns before
+     * uploading scripts validated against a different API version. */
+    cJSON_AddNumberToObject(result, "scripting_api_version", SCRIPTING_API_VERSION);
     send_ok(id, result);
 }
 

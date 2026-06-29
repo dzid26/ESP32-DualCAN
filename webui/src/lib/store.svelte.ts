@@ -100,6 +100,8 @@ class AppState {
 
   fwVersion = $state<string | null>(null);
   protoMismatch = $state<string | null>(null);
+  /** Firmware-declared scripting API version (undefined = firmware too old to report it). */
+  scriptingApiVersion = $state<number | undefined>(undefined);
   /** Advertised BLE name of the currently-connected device (e.g. "Dorky-A3F1"). */
   deviceName = $state<string | null>(null);
 
@@ -392,6 +394,7 @@ class AppState {
       this.proto.reset();
       this.fwVersion = null;
       this.protoMismatch = null;
+      this.scriptingApiVersion = undefined;
       this.simulation = false;
       this.killed = false;
       this.bus0Status = 'idle';
@@ -408,6 +411,7 @@ class AppState {
     try {
       const info = await this.proto.systemInfo();
       this.fwVersion = info.fw_version;
+      this.scriptingApiVersion = info.scripting_api_version;
       this.protoMismatch = info.proto_version !== UI_PROTO_VERSION
         ? `firmware proto v${info.proto_version}, UI expects v${UI_PROTO_VERSION} — some features may not work`
         : null;

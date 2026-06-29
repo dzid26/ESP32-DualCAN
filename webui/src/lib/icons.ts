@@ -5,7 +5,8 @@ export type IconName =
   | 'gallery' | 'log' | 'play' | 'pause' | 'stop' | 'down' | 'up' | 'filter'
   | 'power' | 'ble' | 'wifi' | 'sim' | 'check' | 'x' | 'chevD' | 'search'
   | 'plug' | 'trash' | 'engine' | 'volume' | 'mute' | 'events' | 'ai'
-  | 'bolt' | 'sparkle' | 'tool' | 'radio';
+  | 'bolt' | 'sparkle' | 'tool' | 'radio'
+  | 'alert-triangle' | 'upload';
 
 export const ICON_PATHS: Record<IconName, string[]> = {
   scripts:  ['M8 4h9l3 3v13H8z', 'M4 8h12v12H4z', 'M7 12h6', 'M7 15h4'],
@@ -46,4 +47,6 @@ export const ICON_PATHS: Record<IconName, string[]> = {
   sparkle:  ['M12 6l1.6 4.6L18 12l-4.4 1.4L12 18l-1.6-4.6L6 12l4.4-1.4z', 'M19 6l.6 1.4L21 8l-1.4.6L19 10l-.6-1.4L17 8l1.4-.6z'],
   tool:     ['M14.7 4.3a4 4 0 00-5.4 5.4l-6 6a2 2 0 102.8 2.8l6-6a4 4 0 005.4-5.4l-2.5 2.5-2.3-2.3z'],
   radio:    ['M3 9h18v9H3z', 'M3 9L20 3', 'M19.2 3A0.8 0.8 0 1 0 20.8 3A0.8 0.8 0 1 0 19.2 3', 'M6 12.5A2.5 2.5 0 1 0 11 13.5A2.5 2.5 0 1 0 6 13.5', 'M14 12h5', 'M14 15h5'],
+  'alert-triangle': ['M12 3l10 18H2z', 'M12 12v4', 'M12 17v1'],
+  upload:  ['M12 4v12', 'M7 9l5-5 5 5', 'M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2'],
 };

@@ -4,7 +4,7 @@
   import { dbcStore } from '../../dbcStore.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
   import { examples } from '../../examples';
-  import { preprocessScript } from '../../lib/preprocessor';
+  import { preprocessScript, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
   import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
@@ -25,6 +25,8 @@
   let editorFilename = $state<string>('my_script.be');
 
   let confirmRemove = $state<string | null>(null);
+  /** When non-null, the firmware scripting API version differs — show warning before .bep upload. */
+  let confirmScriptingVersion = $state<{ fw: number; ui: number; fn: string; source: string; bep: string; reenable: boolean } | null>(null);
   const dirty = $derived(code !== savedCode);
   let lastScriptStatusSeq = 0;
   let bepNavigationActive = $state(false);
@@ -175,23 +177,34 @@
       await refresh();
       busy = false;
 
-      // Then preprocess and upload .bep
+      // Then preprocess
       const result = preprocessScript(code, getFullMessages());
       if (result.errors.length > 0) {
         const errMsg = result.errors.join('; ');
-        app.pushLog(`scripts: preprocessing warnings — ${errMsg}`, 'warn', 'scripts');
+        app.pushLog(`scripts: preprocessing errors — ${errMsg}`, 'error', 'scripts');
+        throw new Error(`Preprocessing failed: ${errMsg}`);
       }
-      await app.proto.writeScript(fn, code, result.code);
-      // Reload the saved script from device to confirm clean state.
-      await loadScript(fn);
-      // Re-enable if it was running before editing.
-      if (wasEnabled) await enable(fn);
+      // Check scripting API version before uploading .bep
+      const fwVersion = app.scriptingApiVersion;
+      if (fwVersion !== undefined && fwVersion !== SCRIPTING_API_VERSION) {
+        // Show warning and pause — user must confirm to proceed
+        confirmScriptingVersion = { fw: fwVersion, ui: SCRIPTING_API_VERSION, fn, source: code, bep: result.code, reenable: wasEnabled };
+        return; // stop here; dialog handler calls uploadBep on confirm
+      }
+      await uploadBep(fn, code, result.code, wasEnabled);
       busy = false;
     } catch (e) {
       app.pushLog(`scripts: upload failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
     } finally {
       busy = false;
     }
+  }
+
+  /** Upload .bep and finalise. Extracted so the version-confirm dialog can retry. */
+  async function uploadBep(fn: string, source: string, bep: string, reenable: boolean): Promise<void> {
+    await app.proto.writeScript(fn, source, bep);
+    await loadScript(fn);
+    if (reenable) await enable(fn);
   }
 
   async function saveAndEnable(): Promise<void> {
@@ -417,6 +430,7 @@
 <div
   bind:this={containerEl}
   class="scripts-container"
+  role="region"
   style="padding: 12px; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 10px; touch-action: {isMobile ? 'none' : 'auto'}"
   style:overflow-y={isMobile ? 'hidden' : 'visible'}
   onpointerdown={onDragStart}
@@ -644,6 +658,57 @@
               disabled={busy}
             >
               <Icon name="trash" size={13} />Uninstall
+            </AlertDialog.Action>
+          </div>
+        </div>
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog.Root>
+
+  <AlertDialog.Root open={confirmScriptingVersion !== null} onOpenChange={(v) => !v && (confirmScriptingVersion = null)}>
+    <AlertDialog.Portal>
+      <AlertDialog.Overlay class="ad-overlay" />
+      <AlertDialog.Content class="frame ad-content"
+        onOpenAutoFocus={(e) => { e.preventDefault(); setTimeout(() => document.getElementById('ad-scripting-version-action')?.focus(), 20); }}
+      >
+        <div class="frame__head" style="color: var(--dc-warn-text)">
+          <AlertDialog.Title style="margin: 0; font-size: inherit; font-weight: inherit;" class="row-flex">
+            <Icon name="alert-triangle" size={13} /><span>Scripting API mismatch</span>
+          </AlertDialog.Title>
+          <AlertDialog.Cancel class="btn btn--sm btn--ghost btn--icon" aria-label="Cancel">
+            <Icon name="x" size={13} />
+          </AlertDialog.Cancel>
+        </div>
+        <div class="frame__body" style="display: flex; flex-direction: column; gap: 10px">
+          <AlertDialog.Description style="margin: 0; font-size: 13px; color: var(--dc-text-dim); line-height: 1.5">
+            Firmware reports <strong style="color: var(--dc-text)">scripting API v{confirmScriptingVersion?.fw}</strong>
+            but this UI validated against <strong style="color: var(--dc-text)">v{confirmScriptingVersion?.ui}</strong>.
+          </AlertDialog.Description>
+          <p style="margin: 0; font-size: 12px; color: var(--dc-text-fade); line-height: 1.45">
+            The script may use Berry C bindings that don't exist on this firmware version.
+            Are you sure you want to upload the compiled script?
+          </p>
+          <div class="row-flex" style="justify-content: flex-end; margin-top: 4px">
+            <AlertDialog.Cancel class="btn btn--sm btn--ghost">Cancel</AlertDialog.Cancel>
+            <AlertDialog.Action
+              id="ad-scripting-version-action"
+              class="btn btn--sm btn--warning"
+              onclick={async () => {
+                const v = confirmScriptingVersion;
+                if (!v) return;
+                confirmScriptingVersion = null;
+                busy = true;
+                try {
+                  await uploadBep(v.fn, v.source, v.bep, v.reenable);
+                } catch (e) {
+                  app.pushLog(`scripts: upload failed — ${e instanceof Error ? e.message : e}`, 'error', 'scripts');
+                } finally {
+                  busy = false;
+                }
+              }}
+              disabled={busy}
+            >
+              <Icon name="upload" size={13} />Upload anyway
             </AlertDialog.Action>
           </div>
         </div>

@@ -1,5 +1,10 @@
 #pragma once
 
+/* Bump when the Berry C binding set changes incompatibly (add/remove/change
+ * a be_regfunc call in berry_bindings.c). The web UI warns before uploading
+ * scripts validated against a different version. */
+#define SCRIPTING_API_VERSION 1
+
 #include "berry.h"
 #include "can/can.h"
 
