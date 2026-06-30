@@ -1,4 +1,4 @@
-import { snippetCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { EditorView, hoverTooltip, showTooltip, type Tooltip } from '@codemirror/view';
 import { StateField, type EditorState } from '@codemirror/state';
 import { dbcStore } from '../dbcStore.svelte';
@@ -134,9 +134,9 @@ export const BUILTINS = new Set([...API.map(b => b.label), ...BERRY_BUILTINS]);
 export const KEYWORD_SET = new Set(KEYWORDS);
 
 const berryCompletions: Completion[] = [
-  ...API.map(binding => snippetCompletion(binding.snippet ?? binding.label, {
+  ...API.map(binding => ({
     label: binding.label,
-    type: 'function',
+    type: 'function' as const,
     detail: binding.detail,
     info: binding.documentation,
     boost: 10,
@@ -188,7 +188,7 @@ function dbcSigCompletions(prefix: string, insideString: boolean, busHint: strin
     }));
 }
 
-function dbcCompletions(textBefore: string, wordFrom: number, insideString: boolean, varToMsg?: Map<string, string>): CompletionResult | null {
+function dbcCompletions(textBefore: string, wordFrom: number, wordTo: number, insideString: boolean, varToMsg?: Map<string, string>): CompletionResult | null {
   const callInfo = findDbcCall(textBefore);
   if (!callInfo) return null;
   const busHint = callInfo.bus >= 0 ? `bus ${callInfo.bus}` : '';
@@ -206,7 +206,7 @@ function dbcCompletions(textBefore: string, wordFrom: number, insideString: bool
       const msgName = draftVar && varToMsg ? varToMsg.get(draftVar) : undefined;
       const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
       if (options.length === 0) return null;
-      return { from: wordFrom, options, validFor: /^\w*$/ };
+      return { from: wordFrom, to: wordTo, options };
     }
     return null;
   }
@@ -216,20 +216,20 @@ function dbcCompletions(textBefore: string, wordFrom: number, insideString: bool
     if (callInfo.fnName === 'can_msg_get') return null; // arg 0 is bus number
     const options = dbcMsgCompletions(prefix, insideString, busHint);
     if (options.length === 0) return null;
-    return { from: wordFrom, options, validFor: /^\w*$/ };
+    return { from: wordFrom, to: wordTo, options };
   }
 
   if (callInfo.argIndex === 1) {
     if (callInfo.fnName === 'can_msg_get') {
       const options = dbcMsgCompletions(prefix, insideString, busHint);
       if (options.length === 0) return null;
-      return { from: wordFrom, options, validFor: /^\w*$/ };
+      return { from: wordFrom, to: wordTo, options };
     }
     if (callInfo.fnName === 'on_can_signal') {
       const msgName = callInfo.argValues[0];
       const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
       if (options.length === 0) return null;
-      return { from: wordFrom, options, validFor: /^\w*$/ };
+      return { from: wordFrom, to: wordTo, options };
     }
   }
 
@@ -333,10 +333,15 @@ function findDbcCall(text: string): DbcCallInfo | null {
 export function completeBerry(context: CompletionContext): CompletionResult | null {
   const word = context.matchBefore(/\w*/);
   if (!word) return null;
-  const wordEmpty = word.from === word.to;
+
+  const fullDoc = context.state.doc.toString();
+
+  // Extend word end past cursor to consume trailing letters
+  let wordEnd = word.to;
+  while (wordEnd < fullDoc.length && /\w/.test(fullDoc[wordEnd])) wordEnd++;
+  const wordEmpty = word.from === wordEnd;
 
   const textBefore = context.state.sliceDoc(0, context.pos);
-  const fullDoc = context.state.doc.toString();
 
   const ctx = findContext(textBefore);
 
@@ -352,11 +357,11 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
       ...dbcMsgCompletions(prefix, true, busHint),
     ];
     if (opts.length === 0) return null;
-    return { from: word.from, options: opts, validFor: /^\w*$/ };
+    return { from: word.from, to: wordEnd, options: opts };
   }
 
   if (ctx === 'string') {
-    const result = dbcCompletions(textBefore, word.from, true, varToMsg);
+    const result = dbcCompletions(textBefore, word.from, wordEnd, true, varToMsg);
     if (result) return result;
     if (wordEmpty) return null;
   }
@@ -366,7 +371,7 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
   const callInfo = findDbcCall(textBefore);
 
   if (callInfo) {
-    const result = dbcCompletions(textBefore, word.from, false, varToMsg);
+    const result = dbcCompletions(textBefore, word.from, wordEnd, false, varToMsg);
     if (result) return result;
   }
 
@@ -374,12 +379,13 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
 
   const opts: Completion[] = [];
 
+  opts.push(...berryCompletions);
   if (atStart) {
-    opts.push(...berryCompletions, ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
+    opts.push(...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
   }
 
   if (opts.length === 0) return null;
-  return { from: word.from, options: opts, validFor: /^\w*$/ };
+  return { from: word.from, to: wordEnd, options: opts };
 }
 
 function wordBounds(text: string, pos: number): { from: number; to: number; word: string } | null {
