@@ -1,5 +1,6 @@
 import { snippetCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
-import { hoverTooltip, type Tooltip } from '@codemirror/view';
+import { EditorView, hoverTooltip, showTooltip, type Tooltip } from '@codemirror/view';
+import { StateField, type EditorState } from '@codemirror/state';
 import { dbcStore } from '../dbcStore.svelte';
 import { buildVarToMsgMap } from '../lib/preprocessor';
 
@@ -111,8 +112,8 @@ const API: BindingDoc[] = [
     documentation: 'Milliseconds since boot. Wraps at 2^31.',
     snippet: 'millis()' },
   { label: 'print',
-    detail: 'print(...)',
-    documentation: 'Write a line to the device log; streams to the Dashboard log panel.',
+    detail: 'print(...args)',
+    documentation: 'Write a line to the device log; streams to the Dashboard log panel. Accepts any number of arguments of any type.',
     snippet: 'print(${msg})' },
 ];
 
@@ -260,7 +261,8 @@ function findContext(text: string): CursorContext {
     }
     if (!inString && ch === '#') {
       const nl = text.indexOf('\n', i);
-      i = nl === -1 ? text.length : nl;
+      if (nl === -1) return 'comment'; // # runs to end of text — we're in a comment
+      i = nl;
       continue;
     }
   }
@@ -374,12 +376,6 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
 
   if (atStart) {
     opts.push(...berryCompletions, ...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
-    const busHint = `bus 0`;
-    const prefix = textBefore.slice(word.from);
-    opts.push(...dbcSigCompletions(prefix, true, busHint).map(o => ({ ...o, boost: 5 })));
-    opts.push(...dbcMsgCompletions(prefix, true, busHint).map(o => ({ ...o, boost: 5 })));
-  } else if (callInfo) {
-    opts.push(...KEYWORDS.map(label => ({ label, type: 'keyword' as const })));
   }
 
   if (opts.length === 0) return null;
@@ -425,3 +421,154 @@ export const berryHover = hoverTooltip((view, pos): Tooltip | null => {
     },
   };
 });
+
+/* ── Arg hints tooltip ─────────────────────────────────────────────────── */
+
+interface ArgHintInfo {
+  fnName: string;
+  detail: string;
+  argIndex: number;
+  argCount: number;  // commas seen + 1
+  parenPos: number;
+}
+
+function findArgHint(text: string): ArgHintInfo | null {
+  // Find matching open paren scanning backward
+  let depth = 0;
+  let parenPos = -1;
+  for (let i = text.length - 1; i >= 0; i--) {
+    const ch = text[i];
+    if (ch === ')') depth++;
+    else if (ch === '(') {
+      depth--;
+      if (depth < 0) { parenPos = i; break; }
+    }
+  }
+  if (parenPos < 0) return null;
+
+  // Extract function name
+  const beforeParen = text.slice(0, parenPos).trimEnd();
+  const fnMatch = beforeParen.match(/([A-Za-z_]\w*)$/);
+  if (!fnMatch) return null;
+  const fnName = fnMatch[1];
+
+  const binding = API.find(b => b.label === fnName);
+  if (!binding) return null;
+
+  // Count commas in args (skip strings)
+  const argText = text.slice(parenPos + 1);
+  let argCount = 1;
+  let inStr = false;
+  let qChar = '';
+  for (let i = 0; i < argText.length; i++) {
+    const ch = argText[i];
+    if (ch === '\\') { i++; continue; }
+    if (ch === '"' || ch === "'") {
+      if (!inStr) { inStr = true; qChar = ch; }
+      else if (ch === qChar) { inStr = false; }
+    } else if (!inStr && ch === ',') {
+      argCount++;
+    }
+  }
+
+  return { fnName, detail: binding.detail ?? fnName, argIndex: argCount - 1, argCount, parenPos };
+}
+
+const argHintTooltip = StateField.define<Tooltip | null>({
+  create(state) { return computeArgHint(state); },
+
+  update(value, tr) {
+    if (!tr.docChanged && !tr.selection) return value;
+    return computeArgHint(tr.state);
+  },
+
+  provide: f => showTooltip.compute([f], s => s.field(f)),
+});
+
+function computeArgHint(state: EditorState): Tooltip | null {
+  const pos = state.selection.main.head;
+  const textBefore = state.sliceDoc(0, pos);
+
+  // Don't show inside comments
+  const ctx = findContext(textBefore);
+  if (ctx === 'comment') return null;
+
+  const hint = findArgHint(textBefore);
+  if (!hint) return null;
+
+  // Only show hints when the opening paren is on the same line as the cursor
+  const parenLine = state.doc.lineAt(hint.parenPos).number;
+  const cursorLine = state.doc.lineAt(pos).number;
+  if (parenLine !== cursorLine) return null;
+
+  // Parse the detail to show param list with current arg highlighted
+  const params = parseParams(hint.detail);
+  if (params.length === 0) return null;
+
+  const line = state.doc.lineAt(pos);
+  return {
+    pos: hint.parenPos + 1,
+    end: pos,
+    above: true,
+    create() {
+      const dom = document.createElement('div');
+      dom.className = 'cm-arg-hints';
+
+      const sig = document.createElement('span');
+      sig.className = 'cm-arg-hints-sig';
+      sig.textContent = '(';
+      dom.append(sig);
+
+      const paramList = document.createElement('span');
+      paramList.className = 'cm-arg-hints-params';
+      params.forEach((p, i) => {
+        if (i > 0) {
+          const comma = document.createElement('span');
+          comma.className = 'cm-arg-hints-comma';
+          comma.textContent = ', ';
+          paramList.append(comma);
+        }
+        const param = document.createElement('span');
+        param.className = 'cm-arg-hints-param';
+        if (i === hint.argIndex) param.classList.add('cm-arg-hints-active');
+        param.textContent = p;
+        paramList.append(param);
+      });
+      dom.append(paramList);
+
+      const close = document.createElement('span');
+      close.className = 'cm-arg-hints-sig';
+      close.textContent = ')';
+      dom.append(close);
+
+      return { dom };
+    },
+  };
+}
+
+function parseParams(detail: string): string[] {
+  // Extract params from detail like "fn_name(bus:int, id:int, data:bytes)"
+  const parenStart = detail.indexOf('(');
+  const parenEnd = detail.lastIndexOf(')');
+  if (parenStart < 0 || parenEnd < 0) return [];
+  const inside = detail.slice(parenStart + 1, parenEnd).trim();
+  if (!inside) return [];
+
+  // Split on commas, handling nested parens
+  const params: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < inside.length; i++) {
+    const ch = inside[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    else if (ch === ',' && depth === 0) {
+      params.push(inside.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  params.push(inside.slice(start).trim());
+  return params;
+}
+
+export { argHintTooltip };

@@ -12,7 +12,7 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { drawSelection, dropCursor, EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
-import { completeBerry, berryHover } from './autocomplete';
+import { completeBerry, berryHover, argHintTooltip } from './autocomplete';
 import { berryLanguage } from './highlight-berry';
 
 const berryHighlight = HighlightStyle.define([
@@ -116,6 +116,34 @@ const warmTheme = EditorView.theme({
     color: '#e6c07a',
   },
 
+  /* Arg hints tooltip */
+  '.cm-arg-hints': {
+    padding: '4px 8px',
+    fontFamily: 'var(--dc-font-mono)',
+    fontSize: '12px',
+    lineHeight: '1.5',
+    whiteSpace: 'pre',
+    color: '#a08555',
+    marginLeft: '1ch',
+  },
+  '.cm-arg-hints-sig': {
+    color: '#70583a',
+  },
+  '.cm-arg-hints-params': {
+    color: '#a08555',
+  },
+  '.cm-arg-hints-param': {
+    color: '#a08555',
+    borderRadius: '2px',
+  },
+  '.cm-arg-hints-active': {
+    color: '#ffa24a',
+    fontWeight: '600',
+  },
+  '.cm-arg-hints-comma': {
+    color: '#70583a',
+  },
+
   /* Search / replace panel — flat selectors only (no nested &). */
   '.cm-panel.cm-search': {
     backgroundColor: '#2a1f10',
@@ -198,6 +226,7 @@ export function createCodeMirrorExtensions(onSave?: () => void, language = 'berr
         syntaxHighlighting(berryHighlight),
         autocompletion({ override: [completeBerry], activateOnTyping: true }),
         berryHover,
+        argHintTooltip,
       ]
     : [syntaxHighlighting(defaultHighlightStyle, { fallback: true })];
 
