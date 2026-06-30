@@ -189,6 +189,10 @@ ${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_nam
       installStatus = { ...installStatus, [turnIdx]: 'connect to device first' };
       return;
     }
+    if (!app.aiKey) {
+      installStatus = { ...installStatus, [turnIdx]: 'API key required to install scripts' };
+      return;
+    }
     const nameLine = code.match(/^#\s*@?name\s+(.+)$/m);
     const base = (nameLine?.[1] ?? `ai_script_${turnIdx}`)
       .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 32);
