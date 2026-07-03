@@ -1,13 +1,21 @@
 import { snippetCompletion, type Completion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
 import { hoverTooltip, type Tooltip } from '@codemirror/view';
 import { dbcStore } from '../dbcStore.svelte';
+import { buildVarToMsgMap } from '../lib/preprocessor';
 
 interface DbcCallInfo {
   fnName: string;
   argIndex: number;
   argValues: string[];
   bus: number;
+  /** Position of the opening paren of this call. */
+  parenPos: number;
 }
+
+/** Functions that expect a DBC message name or a draft variable as a string arg. */
+const DBC_MSG_FUNCS = new Set(['on_can_signal', 'can_msg_get', 'can_msg_new', 'msg_sig_get', 'msg_sig_set']);
+/** Functions that take a DBC signal name as the second string argument. */
+const DBC_SIG_FUNCS = new Set(['msg_sig_get', 'msg_sig_set', 'on_can_signal']);
 
 interface BindingDoc {
   label: string;
@@ -36,7 +44,7 @@ const API: BindingDoc[] = [
     snippet: 'can_recv_raw(${bus}, ${msg_id})' },
   { label: 'msg_sig_get',
     detail: 'msg_sig_get(draft, sig:str) -> int',
-    documentation: 'Extract a raw integer bitfield from a pre-read message draft. Nil-guard the draft before calling.',
+    documentation: 'Extract a raw integer bitfield from a pre-read message draft. Nil-guard the draft before calling.\nPreprocessed: msg_sig_get(draft, sb, len, be, signed, scale, offset)',
     snippet: 'msg_sig_get(${msg}, "${sig}")' },
   { label: 'on_can_signal',
     detail: 'on_can_signal(msg:str, sig:str, fn(sig) [, bus:int])',
@@ -44,15 +52,15 @@ const API: BindingDoc[] = [
     snippet: 'on_can_signal("${msg}", "${sig}", def(s)\n  ${body}\nend)' },
   { label: 'can_msg_new',
     detail: 'can_msg_new(name:str) | can_msg_new(id:int, dlc:int) -> draft',
-    documentation: 'Create a fresh zeroed message draft. Name form auto-fills DLC from DBC. Use with msg_sig_set, then can_msg_send.',
+    documentation: 'Create a fresh zeroed message draft. Name form auto-fills DLC from DBC. Use with msg_sig_set, then can_msg_send.\nPreprocessed: can_msg_new(0xID, dlc)',
     snippet: 'can_msg_new("${msg}")' },
   { label: 'can_msg_get',
     detail: 'can_msg_get(bus:int, id:int | name:str) -> draft | nil',
-    documentation: 'Take a draft of the latest rx for this message id or DBC message name. bus is always first. Returns nil if no frame received — use can_msg_new for a fresh draft.',
+    documentation: 'Take a draft of the latest rx for this message id or DBC message name. bus is always first. Returns nil if no frame received — use can_msg_new for a fresh draft.\nPreprocessed: can_msg_get(bus, 0xID)',
     snippet: 'can_msg_get(${bus}, "${msg}")' },
   { label: 'msg_sig_set',
     detail: 'msg_sig_set(draft, sig:str, value)',
-    documentation: 'Modify one signal in the draft, leaving other bits intact. Signal lookup is scoped to the draft\'s message.',
+    documentation: 'Modify one signal in the draft, leaving other bits intact. Signal lookup is scoped to the draft\'s message.\nPreprocessed: msg_sig_set(draft, sb, len, be, signed, scale, offset, val)',
     snippet: 'msg_sig_set(${msg}, "${sig}", ${value})' },
   { label: 'can_msg_send',
     detail: 'can_msg_send(bus:int, draft) -> nil',
@@ -124,11 +132,6 @@ const BERRY_BUILTINS = [
 export const BUILTINS = new Set([...API.map(b => b.label), ...BERRY_BUILTINS]);
 export const KEYWORD_SET = new Set(KEYWORDS);
 
-/* Functions that expect a DBC message name as the first string argument. */
-const DBC_MSG_FUNCS = new Set(['on_can_signal', 'can_msg_get', 'can_msg_new']);
-/* Functions that also expect a DBC signal name as the second string argument. */
-const DBC_SIG_FUNCS = new Set(['msg_sig_get', 'on_can_signal']);
-
 const berryCompletions: Completion[] = [
   ...API.map(binding => snippetCompletion(binding.snippet ?? binding.label, {
     label: binding.label,
@@ -149,9 +152,12 @@ const berryCompletions: Completion[] = [
 const MAX_DBC = 200;
 
 /* Return DBC message names filtered by prefix, capped. */
-function dbcMsgCompletions(prefix: string, insideString: boolean, busHint: string): Completion[] {
+function dbcMsgCompletions(prefix: string, insideString: boolean, busHint: string, bus?: number): Completion[] {
   const lower = prefix.toLowerCase();
-  return dbcStore.messages
+  const msgs = (bus !== undefined && dbcStore.fullMessages[bus])
+    ? dbcStore.fullMessages[bus].map(m => ({ name: m.name, id: m.id }))
+    : dbcStore.messages;
+  return msgs
     .filter(m => !lower || m.name.toLowerCase().includes(lower))
     .slice(0, MAX_DBC)
     .map(msg => ({
@@ -181,23 +187,49 @@ function dbcSigCompletions(prefix: string, insideString: boolean, busHint: strin
     }));
 }
 
-function dbcCompletions(textBefore: string, wordFrom: number, insideString: boolean): CompletionResult | null {
+function dbcCompletions(textBefore: string, wordFrom: number, insideString: boolean, varToMsg?: Map<string, string>): CompletionResult | null {
   const callInfo = findDbcCall(textBefore);
   if (!callInfo) return null;
   const busHint = callInfo.bus >= 0 ? `bus ${callInfo.bus}` : '';
   const prefix = textBefore.slice(wordFrom);
 
+  // msg_sig_get / msg_sig_set: first arg is a draft variable (not a string)
+  if ((callInfo.fnName === 'msg_sig_get' || callInfo.fnName === 'msg_sig_set')) {
+    if (callInfo.argIndex === 0) return null; // no completions on the draft var
+
+    if (callInfo.argIndex === 1) {
+      // Extract draft variable name from raw text between parens
+      const afterParen = textBefore.slice(callInfo.parenPos + 1);
+      const commaIdx = afterParen.indexOf(',');
+      const draftVar = commaIdx >= 0 ? afterParen.slice(0, commaIdx).trim() : null;
+      const msgName = draftVar && varToMsg ? varToMsg.get(draftVar) : undefined;
+      const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
+      if (options.length === 0) return null;
+      return { from: wordFrom, options, validFor: /^\w*$/ };
+    }
+    return null;
+  }
+
+  // on_can_signal / can_msg_new: string message name at arg 0
   if (callInfo.argIndex === 0) {
+    if (callInfo.fnName === 'can_msg_get') return null; // arg 0 is bus number
     const options = dbcMsgCompletions(prefix, insideString, busHint);
     if (options.length === 0) return null;
     return { from: wordFrom, options, validFor: /^\w*$/ };
   }
 
   if (callInfo.argIndex === 1) {
-    const msgName = callInfo.argValues[0];
-    const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
-    if (options.length === 0) return null;
-    return { from: wordFrom, options, validFor: /^\w*$/ };
+    if (callInfo.fnName === 'can_msg_get') {
+      const options = dbcMsgCompletions(prefix, insideString, busHint);
+      if (options.length === 0) return null;
+      return { from: wordFrom, options, validFor: /^\w*$/ };
+    }
+    if (callInfo.fnName === 'on_can_signal') {
+      const msgName = callInfo.argValues[0];
+      const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
+      if (options.length === 0) return null;
+      return { from: wordFrom, options, validFor: /^\w*$/ };
+    }
   }
 
   return null;
@@ -212,7 +244,7 @@ function atStatementStart(textBefore: string): boolean {
 
 /* Determine cursor context by scanning the text left of the cursor.
    Berry tokeniser processes # (comment) before strings, so a # anywhere
-   before a quote takes precedence. */
+   before a quote takes precedence. # is a LINE comment — skip to EOL. */
 type CursorContext = 'comment' | 'string' | 'code';
 
 function findContext(text: string): CursorContext {
@@ -221,10 +253,15 @@ function findContext(text: string): CursorContext {
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (ch === '\\') { i++; continue; }
-    if (!inString && ch === '#') return 'comment';
     if (ch === '"' || ch === "'") {
       if (!inString) { inString = true; quoteChar = ch; }
       else if (ch === quoteChar) { inString = false; }
+      continue;
+    }
+    if (!inString && ch === '#') {
+      const nl = text.indexOf('\n', i);
+      i = nl === -1 ? text.length : nl;
+      continue;
     }
   }
   return inString ? 'string' : 'code';
@@ -254,8 +291,10 @@ function findDbcCall(text: string): DbcCallInfo | null {
 
   const argText = text.slice(parenPos + 1);
   const argValues: string[] = [];
+  let bus = 0;
   let commaCount = 0;
   let i = 0;
+  let firstArgText = '';
   while (i < argText.length) {
     const ch = argText[i];
     if (ch === '"' || ch === "'") {
@@ -271,15 +310,22 @@ function findDbcCall(text: string): DbcCallInfo | null {
       if (!terminated) break;
       i = j + 1;
     } else if (ch === ',') {
+      if (commaCount === 0) firstArgText = argText.slice(0, i);
       commaCount++;
       i++;
     } else {
       i++;
     }
   }
+  if (commaCount === 0) firstArgText = argText;
   const argIndex = commaCount;
 
-  return { fnName, argIndex, argValues, bus: 0 };
+  if (fnName === 'can_msg_get' && firstArgText) {
+    const n = parseInt(firstArgText.trim(), 10);
+    if (!isNaN(n)) bus = n;
+  }
+
+  return { fnName, argIndex, argValues, bus, parenPos };
 }
 
 export function completeBerry(context: CompletionContext): CompletionResult | null {
@@ -288,8 +334,12 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
   const wordEmpty = word.from === word.to;
 
   const textBefore = context.state.sliceDoc(0, context.pos);
+  const fullDoc = context.state.doc.toString();
 
   const ctx = findContext(textBefore);
+
+  // Build variable→message map once for the full doc
+  const varToMsg = buildVarToMsgMap(fullDoc);
 
   if (ctx === 'comment') {
     if (wordEmpty && !context.explicit) return null;
@@ -304,7 +354,7 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
   }
 
   if (ctx === 'string') {
-    const result = dbcCompletions(textBefore, word.from, true);
+    const result = dbcCompletions(textBefore, word.from, true, varToMsg);
     if (result) return result;
     if (wordEmpty) return null;
   }
@@ -314,7 +364,7 @@ export function completeBerry(context: CompletionContext): CompletionResult | nu
   const callInfo = findDbcCall(textBefore);
 
   if (callInfo) {
-    const result = dbcCompletions(textBefore, word.from, false);
+    const result = dbcCompletions(textBefore, word.from, false, varToMsg);
     if (result) return result;
   }
 
