@@ -82,12 +82,12 @@ ${SCRIPTING_MD}
 ## Device context
 ${app.connected ? '✓ Connected' : '⚠ Not connected'}
 ${Object.entries(dbcStore.fullMessages).filter(([,v])=>v.length).map(([k,v])=>`Bus ${k}: ${v.length} msgs`).join('\n') || 'No DBC loaded - use car picker'}
-${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_name) — use message_name as first arg and signal_name as second arg to on_can_signal().\n\n${signals}` : ''}
+${signals ? `\n## Loaded DBC signals\nFormat: signal_name  (message: message_name) — use message_name and signal_name with msg_sig_get().\n\n${signals}` : ''}
 
 ## Instructions
 - Write complete Berry scripts in \`\`\`berry code blocks
 - Always include \`def setup()\`; add \`# @name\` and \`# @bus\` metadata
-- Use exact message_name and signal_name from the DBC signal list above when writing on_can_signal calls
+- Use exact message_name and signal_name from the DBC signal list above when writing msg_sig_get calls
 - Keep scripts focused and well-commented
 - Propose scripts rather than claiming to fire CAN frames directly`;
   }

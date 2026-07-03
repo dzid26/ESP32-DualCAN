@@ -38,11 +38,13 @@ Metadata fields (`@name`, `@description`, `@bus`) appear in the web UI.
 ## CAN signals  *(requires a DBC loaded on the target bus)*
 
 ```berry
-# Subscribe to a signal — fn is called whenever the value changes.
-# First arg is the DBC **message** name, second is the **signal** name within it.
-on_can_signal("VCRIGHT_doorStatus", "VCRIGHT_frontHandlePulled", def(sig)
-  print("handle: " .. str(sig['value']) .. " prev: " .. str(sig['prev']))
-end)
+# Poll a signal via message draft + timer.
+# can_msg_get returns the latest received frame for a given bus + message ID.
+var d = can_msg_get(0, "VCRIGHT_doorStatus")
+if d != nil
+  var v = msg_sig_get(d, "VCRIGHT_frontHandlePulled")
+  print("handle: " .. str(v))
+end
 
 # Read current value synchronously (returns a map or nil).
 var d = can_msg_get(0, "DI_speed")

@@ -14,9 +14,9 @@ interface DbcCallInfo {
 }
 
 /** Functions that expect a DBC message name or a draft variable as a string arg. */
-const DBC_MSG_FUNCS = new Set(['on_can_signal', 'can_msg_get', 'can_msg_new', 'msg_sig_get', 'msg_sig_set']);
+const DBC_MSG_FUNCS = new Set(['can_msg_get', 'can_msg_new', 'msg_sig_get', 'msg_sig_set']);
 /** Functions that take a DBC signal name as the second string argument. */
-const DBC_SIG_FUNCS = new Set(['msg_sig_get', 'msg_sig_set', 'on_can_signal']);
+const DBC_SIG_FUNCS = new Set(['msg_sig_get', 'msg_sig_set']);
 
 interface BindingDoc {
   label: string;
@@ -33,7 +33,7 @@ interface BindingDoc {
  * Naming hierarchy: can_<level>_<verb>
  *   raw frame:  can_send_raw, can_recv_raw   (no DBC, no encoding)
  *   message:    can_msg_get, msg_sig_set, can_msg_send   (decoded, by id)
- *   signal:     msg_sig_get, on_can_signal   (scoped by message name) */
+ *   signal:     msg_sig_get   (scoped by message name) */
 const API: BindingDoc[] = [
   { label: 'can_send_raw',
     detail: 'can_send_raw(bus:int, id:int, data:bytes)',
@@ -47,10 +47,7 @@ const API: BindingDoc[] = [
     detail: 'msg_sig_get(draft, sig:str) -> int',
     documentation: 'Extract a raw integer bitfield from a pre-read message draft. Nil-guard the draft before calling.\nPreprocessed: msg_sig_get(draft, sb, len, be, signed, scale, offset)',
     snippet: 'msg_sig_get(${msg}, "${sig}")' },
-  { label: 'on_can_signal',
-    detail: 'on_can_signal(msg:str, sig:str, fn(sig) [, bus:int])',
-    documentation: 'Invoke fn(sig) whenever the signal changes. sig is {value, prev, sig_idx}. Scoped by message — DBC signal names collide across messages.',
-    snippet: 'on_can_signal("${msg}", "${sig}", def(s)\n  ${body}\nend)' },
+
   { label: 'can_msg_new',
     detail: 'can_msg_new(name:str) | can_msg_new(id:int, dlc:int) -> draft',
     documentation: 'Create a fresh zeroed message draft. Name form auto-fills DLC from DBC. Use with msg_sig_set, then can_msg_send.\nPreprocessed: can_msg_new(0xID, dlc)',
@@ -211,7 +208,7 @@ function dbcCompletions(textBefore: string, wordFrom: number, wordTo: number, in
     return null;
   }
 
-  // on_can_signal / can_msg_new: string message name at arg 0
+  // can_msg_new: string message name at arg 0
   if (callInfo.argIndex === 0) {
     if (callInfo.fnName === 'can_msg_get') return null; // arg 0 is bus number
     const options = dbcMsgCompletions(prefix, insideString, busHint);
@@ -225,12 +222,7 @@ function dbcCompletions(textBefore: string, wordFrom: number, wordTo: number, in
       if (options.length === 0) return null;
       return { from: wordFrom, to: wordTo, options };
     }
-    if (callInfo.fnName === 'on_can_signal') {
-      const msgName = callInfo.argValues[0];
-      const options = dbcSigCompletions(prefix, insideString, busHint, msgName);
-      if (options.length === 0) return null;
-      return { from: wordFrom, to: wordTo, options };
-    }
+
   }
 
   return null;
