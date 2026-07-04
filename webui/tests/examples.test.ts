@@ -110,7 +110,7 @@ const dbcScripts = new Set([
   'tesla_fold_mirror_tile.be',
   'tesla_gear_led_demo.be',
   'track_mode_on_full_throttle.be',
-  'window_drop_on_handle_pull.be',
+  'easy_entry.be',
 ]);
 
 // Scripts that use only raw CAN (no DBC refs) — should pass through unchanged
@@ -161,8 +161,8 @@ test('tesla_gear_led_demo .bep uses msg_sig_get', () => {
   assert(result.code.includes('msg_sig_get('), 'should contain msg_sig_get() calls');
 });
 
-test('window_drop_on_handle_pull .bep uses msg_sig_get and msg_sig_set', () => {
-  const code = readFileSync(join(examplesDir, 'window_drop_on_handle_pull.be'), 'utf-8');
+test('easy_entry .bep uses msg_sig_get and msg_sig_set', () => {
+  const code = readFileSync(join(examplesDir, 'easy_entry.be'), 'utf-8');
   const result = preprocessScript(code, messages);
   assert(result.code.includes('can_msg_send('), 'can_msg_send should pass through');
   assert(result.code.includes('0x294'), 'should contain UI_vehicleControl3 hex ID');

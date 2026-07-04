@@ -1,4 +1,4 @@
-# @name Easy-entry window drop on handle pull
+# @name Easy entry window drop
 # @description Easy-entry: lowers windows when exterior door handles are pulled (all 4), restores them when door closes.
 # @bus 0
 #

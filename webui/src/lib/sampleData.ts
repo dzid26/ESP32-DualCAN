@@ -97,13 +97,15 @@ export type GalleryScript = {
 };
 
 export const GALLERY_SCRIPTS: GalleryScript[] = [
-  { n: 'Window drop on handle pull',    filename: 'window_drop_on_handle_pull.be',   bus: 0, desc: 'Lower window when door is open and handle held 2s+. Template — TX ID needs verification.',                  author: 'dzid26', stars: 42, brands: ['Tesla'] },
+  { n: 'Easy entry window drop',    filename: 'easy_entry.be',   bus: 0, desc: 'Easy-entry: lowers windows when exterior door handles are pulled, restores on door close.',                  author: 'dzid26', stars: 42, brands: ['Tesla'] },
   { n: 'Track mode on full throttle',   filename: 'track_mode_on_full_throttle.be',  bus: 0, desc: 'Arms track mode when throttle pedal pinned >1s. Template — signals need verification.',                      author: 'dzid26', stars: 31, brands: ['Tesla'] },
   { n: 'Tesla Doors Sim',               filename: 'tesla_doors_sim.be',              bus: 0, desc: 'Simulates door open/close every 2s. Useful for testing door-based scripts without a car.',                   author: 'dzid26', stars: 12, brands: ['Tesla'] },
   { n: 'Tiles demo',                    filename: 'tiles_demo.be',                   bus: 0, desc: 'Registers blip_red/green/blue/rainbow action tiles that blink the LED. Verifies the full BLE→tile path.',   author: 'dzid26', stars: 15, brands: ['*'] },
   { n: 'Hello log',                     filename: 'hello_log.be',                    bus: 0, desc: 'Heartbeat every 5s + greet action. No CAN bus needed — good first script.',                                  author: 'dzid26', stars: 8,  brands: ['*'] },
   { n: 'Bench test',                    filename: 'bench_test.be',                   bus: 0, desc: 'Sends periodic counter frames on bus 0 and logs RX. Use with loopback wiring.',                              author: 'dzid26', stars: 10, brands: ['*'] },
   { n: 'Loopback LED',                  filename: 'loopback_led.be',                 bus: 0, desc: 'TX on CAN0, green LED if CAN1 echoes back, red on miss. Also bridges CAN0→CAN1.',                           author: 'dzid26', stars: 6,  brands: ['*'] },
+  { n: 'Light flash horn beep',         filename: 'light_flash_horn_beep.be',          bus: 0, desc: 'Flashes lights and honks horn. TX on VCLEFT_lightController / VCRIGHT_lightController / DAS_bodyControls.', author: 'dzid26', stars: 22, brands: ['*'] },
+  { n: 'Window vent to full open',      filename: 'window_vent_to_full_open.be',       bus: 0, desc: 'Intercepts GOTO_VENT, sends GOTO_PERCENT 100% instead. No hardware CAN bus required.',                  author: 'dzid26', stars: 9,  brands: ['Tesla'] },
 ];
 
 export const DBC_SOURCE = { repo: 'commaai/opendbc', url: 'https://github.com/commaai/opendbc' };
