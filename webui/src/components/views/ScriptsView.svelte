@@ -132,6 +132,11 @@
   async function loadScript(filename: string): Promise<boolean> {
     if (dirty && !confirm('Discard unsaved changes?')) return false;
     if (selFn) scrollPositions.set(selFn, editorScrollTop);
+    // Clear editor to avoid stale data if the fetch fails.
+    code = '';
+    savedCode = '';
+    deviceBepCode = null;
+    preprocessedCode = '';
     selFn = filename;
     editorFilename = filename;
     app.setLastScriptFilename(filename);
