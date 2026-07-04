@@ -183,7 +183,7 @@ void app_main(void)
         static uint32_t last_log_ms = 0;
         if ((now - last_log_ms) >= 1000) {
             last_log_ms = now;
-            ESP_LOGD(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
+            ESP_LOGV(TAG, "tick %" PRIu32 " | free heap: %" PRIu32 " bytes",
                      tick, (uint32_t)esp_get_free_heap_size());
 
             static char stats[1024];

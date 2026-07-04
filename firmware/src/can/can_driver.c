@@ -242,7 +242,7 @@ esp_err_t can_bus_send(int bus_id, uint32_t id,
     esp_err_t err = twai_transmit_v2(s_buses[bus_id], &msg, pdMS_TO_TICKS(timeout_ms));
     if (err == ESP_OK) {
         s_last_tx_ms[bus_id] = (uint32_t)(esp_timer_get_time() / 1000);
-        ESP_LOGD(TAG, "bus%d tx 0x%03" PRIx32 " [%d]", bus_id, id, len);
+        ESP_LOGV(TAG, "bus%d tx 0x%03" PRIx32 " [%d]", bus_id, id, len);
     }
     return err;
 }
@@ -254,7 +254,7 @@ esp_err_t can_bus_receive(int bus_id, twai_message_t *out, uint32_t timeout_ms)
     }
     esp_err_t err = twai_receive_v2(s_buses[bus_id], out, pdMS_TO_TICKS(timeout_ms));
     if (err == ESP_OK) {
-        ESP_LOGD(TAG, "bus%d rx 0x%03" PRIx32 " [%d]", bus_id, out->identifier, out->data_length_code);
+        ESP_LOGV(TAG, "bus%d rx 0x%03" PRIx32 " [%d]", bus_id, out->identifier, out->data_length_code);
     }
     return err;
 }
