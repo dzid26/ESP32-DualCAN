@@ -15,13 +15,18 @@
 
 var DOOR_CLOSED = 1
 var DOOR_OPEN = 4
-var WINDOW_OPEN = 4
-var WINDOW_VENT = 5
 
 var prev_handle_fl = 0, prev_handle_fr = 0, prev_handle_rl = 0, prev_handle_rr = 0
 var prev_door_fl = 0, prev_door_fr = 0, prev_door_rl = 0, prev_door_rr = 0
 var was_window_closed_fl = false, was_window_closed_fr = false, was_window_closed_rl = false, was_window_closed_rr = false
 var was_auto_dropped_fl = false, was_auto_dropped_fr = false, was_auto_dropped_rl = false, was_auto_dropped_rr = false
+
+def window_closed(st)
+  # DBC window position: 0=UNKNOWN 1=CLOSED 2=CRACKED 3=VENT 4=PARTIAL_OPEN 5=FULL_OPEN 6=CLOSED_TRIM_CLEAR
+  # Consider window "closed" (in normal at-rest position) if 1-4
+  if st == nil return false end
+  return st >= 1 && st <= 4
+end
 
 def send_window_drop(m)
   msg_sig_set(m, "UI_windowPercentageRequest", 100)
@@ -57,7 +62,7 @@ def poll()
     if door_fl == DOOR_CLOSED
       if msg_wl != nil                                     # capture window state before door opens next time
         var fl_pos = msg_sig_get(msg_wl, "VCLEFT_windowPositionStateLF")
-        was_window_closed_fl = fl_pos != WINDOW_OPEN && fl_pos != WINDOW_VENT ? true : false
+        was_window_closed_fl = window_closed(fl_pos)
         was_auto_dropped_fl = false
       end
       if prev_door_fl != DOOR_CLOSED && was_auto_dropped_fl == true && was_window_closed_fl == true  # restore on closed rising edge
@@ -89,10 +94,10 @@ def poll()
     if door_rl == DOOR_CLOSED
       if msg_wl != nil                                     # capture window state before door opens next time
         var rl_pos = msg_sig_get(msg_wl, "VCLEFT_windowPositionStateLR")
-        was_window_closed_rl = rl_pos != WINDOW_OPEN && rl_pos != WINDOW_VENT ? true : false
+        was_window_closed_rl = window_closed(rl_pos)
         was_auto_dropped_rl = false
       end
-      if prev_door_rl != DOOR_CLOSED && was_auto_dropped_rl == 1 && was_window_closed_rl == 1  # restore on closed rising edge
+      if prev_door_rl != DOOR_CLOSED && was_auto_dropped_rl == true && was_window_closed_rl == true  # restore on closed rising edge
         print("RL door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedRL", 1)
         send_window_close(m)
@@ -105,7 +110,7 @@ def poll()
           print("RL handle pulled, easy-entry drop")
           msg_sig_set(m, "UI_windowRequestedRL", 1)
           send_window_drop(m)
-          was_auto_dropped_rl = 1
+          was_auto_dropped_rl = true
         end
         if handle_rl == 0 && prev_handle_rl == 1
           print("RL handle released")
@@ -132,10 +137,10 @@ def poll()
     if door_fr == DOOR_CLOSED
       if msg_wr != nil                                     # capture window state before door opens next time
         var fr_pos = msg_sig_get(msg_wr, "VCRIGHT_windowPositionStateRF")
-        was_window_closed_fr = fr_pos != WINDOW_OPEN && fr_pos != WINDOW_VENT ? true : false
+        was_window_closed_fr = window_closed(fr_pos)
         was_auto_dropped_fr = false
       end
-      if prev_door_fr != DOOR_CLOSED && was_auto_dropped_fr == 1 && was_window_closed_fr == 1  # restore on closed rising edge
+      if prev_door_fr != DOOR_CLOSED && was_auto_dropped_fr == true && was_window_closed_fr == true  # restore on closed rising edge
         print("FR door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedFR", 1)
         send_window_close(m)
@@ -148,7 +153,7 @@ def poll()
           print("FR handle pulled, easy-entry drop")
           msg_sig_set(m, "UI_windowRequestedFR", 1)
           send_window_drop(m)
-          was_auto_dropped_fr = 1
+          was_auto_dropped_fr = true
         end
         if handle_fr == 0 && prev_handle_fr == 1
           print("FR handle released")
@@ -164,10 +169,10 @@ def poll()
     if door_rr == DOOR_CLOSED
       if msg_wr != nil                                     # capture window state before door opens next time
         var rr_pos = msg_sig_get(msg_wr, "VCRIGHT_windowPositionStateRR")
-        was_window_closed_rr = rr_pos != WINDOW_OPEN && rr_pos != WINDOW_VENT ? true : false
+        was_window_closed_rr = window_closed(rr_pos)
         was_auto_dropped_rr = false
       end
-      if prev_door_rr != DOOR_CLOSED && was_auto_dropped_rr == 1 && was_window_closed_rr == 1  # restore on closed rising edge
+      if prev_door_rr != DOOR_CLOSED && was_auto_dropped_rr == true && was_window_closed_rr == true  # restore on closed rising edge
         print("RR door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedRR", 1)
         send_window_close(m)
@@ -180,7 +185,7 @@ def poll()
           print("RR handle pulled, easy-entry drop")
           msg_sig_set(m, "UI_windowRequestedRR", 1)
           send_window_drop(m)
-          was_auto_dropped_rr = 1
+          was_auto_dropped_rr = true
         end
         if handle_rr == 0 && prev_handle_rr == 1
           print("RR handle released")
