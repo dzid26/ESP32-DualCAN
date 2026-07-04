@@ -97,7 +97,7 @@ export type GalleryScript = {
 };
 
 export const GALLERY_SCRIPTS: GalleryScript[] = [
-  { n: 'Easy entry window drop',    filename: 'easy_entry.be',   bus: 0, desc: 'Easy-entry: lowers windows when exterior door handles are pulled, restores on door close.',                  author: 'dzid26', stars: 42, brands: ['Tesla'] },
+  { n: 'Easy entry window drop',    filename: 'easy_entry_window_drop.be',   bus: 0, desc: 'Easy-entry: lowers windows when exterior door handles are pulled, restores on door close.',                  author: 'dzid26', stars: 42, brands: ['Tesla'] },
   { n: 'Track mode on full throttle',   filename: 'track_mode_on_full_throttle.be',  bus: 0, desc: 'Arms track mode when throttle pedal pinned >1s. Template — signals need verification.',                      author: 'dzid26', stars: 31, brands: ['Tesla'] },
   { n: 'Tesla Doors Sim',               filename: 'tesla_doors_sim.be',              bus: 0, desc: 'Simulates door open/close every 2s. Useful for testing door-based scripts without a car.',                   author: 'dzid26', stars: 12, brands: ['Tesla'] },
   { n: 'Tiles demo',                    filename: 'tiles_demo.be',                   bus: 0, desc: 'Registers blip_red/green/blue/rainbow action tiles that blink the LED. Verifies the full BLE→tile path.',   author: 'dzid26', stars: 15, brands: ['*'] },
