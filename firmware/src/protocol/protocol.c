@@ -611,6 +611,13 @@ static void handle_ble_unlock_pairing(int id)
     send_ok(id, NULL);
 }
 
+static void handle_ble_mtu(int id)
+{
+    cJSON *result = cJSON_CreateObject();
+    cJSON_AddNumberToObject(result, "mtu", dorky_ble_mtu());
+    send_ok(id, result);
+}
+
 static void handle_ble_reset_pairs(int id)
 {
     /* Reply BEFORE wiping — the wipe terminates this very connection. */
@@ -1081,6 +1088,7 @@ static void dispatch_frame(const uint8_t *payload, size_t len)
     else if (strcmp(op_s, "ble.status") == 0)          handle_ble_status(id);
     else if (strcmp(op_s, "ble.unlock_pairing") == 0)  handle_ble_unlock_pairing(id);
     else if (strcmp(op_s, "ble.reset_pairs") == 0)     handle_ble_reset_pairs(id);
+    else if (strcmp(op_s, "ble.mtu") == 0)             handle_ble_mtu(id);
     else if (strcmp(op_s, "wifi.status") == 0)    handle_wifi_status(id);
     else if (strcmp(op_s, "wifi.set_creds") == 0) handle_wifi_set_creds(id, req);
     else if (strcmp(op_s, "settings.set_secret") == 0)   handle_settings_set_secret(id, req);

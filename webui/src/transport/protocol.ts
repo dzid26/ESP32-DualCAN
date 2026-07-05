@@ -114,7 +114,9 @@ export class Protocol {
   // (including older Android builds that cap at 185) while leaving the
   // old 100-byte ceiling well behind — that bound was overly cautious
   // and was the main rate-limit on OTA chunk throughput.
-  private readonly CHUNK = 180;
+  /** Per-write chunk size for the underlying BLE transport.  Initialised to
+   *  a safe fallback and bumped to ATT_MTU-3 once ble.mtu returns. */
+  private CHUNK = 180;
 
   private txMutex = Promise.resolve();
   /** Timestamp of the last byte received via onRx. 0 if nothing received yet. */
@@ -135,6 +137,19 @@ export class Protocol {
    *  Fires at most once per stall episode; resets when data arrives. */
   onStall(cb: () => void): void {
     this.stallCb = cb;
+  }
+
+  /** Query the negotiated ATT MTU from the device and adjust CHUNK to
+   *  MTU-3.  Call once after connect, before sending large frames. */
+  async adjustChunkFromMtu(): Promise<void> {
+    try {
+      const { mtu } = await this.call<{ mtu: number }>('ble.mtu');
+      if (typeof mtu === 'number' && mtu > 200) {
+        this.CHUNK = mtu - 3;
+      }
+    } catch {
+      /* keep the 180 fallback */
+    }
   }
 
   /** Clear all state after a disconnect. Rejects all pending requests. */
