@@ -164,8 +164,11 @@ export class Protocol {
   /** Send a fully-built frame (header + payload) on the wire, serialised
    * through txMutex. The pending-promise must already be registered by
    * the caller and reachable via the response's id field. */
-  private dispatchFrame(id: number, frame: Uint8Array): void {
+  private dispatchFrame(id: number, frame: Uint8Array): Promise<void> {
+    let begin!: () => void;
+    const started = new Promise<void>(r => begin = r);
     const doSend = async () => {
+      begin();
       try {
         for (let off = 0; off < frame.length; off += this.CHUNK) {
           const chunk = frame.subarray(off, Math.min(off + this.CHUNK, frame.length));
@@ -180,6 +183,7 @@ export class Protocol {
       }
     };
     this.txMutex = this.txMutex.then(doSend);
+    return started;
   }
 
   async call<T = any>(op: string, params: Record<string, unknown> = {}, timeoutMs = 5000): Promise<T> {
@@ -194,27 +198,29 @@ export class Protocol {
 
     const promise = new Promise<T>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      setTimeout(() => {
-        if (this.pending.delete(id)) {
-          reject(new Error(`Timeout waiting for response to ${op}`));
-          /* If the firmware sent a partial frame before stalling, the rxBuf
-           * contains stale bytes that poison all future parsing — the header
-           * says "frame is N bytes" but the rest never arrives, so onRx
-           * keeps blocking waiting for more data.  Reset to recover without
-           * requiring a full disconnect. */
-          this.rxBuf = new Uint8Array(0);
-          if (!this.stallReported && this.stallCb &&
-              this.transport.connected &&
-              this.lastRxTimestamp > 0 &&
-              Date.now() - this.lastRxTimestamp > 10_000) {
-            this.stallReported = true;
-            this.stallCb();
+      this.dispatchFrame(id, frame).then(() => {
+        if (!this.pending.has(id)) return;
+        setTimeout(() => {
+          if (this.pending.delete(id)) {
+            reject(new Error(`Timeout waiting for response to ${op}`));
+            /* If the firmware sent a partial frame before stalling, the rxBuf
+             * contains stale bytes that poison all future parsing — the header
+             * says "frame is N bytes" but the rest never arrives, so onRx
+             * keeps blocking waiting for more data.  Reset to recover without
+             * requiring a full disconnect. */
+            this.rxBuf = new Uint8Array(0);
+            if (!this.stallReported && this.stallCb &&
+                this.transport.connected &&
+                this.lastRxTimestamp > 0 &&
+                Date.now() - this.lastRxTimestamp > 10_000) {
+              this.stallReported = true;
+              this.stallCb();
+            }
           }
-        }
-      }, timeoutMs);
+        }, timeoutMs);
+      });
     });
 
-    this.dispatchFrame(id, frame);
     return promise;
   }
 
@@ -236,14 +242,16 @@ export class Protocol {
 
     const promise = new Promise<void>((resolve, reject) => {
       this.pending.set(id, { resolve: () => resolve(), reject });
-      setTimeout(() => {
-        if (this.pending.delete(id)) {
-          reject(new Error('Timeout waiting for response to ota.write (binary)'));
-        }
-      }, timeoutMs);
+      this.dispatchFrame(id, frame).then(() => {
+        if (!this.pending.has(id)) return;
+        setTimeout(() => {
+          if (this.pending.delete(id)) {
+            reject(new Error('Timeout waiting for response to ota.write (binary)'));
+          }
+        }, timeoutMs);
+      });
     });
 
-    this.dispatchFrame(id, frame);
     return promise;
   }
 
