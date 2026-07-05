@@ -31,7 +31,7 @@
 
 static const char *TAG = "proto";
 
-#define RX_BUF_MAX          (16 * 1024)     /* enough for a 10 KB script */
+#define RX_BUF_MAX          (32 * 1024)     /* enough for larger scripts + compiled bytecode */
 #define FRAME_HDR_LEN       4
 #define DISPATCH_QUEUE_LEN  8
 
@@ -1064,7 +1064,14 @@ void protocol_on_ble_write(const uint8_t *data, size_t len, void *ctx)
         int rc = frame_buf_next(&s_rx_fb, &payload, &plen);
         if (rc == 0) break;
         if (rc < 0) {
-            ESP_LOGE(TAG, "frame length exceeds buffer, resetting");
+            /* frame_buf_next already reset the buffer — peek at the header
+             * bytes (still in s_rx_buf) to report the offending length. */
+            uint32_t hdr = (uint32_t)s_rx_buf[0]
+                         | ((uint32_t)s_rx_buf[1] << 8)
+                         | ((uint32_t)s_rx_buf[2] << 16)
+                         | ((uint32_t)s_rx_buf[3] << 24);
+            ESP_LOGE(TAG, "frame length %u exceeds buffer (%d), resetting",
+                     (unsigned)(hdr & 0x0FFFFFFFu), RX_BUF_MAX);
             return;
         }
 
