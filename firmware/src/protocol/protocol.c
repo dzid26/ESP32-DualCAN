@@ -34,6 +34,7 @@ static const char *TAG = "proto";
 #define RX_BUF_MAX          (32 * 1024)     /* enough for larger scripts + compiled bytecode */
 #define FRAME_HDR_LEN       4
 #define DISPATCH_QUEUE_LEN  8
+#define NOTIFY_CHUNK        200     /* BLE notify chunk: must fit within MTU-3 on all stacks */
 
 typedef struct { uint8_t *data; size_t len; uint8_t type; } frame_item_t;
 
@@ -41,6 +42,7 @@ static script_loader_t *s_loader;
 static uint8_t          s_rx_buf[RX_BUF_MAX];
 static frame_buf_t      s_rx_fb;
 static QueueHandle_t    s_frame_queue;
+static SemaphoreHandle_t s_send_mutex;
 
 /* ---- trace state ---- */
 /* Bit 0 = bus 0 enabled, bit 1 = bus 1 enabled. 0 = trace off. */
@@ -80,20 +82,27 @@ static void send_frame(cJSON *resp)
     frame[3] = (uint8_t)((jlen >> 24) & 0xFF);
     memcpy(frame + FRAME_HDR_LEN, json, jlen);
 
-    /* BLE notifications are limited to MTU-3 (~509 B). Chunk larger frames.
-     * Bail out mid-chunk if the link drops — without this, a disconnect during
-     * a big frame floods nimble_host with failed-notify calls and overflows
-     * its stack. */
-    const size_t CHUNK = 200; /* conservative; negotiated MTU may be smaller */
     size_t total = FRAME_HDR_LEN + jlen;
     size_t off = 0;
+
+    if (s_send_mutex) xSemaphoreTake(s_send_mutex, portMAX_DELAY);
+
     while (off < total) {
         if (!dorky_ble_connected()) break;
         size_t n = total - off;
-        if (n > CHUNK) n = CHUNK;
+        if (n > NOTIFY_CHUNK) n = NOTIFY_CHUNK;
         if (dorky_ble_notify(frame + off, n) != 0) break;
         off += n;
+        /* Yield to the higher-priority NimBLE host task so it can drain its
+         * event queue between chunks.  Without a gap, rapid notify calls
+         * block the main task on a full host queue, stalling the dispatch
+         * loop for seconds.  Unlike vTaskDelay, taskYIELD returns
+         * immediately after the host task processes a single event, keeping
+         * the BLE link active between chunks. */
+        if (off < total) taskYIELD();
     }
+
+    if (s_send_mutex) xSemaphoreGive(s_send_mutex);
 
     free(frame);
     free(json);
@@ -1188,6 +1197,7 @@ static const char *script_name_by_id(int script_id)
 
 void protocol_init(script_loader_t *loader)
 {
+    s_send_mutex = xSemaphoreCreateMutex();
     s_loader = loader;
     frame_buf_init(&s_rx_fb, s_rx_buf, sizeof(s_rx_buf));
     s_frame_queue = xQueueCreate(DISPATCH_QUEUE_LEN, sizeof(frame_item_t));
