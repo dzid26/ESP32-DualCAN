@@ -607,10 +607,13 @@
             <Progress.Root value={app.otaProgress} class="ota-progress-wrap">
               <div class="ota-progress-bar" style="width: {app.otaProgress}%"></div>
             </Progress.Root>
-            <div style="display: flex; align-items: center; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
               <span class="mono" style="font-size: 11px; color: {app.otaDone ? 'var(--dc-ok)' : 'var(--dc-text-dim)'}">
                 {app.otaStatus}
               </span>
+              {#if app.otaSpeed}
+                <span class="mono" style="font-size: 11px; color: var(--dc-text-dim)">{app.otaSpeed}</span>
+              {/if}
               {#if app.otaBusy}
                 <button class="btn btn--sm btn--danger" onclick={() => app.abortOTA()}>Abort</button>
               {/if}

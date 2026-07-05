@@ -171,6 +171,7 @@ class AppState {
   otaBusy = $state(false);
   otaProgress = $state(0);   // 0–100
   otaTotal = $state(0);      // total bytes
+  otaSpeed = $state('');     // throughput during transfer, e.g. "12 KB/s"
   otaStatus = $state('');    // human-readable status line
   otaError = $state<string | null>(null);
   otaDone = $state(false);
@@ -418,6 +419,9 @@ class AppState {
     } catch {
       this.protoMismatch = 'firmware too old (no system.info) — please update';
     }
+    /* Query the negotiated ATT MTU so OTA writes use the largest possible
+     * chunk size.  Best-effort; fallback is the safe 180-byte default. */
+    this.proto.adjustChunkFromMtu().catch(() => {});
     try {
       const r = await this.proto.getSecret('anthropic');
       if (r.value) this.setAiKey(r.value);
@@ -445,6 +449,7 @@ class AppState {
     this.otaBusy = false;
     this.otaProgress = 0;
     this.otaTotal = 0;
+    this.otaSpeed = '';
     this.otaStatus = '';
     this.otaError = null;
     this.otaDone = false;
@@ -463,9 +468,15 @@ class AppState {
     this.otaStatus = `Preparing flash for ${label} (${(bin.length / 1024).toFixed(0)} KB)…`;
     this.pushLog(`OTA: starting upload of ${label} (${bin.length} bytes)`, 'info', 'ota');
 
+    const t0 = performance.now();
     try {
       await this.proto.streamFirmware(bin, (sent, total) => {
         this.otaProgress = Math.round((sent / total) * 100);
+        const elapsed = (performance.now() - t0) / 1000;
+        if (elapsed > 0.5) {
+          const bps = sent / elapsed;
+          this.otaSpeed = bps >= 1024 ? `${(bps / 1024).toFixed(1)} KB/s` : `${bps.toFixed(0)} B/s`;
+        }
         this.otaStatus = `Flashing… ${this.otaProgress}% (${(sent / 1024).toFixed(0)} / ${(total / 1024).toFixed(0)} KB)`;
       });
 
@@ -509,6 +520,7 @@ class AppState {
     try {
       await this.proto.otaAbort();
       this.otaStatus = 'Aborted';
+      this.otaSpeed = '';
       this.otaBusy = false;
       this.pushLog('OTA aborted by user', 'warn', 'ota');
     } catch {
