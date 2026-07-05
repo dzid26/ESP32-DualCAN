@@ -248,7 +248,7 @@ class AppState {
       if (kind === 'auth_fail') {
         toast.show({
           severity: 'error',
-          message: 'Dorky rejected the connection. Most often the OS has a stale bond — remove "Dorky" from your Bluetooth settings, then reconnect.',
+          message: 'Dorky rejected the connection. Maybe you reconnected too quickly. Or the OS has a stale bond — remove "Dorky" from your Bluetooth settings, then reconnect.',
           link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
           duration: 12000,
         });

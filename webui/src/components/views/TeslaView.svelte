@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
+  import { BleClient } from '@capacitor-community/bluetooth-le';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
   import { AlertDialog } from 'bits-ui';
@@ -25,26 +26,28 @@
   let webBleScanning = $state(false);
   const TESLA_SVC    = '00000211-b2d1-43f0-9b88-960cebf8b91e';
   const TESLA_VER    = '00000214-b2d1-43f0-9b88-960cebf8b91e';
-  const webBleSupported = typeof navigator !== 'undefined' && !!navigator.bluetooth;
+  // The Capacitor plugin handles BLE availability detection per platform.
+  const webBleSupported = true;
 
   async function webBleScan(): Promise<void> {
     webBleScanning = true;
     webBleDevice = null;
     try {
-      const dev = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [TESLA_SVC] }],
+      const device = await BleClient.requestDevice({
+        services: [TESLA_SVC],
         optionalServices: [TESLA_SVC],
       });
-      webBleDevice = { name: dev.name ?? '(unknown)', connected: false };
+
+      const name = device.name ?? '(unknown)';
+      webBleDevice = { name, connected: false };
+
       try {
-        const server = await dev.gatt!.connect();
-        const svc    = await server.getPrimaryService(TESLA_SVC);
-        const chr    = await svc.getCharacteristic(TESLA_VER);
-        const val    = await chr.readValue();
-        const bytes  = Array.from(new Uint8Array(val.buffer));
+        await BleClient.connect(device.deviceId, () => {});
+        const val = await BleClient.read(device.deviceId, TESLA_SVC, TESLA_VER);
+        const bytes = Array.from(new Uint8Array(val.buffer));
         webBleDevice = { ...webBleDevice, connected: true,
           version: bytes.map(b => b.toString(16).padStart(2,'0')).join(' ') };
-        server.disconnect();
+        await BleClient.disconnect(device.deviceId);
       } catch { /* version read optional */ }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -141,9 +144,8 @@
     <div class="frame scanner-frame">
       <div class="frame__head">Nearby Teslas</div>
       <div class="frame__body" style="display:flex;flex-direction:column;gap:10px">
-        {#if webBleSupported}
           <div style="font-size:12px;color:var(--dc-text-dim);line-height:1.5">
-            Scan for nearby Tesla VCSEC advertisements directly from this browser
+            Scan for nearby Tesla VCSEC advertisements directly from this device
             — no Dorky connection needed.
           </div>
           <button class="btn btn--sm btn--info" style="align-self:flex-start"
@@ -169,11 +171,6 @@
               Connect Dorky to pair.
             </div>
           {/if}
-        {:else}
-          <div style="font-size:12px;color:var(--dc-text-dim)">
-            Needs Chrome or Edge (not available on iOS).
-          </div>
-        {/if}
       </div>
     </div>
 

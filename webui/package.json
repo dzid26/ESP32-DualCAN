@@ -23,6 +23,8 @@
     "vite": "^8.0.4"
   },
   "dependencies": {
+    "@capacitor/core": "^6.2.1",
+    "@capacitor-community/bluetooth-le": "^6.1.0",
     "@codemirror/autocomplete": "^6.20.2",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/language": "^6.12.3",

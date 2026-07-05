@@ -1,75 +1,80 @@
 import type { Transport } from './types';
+import { BleClient } from '@capacitor-community/bluetooth-le';
 
 // Nordic UART Service UUIDs (must match firmware ble_transport.c)
 const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const RX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write to device
 const TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify from device
 
-/** How the link came down, as inferred from timing + intent. Web Bluetooth
- * doesn't expose the HCI reason, so we make do with what we can observe. */
+/** How the link came down, as inferred from timing + intent. */
 export type DisconnectKind =
   | 'user'           // disconnect() was called explicitly
   | 'auth_fail'      // came down within AUTH_FAIL_THRESHOLD_MS — almost always stale OS bond / 517
   | 'replaced'       // another authorized client took over (firmware notified us)
   | 'unexpected';    // anything else (out of range, peer powered off, kicked)
 
-/** Disconnects faster than this are treated as authentication failures —
- * a healthy GATT setup takes at least a few hundred ms. */
+/** Disconnects faster than this are treated as authentication failures. */
 const AUTH_FAIL_THRESHOLD_MS = 1500;
 
 export class BleTransport implements Transport {
-  private device: BluetoothDevice | null = null;
-  private server: BluetoothRemoteGATTServer | null = null;
-  private rxChar: BluetoothRemoteGATTCharacteristic | null = null;
-  private txChar: BluetoothRemoteGATTCharacteristic | null = null;
+  private deviceId: string | null = null;
+  private deviceName_: string | null = null;
   private receiveCb: ((data: Uint8Array) => void) | null = null;
   private changeCbs: Array<(connected: boolean) => void> = [];
   private disconnectCbs: Array<(kind: DisconnectKind) => void> = [];
   private _connected = false;
   private connectedAt = 0;
   private userInitiatedDisconnect = false;
-  /** Guards against Windows firing gattserverdisconnected twice for one event. */
+  private initialized = false;
+  /** Set to true while reconnect() is running so stale disconnect events
+   *  from the plugin don't corrupt the state we're about to replace. */
+  private reconnecting = false;
+  /** Guards against the plugin firing onDisconnected twice for one event. */
   private disconnectHandled = false;
-  /** Set by handleCharacteristicValueChanged when the firmware signals the
-   * reason for the upcoming disconnect via a [0xFD, reason] notification. */
+  /** Set by onNotification when the firmware signals the reason for the
+   *  upcoming disconnect via a [0xFD, reason] notification. */
   private pendingDisconnectReason: DisconnectKind | null = null;
-  private readonly handleGattServerDisconnected = () => {
-    if (this.disconnectHandled) return;
-    this.disconnectHandled = true;
 
-    let kind: DisconnectKind;
-    let sinceConnect = 0;
-    if (this.pendingDisconnectReason) {
-      kind = this.pendingDisconnectReason;
-      this.pendingDisconnectReason = null;
-    } else {
-      sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
-      if (this.userInitiatedDisconnect) kind = 'user';
-      else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) kind = 'auth_fail';
-      else kind = 'unexpected';
-    }
-    this.userInitiatedDisconnect = false;
-    this.connectedAt = 0;
-    this.server = null;
-    this.rxChar = null;
-    this.txChar = null;
-    this.device = null;
-    this.setConnected(false);
-    console.log(`BLE disconnected (${kind}, after ${sinceConnect}ms)`);
-    this.disconnectCbs.forEach(cb => cb(kind));
-  };
-  private readonly handleCharacteristicValueChanged = (event: Event) => {
-    const dv = (event.target as BluetoothRemoteGATTCharacteristic).value;
-    if (!dv) return;
-    const data = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+  private readonly onNotification = (value: DataView): void => {
+    const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
     // Firmware disconnect-reason notification: [0xFD, reason]
     if (data.length >= 2 && data[0] === 0xFD) {
       if (data[1] === 0x01) this.pendingDisconnectReason = 'replaced';
       return;
     }
-    if (this.receiveCb) {
-      this.receiveCb(data);
+    if (this.receiveCb) this.receiveCb(data);
+  };
+
+  private readonly onDisconnected = (_deviceId: string): void => {
+    // The plugin sometimes fires this twice for one disconnect.
+    if (this.disconnectHandled) return;
+    this.disconnectHandled = true;
+
+    // During reconnect we intentionally disconnect and then re-connect.
+    // Ignore the disconnect event from the teardown — the subsequent
+    // connect() will establish the new session.
+    if (this.reconnecting) return;
+
+    let kind: DisconnectKind;
+    const sinceConnect = this.connectedAt ? Date.now() - this.connectedAt : Infinity;
+
+    if (this.pendingDisconnectReason) {
+      kind = this.pendingDisconnectReason;
+      this.pendingDisconnectReason = null;
+    } else if (this.userInitiatedDisconnect) {
+      kind = 'user';
+    } else if (sinceConnect < AUTH_FAIL_THRESHOLD_MS) {
+      kind = 'auth_fail';
+    } else {
+      kind = 'unexpected';
     }
+    this.userInitiatedDisconnect = false;
+    this.connectedAt = 0;
+    this.deviceId = null;
+    this.deviceName_ = null;
+    this.setConnected(false);
+    console.log(`BLE disconnected (${kind}, after ${sinceConnect}ms)`);
+    this.disconnectCbs.forEach(cb => cb(kind));
   };
 
   get connected(): boolean {
@@ -78,7 +83,7 @@ export class BleTransport implements Transport {
 
   /** Name of the currently-connected device (e.g. "Dorky-A3F1"), or null when disconnected. */
   get deviceName(): string | null {
-    return this._connected ? (this.device?.name ?? null) : null;
+    return this._connected ? this.deviceName_ : null;
   }
 
   private setConnected(val: boolean) {
@@ -97,130 +102,127 @@ export class BleTransport implements Transport {
     this.disconnectCbs.push(cb);
   }
 
-  private async setupDevice(device: BluetoothDevice): Promise<void> {
-    // Do all I/O first — any pending gattserverdisconnected from the previous
-    // disconnect fires during these awaits with no listener attached → dropped.
-    this.server = await device.gatt!.connect();
-    const service = await this.server.getPrimaryService(SERVICE_UUID);
-
-    this.rxChar = await service.getCharacteristic(RX_CHAR_UUID);
-    this.txChar = await service.getCharacteristic(TX_CHAR_UUID);
-
-    this.device = device;
-    this.connectedAt = Date.now();
-    this.disconnectHandled = false;
-
-    // Attach the disconnect listener now — any stale events from the previous
-    // disconnect have already fired during the I/O awaits above.
-    device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-    device.addEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-
-    // Subscribe to incoming data. startNotifications can hang on Windows,
-    // so race it against a short timeout — setupDevice always completes,
-    // and if it resolves later, notifications kick in automatically.
-    // Don't setConnected(true) until after this — on Android, concurrent
-    // GATT ops (protocol writes from onConnChange) race with notifications.
-    this.txChar.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
-    await Promise.race([
-      this.txChar.startNotifications().then(() => console.log('BLE notifications started')),
-      new Promise(r => setTimeout(r, 5000)).then(() => console.warn('BLE startNotifications timed out')),
-    ]).catch(() => console.warn('BLE startNotifications failed — reconnect may help'));
-
-    this.setConnected(true);
-    console.log('BLE connected to', device.name);
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await BleClient.initialize();
+      this.initialized = true;
+    }
   }
 
-  /** Try setupDevice with up to 5 retries. gatt.connect can fail right after
-   *  disconnect on Windows — the short delay lets the stack settle. */
-  private async setupWithRetry(device: BluetoothDevice): Promise<void> {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        await this.setupDevice(device);
-        return;
-      } catch (err) {
-        if (this.server?.connected) {
-          try { this.server.disconnect(); } catch { /* ignore */ }
-        }
-        device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-        this.server = null;
-        this.rxChar = null;
-        this.txChar = null;
-        this.device = null;
-        this.connectedAt = 0;
-        this.disconnectHandled = false;
-        this.setConnected(false);
-        if (attempt >= 4) throw err;
-        await new Promise(r => setTimeout(r, 50));
-      }
-    }
+  private async subscribeNotifications(): Promise<void> {
+    if (!this.deviceId) throw new Error('Not connected');
+    // stop + start to replace any stale callback from a previous session
+    try { await BleClient.stopNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID); } catch { /* ignore */ }
+    await BleClient.startNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID, this.onNotification);
   }
 
   async connect(): Promise<void> {
-    if (!navigator.bluetooth) {
-      throw new Error(
-        'Web Bluetooth not available. Use Chrome/Edge on localhost or HTTPS.'
-      );
+    await this.ensureInitialized();
+
+    try {
+      const device = await BleClient.requestDevice({
+        services: [SERVICE_UUID],
+        optionalServices: [SERVICE_UUID],
+      });
+
+      this.deviceId = device.deviceId;
+      this.deviceName_ = device.name ?? null;
+      this.disconnectHandled = false;
+
+      await BleClient.connect(device.deviceId, this.onDisconnected);
+      this.connectedAt = Date.now();
+
+      // Race startNotifications against a timeout — it can hang on Windows.
+      await Promise.race([
+        this.subscribeNotifications().then(() => console.log('BLE notifications started')),
+        new Promise(r => setTimeout(r, 5000)).then(() => console.warn('BLE startNotifications timed out')),
+      ]).catch(() => console.warn('BLE startNotifications failed — reconnect may help'));
+
+      // If the connection dropped during notification setup (e.g. auth
+      // failure), onDisconnected cleared deviceId — don't override.
+      if (!this.deviceId) return;
+
+      this.setConnected(true);
+      console.log('BLE connected to', device.name);
+    } catch (e) {
+      // Null our state and tell the plugin to release any lingering
+      // connection so the next attempt starts fresh.
+      const id = this.deviceId;
+      this.deviceId = null;
+      this.deviceName_ = null;
+      this.connectedAt = 0;
+      this.setConnected(false);
+      if (id) { try { await BleClient.disconnect(id); } catch { /* ignore */ } }
+      throw e;
     }
-
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [SERVICE_UUID] }],
-      optionalServices: [SERVICE_UUID],
-    });
-
-    await this.setupWithRetry(device);
   }
 
   async disconnect(): Promise<void> {
     this.userInitiatedDisconnect = true;
-    if (this.server?.connected) {
-      this.server.disconnect();
+    if (this.deviceId) {
+      await BleClient.disconnect(this.deviceId);
     }
-    // On Windows, gattserverdisconnected can fire async. Remove the listener
-    // so a stale event doesn't corrupt a subsequent connection.
-    if (this.device) {
-      this.device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-    }
-    this.server = null;
-    this.rxChar = null;
-    this.txChar = null;
-    this.device = null;
+    this.deviceId = null;
+    this.deviceName_ = null;
     this.connectedAt = 0;
     this.setConnected(false);
   }
 
   async send(data: Uint8Array): Promise<void> {
-    if (!this.rxChar) throw new Error('Not connected');
-    // @ts-expect-error TS 5.x ArrayBufferLike vs ArrayBuffer mismatch — runtime is fine
-    await this.rxChar.writeValueWithoutResponse(data);
+    if (!this.deviceId) throw new Error('Not connected');
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    await BleClient.writeWithoutResponse(this.deviceId, SERVICE_UUID, RX_CHAR_UUID, dv);
   }
 
   /** Re-subscribe to TX characteristic notifications.
    *  Call when the notification stream appears stalled (no incoming data
-   *  despite the GATT connection being up). Returns immediately if the
-   *  characteristic is gone. */
+   *  despite the GATT connection being up). */
   async restartNotifications(): Promise<void> {
-    if (!this.txChar) throw new Error('Not connected');
-    await this.txChar.startNotifications();
+    await this.subscribeNotifications();
   }
 
   /** Disconnect and reconnect to the same device without showing the
    *  Bluetooth picker. Useful for recovering a wedged transport. */
   async reconnect(): Promise<void> {
-    const device = this.device;
-    if (!device) throw new Error('No device to reconnect to');
+    const id = this.deviceId;
+    if (!id) throw new Error('No device to reconnect to');
 
-    // Tear down the current session.
+    this.reconnecting = true;
     this.userInitiatedDisconnect = true;
-    try { this.server?.disconnect(); } catch { /* ignore */ }
-    device.removeEventListener('gattserverdisconnected', this.handleGattServerDisconnected);
-    this.server = null;
-    this.rxChar = null;
-    this.txChar = null;
-    this.connectedAt = 0;
-    this.disconnectHandled = false;
-    this.setConnected(false);
 
-    await this.setupWithRetry(device);
+    try {
+      // Tear down the current session in the plugin — onDisconnected will
+      // see reconnecting=true and skip to avoid corrupting state.
+      try { await BleClient.disconnect(id); } catch { /* ignore */ }
+      this.connectedAt = 0;
+      this.setConnected(false);
+
+      // New session — allow disconnect events to be processed normally.
+      this.reconnecting = false;
+      this.disconnectHandled = false;
+
+      await BleClient.connect(id, this.onDisconnected);
+      this.deviceId = id;
+      this.connectedAt = Date.now();
+
+      await this.subscribeNotifications();
+
+      // If the connection dropped during notification setup, deviceId
+      // was already cleared by onDisconnected.
+      if (!this.deviceId) return;
+
+      this.setConnected(true);
+      console.log('BLE reconnected');
+    } catch (e) {
+      // Null our state and tell the plugin to release any lingering
+      // connection so the next attempt starts fresh.
+      this.deviceId = null;
+      this.deviceName_ = null;
+      this.connectedAt = 0;
+      this.setConnected(false);
+      try { await BleClient.disconnect(id); } catch { /* ignore */ }
+      throw e;
+    }
   }
 
   onReceive(cb: (data: Uint8Array) => void): void {
