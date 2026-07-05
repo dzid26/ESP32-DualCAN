@@ -227,21 +227,46 @@ static void log_push_raw(const char *raw)
     cJSON_Delete(push);
 }
 
+/* NimBLE log lines we never want to see on serial. 
+ * Use with CONFIG_BT_NIMBLE_LOG_LEVEL_DEBUG=y 
+*/
+static bool is_nimble_noise(const char *s)
+{
+    return strstr(s, "NimBLE: 0x") != NULL
+        || strstr(s, "GATT procedure initiated: notify") != NULL
+        || strstr(s, "NimBLE: att_handle=") != NULL;
+}
+
+/* NimBLE log lines that must not be forwarded over BLE — they flood the
+ * notify stream and can corrupt concurrent frame sends. */
+static bool is_nimble_noise_ble(const char *s)
+{
+    return strstr(s, ") NimBLE:") != NULL;
+}
+
 static int log_vprintf_hook(const char *fmt, va_list args)
 {
     va_list args2;
     va_copy(args2, args);
-    int ret = s_orig_vprintf(fmt, args);
 
-    /* Guard against re-entrancy: send_frame → dorky_ble_notify causes NimBLE
-     * to log "GATT procedure initiated: notify" at INFO level, which re-enters
-     * this hook and recurses until the stack overflows (~17 frames × 700 B). */
+    char buf[320];
+    char raw[320];
+    vsnprintf(buf, sizeof(buf), fmt, args2);
+
+    size_t raw_len = strip_ansi(buf, raw, sizeof(raw));
+
+    /* Serial: suppress NimBLE noise (hex dumps, notify chatter). */
+    int ret;
+    if (raw_len > 0 && is_nimble_noise(raw))
+        ret = (int)raw_len;
+    else
+        ret = s_orig_vprintf(fmt, args);
+
+    /* BLE: never forward any NimBLE log to avoid flooding the notify stream
+     * and causing re-entrancy (send_frame → dorky_ble_notify logs at INFO). */
     if (!s_hook_active && dorky_ble_connected()) {
         s_hook_active = true;
-        char buf[320];
-        char raw[320];
-        vsnprintf(buf, sizeof(buf), fmt, args2);
-        if (strip_ansi(buf, raw, sizeof(raw)) > 0)
+        if (raw_len > 0 && !is_nimble_noise_ble(raw))
             log_push_raw(raw);
         s_hook_active = false;
     }
