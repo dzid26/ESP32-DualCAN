@@ -1,14 +1,25 @@
 name: Prerelease
 
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/prerelease.yml']
   workflow_run:
     workflows: ["Firmware CI"]
     types: [completed]
     branches: [main]
 
 jobs:
+  validate:
+    name: Validate workflow
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "prerelease.yml syntax validated"
+
   publish:
     name: Publish continuous prerelease
+    if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,7 +28,7 @@ jobs:
         id: sha
         run: echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
         env:
-          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
 
       - name: Download firmware artifact
         uses: actions/download-artifact@v4
