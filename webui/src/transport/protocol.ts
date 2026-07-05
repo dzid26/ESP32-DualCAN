@@ -197,8 +197,12 @@ export class Protocol {
       setTimeout(() => {
         if (this.pending.delete(id)) {
           reject(new Error(`Timeout waiting for response to ${op}`));
-          // No data received for > 10 s while connected → notification stream
-          // likely stalled. Fire stall callback once per episode.
+          /* If the firmware sent a partial frame before stalling, the rxBuf
+           * contains stale bytes that poison all future parsing — the header
+           * says "frame is N bytes" but the rest never arrives, so onRx
+           * keeps blocking waiting for more data.  Reset to recover without
+           * requiring a full disconnect. */
+          this.rxBuf = new Uint8Array(0);
           if (!this.stallReported && this.stallCb &&
               this.transport.connected &&
               this.lastRxTimestamp > 0 &&
