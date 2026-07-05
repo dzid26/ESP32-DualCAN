@@ -10,27 +10,18 @@ on:
     branches: [main]
 
 jobs:
-  validate:
-    name: Validate workflow
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "prerelease.yml syntax validated"
-
   publish:
     name: Publish continuous prerelease
-    if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Resolve short SHA
-        id: sha
-        run: echo "short=${SHA:0:7}" >> "$GITHUB_OUTPUT"
-        env:
-          SHA: ${{ github.event.workflow_run.head_sha }}
+      - name: Validate workflow file
+        if: github.event_name == 'push'
+        run: echo "prerelease.yml syntax OK"
 
       - name: Download firmware artifact
+        if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
         with:
           name: firmware-bin
@@ -38,10 +29,11 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Upload to continuous prerelease
+        if: github.event_name == 'workflow_run'
         uses: ncipollo/release-action@v1
         with:
           tag: continuous
-          name: Continuous build (${{ steps.sha.outputs.short }})
+          name: Continuous build (${{ substring(github.event.workflow_run.head_sha, 0, 7) }})
           prerelease: true
           allowUpdates: true
           removeArtifacts: true
