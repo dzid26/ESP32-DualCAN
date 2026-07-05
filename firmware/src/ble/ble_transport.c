@@ -457,6 +457,12 @@ bool dorky_ble_connected(void)
     return s_conn_handle != BLE_HS_CONN_HANDLE_NONE;
 }
 
+uint16_t dorky_ble_mtu(void)
+{
+    if (s_conn_handle == BLE_HS_CONN_HANDLE_NONE) return 0;
+    return ble_att_mtu(s_conn_handle);
+}
+
 bool dorky_ble_pairing_open(void)
 {
     return s_pairing_open;

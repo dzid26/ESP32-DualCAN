@@ -34,7 +34,7 @@ static const char *TAG = "proto";
 #define RX_BUF_MAX          (32 * 1024)     /* enough for larger scripts + compiled bytecode */
 #define FRAME_HDR_LEN       4
 #define DISPATCH_QUEUE_LEN  8
-#define NOTIFY_CHUNK        200     /* BLE notify chunk: must fit within MTU-3 on all stacks */
+#define NOTIFY_CHUNK        200     /* fallback: safe before MTU exchange completes */
 
 typedef struct { uint8_t *data; size_t len; uint8_t type; } frame_item_t;
 
@@ -86,12 +86,17 @@ static void send_frame(cJSON *resp)
     size_t off = 0;
     int retries = 0;
 
+    /* Size each chunk to the negotiated ATT MTU minus the 3-byte notify header.
+     * The 200-byte floor keeps us safe if MTU exchange hasn't completed yet. */
+    uint16_t mtu = dorky_ble_mtu();
+    uint16_t chunk = (mtu > 203) ? mtu - 3 : NOTIFY_CHUNK;
+
     if (s_send_mutex) xSemaphoreTake(s_send_mutex, portMAX_DELAY);
 
     while (off < total) {
         if (!dorky_ble_connected()) break;
         size_t n = total - off;
-        if (n > NOTIFY_CHUNK) n = NOTIFY_CHUNK;
+        if (n > chunk) n = chunk;
         if (dorky_ble_notify(frame + off, n) != 0) {
             if (++retries >= 100) {
                 ESP_LOGE(TAG, "notify busy after 100 retries, dropping frame");

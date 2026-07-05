@@ -18,6 +18,9 @@ int dorky_ble_notify(const uint8_t *data, size_t len);
 /* Returns true if a client is currently connected. */
 bool dorky_ble_connected(void);
 
+/* Returns the negotiated ATT MTU for the active connection, or 0 if disconnected. */
+uint16_t dorky_ble_mtu(void);
+
 /* Returns true while the pairing window is open (new, unbonded devices accepted). */
 bool dorky_ble_pairing_open(void);
 
