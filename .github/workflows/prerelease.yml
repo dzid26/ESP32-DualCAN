@@ -33,7 +33,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: continuous
-          name: Continuous build (${{ substring(github.event.workflow_run.head_sha, 0, 7) }})
+          name: Continuous build (${{ github.event.workflow_run.head_sha }})
           prerelease: true
           allowUpdates: true
           removeArtifacts: true
