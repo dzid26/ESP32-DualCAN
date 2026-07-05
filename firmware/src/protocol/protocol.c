@@ -84,6 +84,7 @@ static void send_frame(cJSON *resp)
 
     size_t total = FRAME_HDR_LEN + jlen;
     size_t off = 0;
+    int retries = 0;
 
     if (s_send_mutex) xSemaphoreTake(s_send_mutex, portMAX_DELAY);
 
@@ -91,7 +92,15 @@ static void send_frame(cJSON *resp)
         if (!dorky_ble_connected()) break;
         size_t n = total - off;
         if (n > NOTIFY_CHUNK) n = NOTIFY_CHUNK;
-        if (dorky_ble_notify(frame + off, n) != 0) break;
+        if (dorky_ble_notify(frame + off, n) != 0) {
+            if (++retries >= 100) {
+                ESP_LOGE(TAG, "notify busy after 100 retries, dropping frame");
+                break;
+            }
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
+        }
+        retries = 0;
         off += n;
         /* Yield to the higher-priority NimBLE host task so it can drain its
          * event queue between chunks.  Without a gap, rapid notify calls
