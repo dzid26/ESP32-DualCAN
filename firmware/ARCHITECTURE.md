@@ -382,7 +382,7 @@ CodeMirror 6 with a custom Berry tokenizer and a static completion provider main
 
 ### 9.3 Example script gallery
 
-`firmware/scripts_examples/` holds example `.be` files with frontmatter metadata (`@name`, `@description`, `@bus`). The web UI fetches this directory from the GitHub repo at runtime and renders it as a one-click install gallery. No separate "store" infrastructure.
+`firmware/test_scripts/` holds test `.be` files. User-facing example scripts live in `/scripts/tesla/`. The web UI fetches these directories from the GitHub repo at runtime and renders them as a one-click install gallery. No separate "store" infrastructure.
 
 ---
 
@@ -598,7 +598,7 @@ firmware/
     │   ├── tesla_ble/           # optional, phase 3
     │   └── ota/
     ├── partitions.csv           # OTA + LittleFS layout
-    ├── scripts_examples/        # .be example automations
+    ├── test_scripts/            # .be test automations
     └── data/                    # populated by build, flashed to LittleFS
         └── webui/               # copied from webui/dist
 webui/                           # Svelte app (independent project)
@@ -606,7 +606,9 @@ webui/                           # Svelte app (independent project)
     ├── src/
     └── dist/                    # build output (gitignored)
 scripts/
-    └── build-webui.sh           # npm build + copy into firmware/data/webui
+    └── tesla/                   # .be user automations
+tools/
+    └── git-hooks/               # git hooks
 .github/workflows/
     ├── firmware.yml             # pio build + host tests
     ├── webui.yml                # npm build + GH Pages deploy

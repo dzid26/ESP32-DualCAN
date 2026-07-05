@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Builds a tiny native parse-checker against the bundled Berry sources and
-# runs it over every script in firmware/scripts_examples/. Catches syntax /
+# runs it over every script in firmware/test_scripts/. Catches syntax /
 # parse errors in examples without needing a flashed ESP32.
 #
-# Usage:  ./tools/parse_check_examples.sh           # check examples/
+# Usage:  ./tools/parse_check_examples.sh           # check test_scripts/
 #         ./tools/parse_check_examples.sh path.be   # check specific files
 
 set -euo pipefail
@@ -40,7 +40,7 @@ if [ "$#" -gt 0 ]; then
   files=("$@")
 else
   shopt -s nullglob
-  files=( "$ROOT"/scripts_examples/*.be )
+  files=( "$ROOT"/test_scripts/*.be )
 fi
 
 if [ "${#files[@]}" -eq 0 ]; then

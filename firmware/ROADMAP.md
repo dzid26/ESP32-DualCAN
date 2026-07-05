@@ -94,13 +94,13 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
    - Per-ID TX rate limiter (default 100 Hz).
    - Startup delay (wait for rx activity before enabling user scripts).
    - Simulation mode toggle that diverts sends to a log.
-10. **First real automation** (`scripts_examples/window_drop_on_long_handle.be`):
+10. **First real automation** (`scripts/tesla/window_drop_on_long_handle.be`):
     - Subscribe to door open and handle pull signals on bus 0.
     - On door-open + handle-pulled-sustained-2s, send window-down command.
     - Includes the actual Tesla signal and message names once we identify them in the DBC.
 11. **Tests for phase 1 features**:
     - Host: DBC binary decode vs. a set of reference frames (multiplexed signals included), message encode preserving untouched bits, auto checksum + counter on send, CBOR round-trip for every new topic.
-    - Host: Berry script test that loads `window_drop_on_long_handle.be`, fakes signal updates, asserts the correct TX message is produced — all without flashing.
+    - Host: Berry script test that loads `window_drop_on_long_handle.be` from test_scripts, fakes signal updates, asserts the correct TX message is produced — all without flashing.
     - Embedded: LittleFS mount + script read, NVS round-trip, BLE advertise smoke test.
     - Web UI: Vitest unit tests for the BLE transport adapter against a mocked GATT layer.
 
@@ -135,7 +135,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
 4. **Event-triggered capture**: UI-driven, starts/stops trace based on a signal predicate, saves to a file.
 5. **Baseline diff tool**: UI-side, snapshot A / perform action / snapshot B / render diff.
 6. **Replay**: load a saved capture, send frames in order (respects timestamps or at fixed rate), works in simulation mode too.
-7. **Second automation** (`scripts_examples/track_mode_on_full_throttle.be`):
+7. **Second automation** (`test_scripts/track_mode_on_full_throttle.be`):
    - Uses `UI_trackModeRequest` signal from the larger DBC.
    - Holds full-throttle detection and edge debouncing.
 8. **Signal graphs on the Dashboard** *(uPlot — partially scaffolded in DashboardView.svelte)*.

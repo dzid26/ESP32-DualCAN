@@ -2,7 +2,7 @@
   import { app } from '../../lib/store.svelte';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
-  import { GALLERY_SCRIPTS, GALLERY_DBCS, DBC_SOURCE, type GalleryDbc } from '../../lib/sampleData';
+  import { GALLERY_DBCS, DBC_SOURCE, type GalleryDbc } from '../../lib/sampleData';
   import { examples } from '../../examples';
 
   type Tab = 'scripts' | 'dbcs';
@@ -12,7 +12,7 @@
   const matches = (item: { brands?: string[] }) =>
     !carBrand || item.brands?.includes('*') || item.brands?.includes(carBrand);
 
-  const scripts = $derived(GALLERY_SCRIPTS.filter(matches));
+  const scripts = $derived(examples);
   const dbcs = $derived(GALLERY_DBCS.filter(matches));
   const opendbcDbcs  = $derived(dbcs.filter(d => d.source === 'opendbc'));
   const communityDbcs = $derived(dbcs.filter(d => d.source === 'community'));
@@ -74,7 +74,7 @@
     style="gap: 2px; background: var(--dc-surface); border: 1px solid var(--dc-border); border-radius: 4px; padding: 3px; align-self: flex-start"
   >
     {#each [
-      { id: 'scripts' as Tab, label: 'Scripts',  icon: 'scripts' as const, shown: scripts.length, total: GALLERY_SCRIPTS.length },
+      { id: 'scripts' as Tab, label: 'Scripts',  icon: 'scripts' as const, shown: scripts.length, total: scripts.length },
       { id: 'dbcs'    as Tab, label: 'DBCs',     icon: 'dbc'     as const, shown: dbcs.length,    total: GALLERY_DBCS.length },
     ] as t}
       <button
@@ -93,49 +93,32 @@
   {#if tab === 'scripts'}
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px">
       {#each scripts as ex}
-        {@const preview = examples.find(e => e.filename === ex.filename)}
-        <div class="frame gal-card">
-          <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px">
+        <div class="frame gal-card" style="display: flex; flex-direction: column">
+          <div class="frame__body" style="display: flex; flex-direction: column; gap: 8px; flex: 1">
             <div class="row-flex" style="justify-content: space-between; align-items: flex-start; gap: 8px">
-              <div style="font-size: 13px; color: var(--dc-text); font-weight: 600; line-height: 1.3; flex: 1">{ex.n}</div>
+              <div style="font-size: 13px; color: var(--dc-text); font-weight: 600; line-height: 1.3; flex: 1">{ex.name}</div>
               <span class={'gal-bus gal-bus--' + ex.bus} title={`Targets bus ${ex.bus}`}>bus {ex.bus}</span>
             </div>
-            <div style="font-size: 12px; color: var(--dc-text-fade); line-height: 1.45; flex: 1">{ex.desc}</div>
-            {#if expanded[ex.filename] && preview}
-              <pre class="mono gal-preview">{preview.code}</pre>
+            <div style="font-size: 12px; color: var(--dc-text-fade); line-height: 1.45; flex: 1">{ex.description}</div>
+            {#if expanded[ex.filename]}
+              <pre class="mono gal-preview">{ex.code}</pre>
             {/if}
-            <div class="row-flex gal-meta" style="flex-wrap: wrap; gap: 6px">
-              {#if ex.brands?.includes('*')}
-                <span class="gal-brand gal-brand--any mono">universal</span>
-              {:else}
-                {#each ex.brands as b}
-                  <span class="gal-brand mono">{b}</span>
-                {/each}
-              {/if}
-              <span class="spacer"></span>
-              <span class="muted mono" style="font-size: 11px">@{ex.author}</span>
-              <span class="ghost mono" style="font-size: 11px">★ {ex.stars}</span>
-            </div>
-            <div class="row-flex gal-actions" style="justify-content: flex-end">
-              {#if preview}
-                <button class="btn btn--sm btn--ghost"
-                  onclick={() => (expanded[ex.filename] = !expanded[ex.filename])}>
-                  {expanded[ex.filename] ? 'Hide' : 'Preview'}
-                </button>
-                <button class="btn btn--sm btn--primary"
-                  onclick={() => installScript(ex.filename)}>
-                  <Icon name="down" size={13} />Install
-                </button>
-              {:else}
-                <span class="ghost mono" style="font-size: 10px">{ex.filename}</span>
-              {/if}
+            <div class="row-flex gal-actions" style="justify-content: flex-end; margin-top: auto">
+              <button class="btn btn--sm btn--ghost"
+                onclick={() => (expanded[ex.filename] = !expanded[ex.filename])}>
+                {expanded[ex.filename] ? 'Hide' : 'Preview'}
+              </button>
+              <button class="btn btn--sm btn--primary"
+                onclick={() => installScript(ex.filename)}>
+                <Icon name="down" size={13} />Install
+              </button>
             </div>
           </div>
         </div>
       {/each}
       {#if scripts.length === 0}
         <div class="muted" style="grid-column: 1 / -1; text-align: center; padding: 24px; font-size: 12px">
-          No scripts tagged for {app.car?.brand}. Clear the vehicle in the status bar to see everything.
+          No scripts found.
         </div>
       {/if}
     </div>

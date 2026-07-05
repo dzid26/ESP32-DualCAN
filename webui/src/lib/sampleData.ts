@@ -25,7 +25,7 @@ export const SAMPLE_EVENTS: EventTile[] = [
   { id: 'horn',       name: 'Honk horn',       icon: '📯', desc: 'Single short pulse',         danger: false, lastRun: '2m ago' },
   { id: 'hl-on',      name: 'Headlights ON',   icon: '💡', desc: 'CAN1 0x3E9 byte4 bit0=1',    danger: true,  lastRun: null,        led: 'off' },
   { id: 'hl-off',     name: 'Headlights OFF',  icon: '🌙', desc: 'CAN1 0x3E9 byte4 bit0=0',    danger: true,  lastRun: '14m ago',   led: 'on'  },
-  { id: 'beep',       name: 'Cabin beep',      icon: '🔔', desc: '500 Hz · 200 ms',            danger: false, lastRun: 'never' },
+  { id: 'beep',       name: 'Honk beep',       icon: '🔔', desc: 'honk',                        danger: false, lastRun: 'never' },
   { id: 'lock',       name: 'Lock doors',      icon: '🔒', desc: 'Body bus · BCM cmd',         danger: true,  lastRun: null,        led: 'on'  },
   { id: 'unlock',     name: 'Unlock doors',    icon: '🔓', desc: 'Body bus · BCM cmd',         danger: true,  lastRun: null,        led: 'off' },
   { id: 'fan-3',      name: 'HVAC fan → 3',    icon: '🌬', desc: 'Climate bus',                danger: false, lastRun: '1h ago',    led: 'warn'},
@@ -88,25 +88,7 @@ export const DBC_MSGS: DbcMsg[] = [
   { id: 0x39D, name: 'IBST_status',              sigs: 6, age: 55  },
 ];
 
-export type GalleryScript = {
-  n: string;
-  /** Basename in firmware/scripts_examples/ — used to load bundled content. */
-  filename: string;
-  bus: number; desc: string;
-  author: string; stars: number; brands: string[];
-};
 
-export const GALLERY_SCRIPTS: GalleryScript[] = [
-  { n: 'Easy entry window drop',    filename: 'easy_entry_window_drop.be',   bus: 0, desc: 'Easy-entry: lowers windows when exterior door handles are pulled, restores on door close.',                  author: 'dzid26', stars: 42, brands: ['Tesla'] },
-  { n: 'Track mode on full throttle',   filename: 'track_mode_on_full_throttle.be',  bus: 0, desc: 'Arms track mode when throttle pedal pinned >1s. Template — signals need verification.',                      author: 'dzid26', stars: 31, brands: ['Tesla'] },
-  { n: 'Tesla Doors Sim',               filename: 'tesla_doors_sim.be',              bus: 0, desc: 'Simulates door open/close every 2s. Useful for testing door-based scripts without a car.',                   author: 'dzid26', stars: 12, brands: ['Tesla'] },
-  { n: 'Tiles demo',                    filename: 'tiles_demo.be',                   bus: 0, desc: 'Registers blip_red/green/blue/rainbow action tiles that blink the LED. Verifies the full BLE→tile path.',   author: 'dzid26', stars: 15, brands: ['*'] },
-  { n: 'Hello log',                     filename: 'hello_log.be',                    bus: 0, desc: 'Heartbeat every 5s + greet action. No CAN bus needed — good first script.',                                  author: 'dzid26', stars: 8,  brands: ['*'] },
-  { n: 'Bench test',                    filename: 'bench_test.be',                   bus: 0, desc: 'Sends periodic counter frames on bus 0 and logs RX. Use with loopback wiring.',                              author: 'dzid26', stars: 10, brands: ['*'] },
-  { n: 'Loopback LED',                  filename: 'loopback_led.be',                 bus: 0, desc: 'TX on CAN0, green LED if CAN1 echoes back, red on miss. Also bridges CAN0→CAN1.',                           author: 'dzid26', stars: 6,  brands: ['*'] },
-  { n: 'Light flash horn beep',         filename: 'light_flash_horn_beep.be',          bus: 0, desc: 'Flashes lights and honks horn. TX on VCLEFT_lightController / VCRIGHT_lightController / DAS_bodyControls.', author: 'dzid26', stars: 22, brands: ['*'] },
-  { n: 'Window vent to full open',      filename: 'window_vent_to_full_open.be',       bus: 0, desc: 'Intercepts GOTO_VENT, sends GOTO_PERCENT 100% instead. No hardware CAN bus required.',                  author: 'dzid26', stars: 9,  brands: ['Tesla'] },
-];
 
 export const DBC_SOURCE = { repo: 'commaai/opendbc', url: 'https://github.com/commaai/opendbc' };
 

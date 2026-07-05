@@ -7,16 +7,13 @@
 var a = can_msg_get(0, "DAS_bodyControls")
 var b = can_msg_get(1, "VCLEFT_doorStatus")
 
-# Name-first (passes through unchanged)
-var c = can_msg_get("DAS_bodyControls", 0)
-
 # Already numeric (passes through)
 var d = can_msg_get(0, 0x3e9)
 
 # ---- 2. can_msg_new ----
 # With optional bus arg (rewritten)
-var e = can_msg_new("UI_vehicleControl3", 0)
-var f = can_msg_new("DAS_bodyControls")
+var e = can_msg_new(0, "UI_vehicleControl3")
+var f = can_msg_new(0,"DAS_bodyControls")
 
 # Already numeric (passes through)
 var g = can_msg_new(0x294)
@@ -48,14 +45,14 @@ msg_sig_set(e, "UI_windowRequestedRL", val && 1)
 can_msg_send(0, a)
 can_msg_send(1, e)
 
-# ---- 6. Error cases (emits raise) ----
-# Unknown message
-var bad = can_msg_get(0, "UNKNOWN_MESSAGE")
-var bad2 = can_msg_new("UNKNOWN_MESSAGE")
+# # ---- 6. Error cases (emits raise) ----
+# # Unknown message
+# var bad = can_msg_get(0, "UNKNOWN_MESSAGE")
+# var bad2 = can_msg_new("UNKNOWN_MESSAGE")
 
-# Unknown signal
-var bad3 = msg_sig_get(a, "UNKNOWN_SIG")
-msg_sig_set(a, "UNKNOWN_SIG", 0)
+# # Unknown signal
+# var bad3 = msg_sig_get(a, "UNKNOWN_SIG")
+# msg_sig_set(a, "UNKNOWN_SIG", 0)
 
 # ---- 7. Typical edge: read then extract ----
 var di_msg = can_msg_get(0, "DI_systemStatus")

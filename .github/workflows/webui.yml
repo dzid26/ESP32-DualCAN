@@ -4,12 +4,12 @@ on:
   push:
     paths:
       - 'webui/**'
-      - 'firmware/scripts_examples/**'
+      - 'firmware/test_scripts/**'
       - '.github/workflows/webui.yml'
   pull_request:
     paths:
       - 'webui/**'
-      - 'firmware/scripts_examples/**'
+      - 'firmware/test_scripts/**'
 
 permissions:
   contents: read

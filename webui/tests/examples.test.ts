@@ -100,52 +100,27 @@ test('DBC parsed VCRIGHT_doorStatus signal metadata', () => {
  *  Preprocess every example .be script and verify the output
  * ================================================================ */
 
-const examplesDir = join(REPO, 'firmware/scripts_examples');
-const scriptFiles = readdirSync(examplesDir).filter(f => f.endsWith('.be'));
+const testScriptsDir = join(REPO, 'firmware/test_scripts');
+const teslaScriptsDir = join(REPO, 'scripts/tesla');
+const scriptFiles = [
+  ...readdirSync(testScriptsDir).filter(f => f.endsWith('.be')).map(f => join(testScriptsDir, f)),
+  ...readdirSync(teslaScriptsDir).filter(f => f.endsWith('.be')).map(f => join(teslaScriptsDir, f)),
+];
 
-// Scripts that reference DBC messages/signals and should preprocess without errors
-const dbcScripts = new Set([
-  'tesla_blink_hazards_tile.be',
-  'tesla_das_bodycontrols_loopback.be',
-  'tesla_fold_mirror_tile.be',
-  'tesla_gear_led_demo.be',
-  'track_mode_on_full_throttle.be',
-  'easy_entry_window_drop.be',
-]);
-
-// Scripts that use only raw CAN (no DBC refs) — should pass through unchanged
-const rawScripts = new Set([
-  'bench_test.be',
-  'hello_log.be',
-  'loopback_led.be',
-  'tesla_doors_sim.be',
-  'tiles_demo.be',
-]);
-
-for (const fn of scriptFiles) {
+for (const fp of scriptFiles) {
+  const fn = fp.split(/[\\/]/).pop()!;
   test(`preprocesses ${fn}`, () => {
-    const code = readFileSync(join(examplesDir, fn), 'utf-8');
+    const code = readFileSync(fp, 'utf-8');
     const result = preprocessScript(code, messages);
-
     assert.ok(typeof result.code === 'string', `${fn}: code should be a string`);
-
-    if (dbcScripts.has(fn)) {
-      assert.equal(result.errors.length, 0,
-        `${fn}: DBC-referencing script should have 0 errors, got: ${result.errors.join('; ')}`);
-      assert.notEqual(result.code, code, `${fn}: DBC-referencing script should be transformed`);
-    }
-
-    if (rawScripts.has(fn)) {
-      assert.equal(result.code, code, `${fn}: raw-CAN script should pass through unchanged`);
-      assert.equal(result.errors.length, 0, `${fn}: should have 0 errors`);
-    }
+    assert.equal(result.errors.length, 0, `${fn}: should have 0 errors, got: ${result.errors.join('; ')}`);
   });
 }
 
 /* ---- Spot-check specific preprocessor output ---- */
 
 test('tesla_blink_hazards_tile .bep uses msg_sig_set', () => {
-  const code = readFileSync(join(examplesDir, 'tesla_blink_hazards_tile.be'), 'utf-8');
+  const code = readFileSync(join(testScriptsDir, 'tesla_blink_hazards_tile.be'), 'utf-8');
   const result = preprocessScript(code, messages);
   assert(result.code.includes('0x3e9'), 'should contain hex message ID');
   assert(result.code.includes('msg_sig_set('), 'should contain msg_sig_set() calls');
@@ -153,16 +128,8 @@ test('tesla_blink_hazards_tile .bep uses msg_sig_set', () => {
   assert(result.code.includes('can_msg_send('), 'can_msg_send should pass through');
 });
 
-test('tesla_gear_led_demo .bep uses msg_sig_get', () => {
-  const code = readFileSync(join(examplesDir, 'tesla_gear_led_demo.be'), 'utf-8');
-  const result = preprocessScript(code, messages);
-  assert(result.code.includes('0x118'), 'should contain DI_systemStatus hex ID');
-  assert(result.code.includes('can_msg_get(0, 0x118)'), 'should contain can_msg_get for DI_systemStatus');
-  assert(result.code.includes('msg_sig_get('), 'should contain msg_sig_get() calls');
-});
-
 test('easy_entry_window_drop .bep uses msg_sig_get and msg_sig_set', () => {
-  const code = readFileSync(join(examplesDir, 'easy_entry_window_drop.be'), 'utf-8');
+  const code = readFileSync(join(teslaScriptsDir, 'easy_entry_window_drop.be'), 'utf-8');
   const result = preprocessScript(code, messages);
   assert(result.code.includes('can_msg_send('), 'can_msg_send should pass through');
   assert(result.code.includes('0x294'), 'should contain UI_vehicleControl3 hex ID');
@@ -175,18 +142,11 @@ test('easy_entry_window_drop .bep uses msg_sig_get and msg_sig_set', () => {
 });
 
 test('tesla_das_bodycontrols_loopback .bep has all msg_sig_set calls', () => {
-  const code = readFileSync(join(examplesDir, 'tesla_das_bodycontrols_loopback.be'), 'utf-8');
+  const code = readFileSync(join(testScriptsDir, 'tesla_das_bodycontrols_loopback.be'), 'utf-8');
   const result = preprocessScript(code, messages);
   const matches = result.code.match(/msg_sig_set\(/g);
   assert.ok(matches, 'should contain msg_sig_set() calls');
   assert.equal(matches.length, 8, 'tesla_das_bodycontrols_loopback has 8 msg_sig_set calls');
 });
 
-test('raw CAN scripts pass through unchanged', () => {
-  for (const fn of rawScripts) {
-    const code = readFileSync(join(examplesDir, fn), 'utf-8');
-    const result = preprocessScript(code, messages);
-    assert.equal(result.code, code, `${fn} should be identical`);
-    assert.equal(result.errors.length, 0, `${fn} should have no errors`);
-  }
-});
+

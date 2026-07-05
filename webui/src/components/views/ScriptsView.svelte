@@ -3,7 +3,7 @@
   import { app } from '../../lib/store.svelte';
   import { dbcStore } from '../../dbcStore.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
-  import { examples } from '../../examples';
+  import { allExamples as examples } from '../../examples';
   import { preprocessScript, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
   import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
@@ -459,9 +459,9 @@
           class="sel"
           onchange={loadExample}
           title="Load a bundled Berry example into the editor (firmware/scripts_examples)"
-          style="flex: 1 1 auto; flex-shrink: 0; min-width: 80px; max-width: 160px; padding-right: 24px"
+          style="width: auto; min-width: 60px; max-width: 140px"
         >
-          <option value="">Load example…</option>
+          <option value="">Load…</option>
           {#each examples as ex}
             <option value={ex.filename}>{ex.name}</option>
           {/each}
