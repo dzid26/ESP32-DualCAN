@@ -416,8 +416,10 @@ class AppState {
       this.protoMismatch = info.proto_version !== UI_PROTO_VERSION
         ? `firmware proto v${info.proto_version}, UI expects v${UI_PROTO_VERSION} — some features may not work`
         : null;
-    } catch {
-      this.protoMismatch = 'firmware too old (no system.info) — please update';
+    } catch (e) {
+      if (!(e instanceof Error && /timeout/i.test(e.message))) {
+        this.protoMismatch = 'firmware too old (no system.info) — please update';
+      }
     }
     /* Query the negotiated ATT MTU so OTA writes use the largest possible
      * chunk size.  Best-effort; fallback is the safe 180-byte default. */
