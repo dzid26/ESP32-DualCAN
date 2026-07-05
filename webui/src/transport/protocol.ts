@@ -567,9 +567,9 @@ export class Protocol {
     }
 
     // Send raw bytes in a binary frame — no base64 inflation, no JSON
-    // parse on the firmware side. 4 KB stays under the device's 5 KB
-    // OTA scratch + 16 KB RX buffer with room for the 8-byte header.
-    const CHUNK = 4096;
+    // parse on the firmware side.  16 KB stays under the device's 32 KB
+    // RX buffer with room for the 8-byte header + stack headroom.
+    const CHUNK = 16384;
     let sent = 0;
     while (sent < bin.length) {
       const end = Math.min(sent + CHUNK, bin.length);
