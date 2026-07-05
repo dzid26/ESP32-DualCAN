@@ -1,0 +1,32 @@
+name: Prerelease
+
+on:
+  workflow_run:
+    workflows: ["Firmware CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  publish:
+    name: Publish continuous prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-bin
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Upload to continuous prerelease
+        uses: ncipollo/release-action@v1
+        with:
+          tag: continuous
+          name: Continuous build (${{ github.event.workflow_run.head_sha[..7] }})
+          prerelease: true
+          allowUpdates: true
+          removeArtifacts: true
+          replacesArtifacts: true
+          artifacts: firmware.bin
