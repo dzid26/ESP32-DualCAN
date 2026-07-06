@@ -32,10 +32,13 @@ jobs:
         if: github.event_name == 'workflow_run'
         uses: ncipollo/release-action@v1
         with:
-          tag: continuous
-          name: Continuous build (${{ github.event.workflow_run.head_sha }})
+          tag: nightly
+          name: Nightly pre-release
+          body: |
+            Rolling pre-release built from `main` — updated on every push.
           prerelease: true
           allowUpdates: true
           removeArtifacts: true
           replacesArtifacts: true
           artifacts: firmware.bin
+          generateReleaseNotes: true
