@@ -37,6 +37,14 @@ function replaceAt(str: string, start: number, end: number, replacement: string)
   return str.substring(0, start) + replacement + str.substring(end);
 }
 
+/* Check if a position in source falls on a Berry-commented line (starts with #). */
+function isCommented(source: string, pos: number): boolean {
+  const before = source.slice(0, pos);
+  const lastNewline = before.lastIndexOf('\n');
+  const line = lastNewline < 0 ? before : before.slice(lastNewline + 1);
+  return /^\s*#/.test(line);
+}
+
 /* ---- Track variable → message name mappings ---- */
 // Scans source for var X = can_msg_get(bus, "msg") / can_msg_new("msg")
 // assignments. Returns a map of variable name → set of message types it
@@ -46,6 +54,7 @@ export function trackVarToMsgs(source: string): Map<string, Set<string>> {
   const varGetRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_get\s*\(\s*\d+\s*,\s*"([^"]+)"\s*\)/g;
   let m: RegExpExecArray | null;
   while ((m = varGetRe.exec(source)) !== null) {
+    if (isCommented(source, m.index)) continue;
     const varName = m[1];
     const msgName = m[2];
     if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
@@ -53,6 +62,7 @@ export function trackVarToMsgs(source: string): Map<string, Set<string>> {
   }
   const varNewRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_new\s*\(\s*"([^"]+)"\s*(?:,\s*\d+\s*)?\)/g;
   while ((m = varNewRe.exec(source)) !== null) {
+    if (isCommented(source, m.index)) continue;
     const varName = m[1];
     const msgName = m[2];
     if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
@@ -167,6 +177,7 @@ export function preprocessScript(
   const canMsgGetPattern = /can_msg_get\s*\(\s*(\d+)\s*,\s*"([^"]+)"\s*\)/g;
   let match: RegExpExecArray | null;
   while ((match = canMsgGetPattern.exec(code)) !== null) {
+    if (isCommented(code, match.index)) continue;
     const bus = match[1];
     const msgName = match[2];
     const fullMatch = match[0];
@@ -191,6 +202,7 @@ export function preprocessScript(
   // which returns a draft map {id, data, dlc} with zeroed data.
   const canMsgNewNamePattern = /can_msg_new\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
   while ((match = canMsgNewNamePattern.exec(code)) !== null) {
+    if (isCommented(code, match.index)) continue;
     const msgName = match[1];
     const fullMatch = match[0];
     const matchStart = match.index;
@@ -215,6 +227,7 @@ export function preprocessScript(
   // draft.data internally and handles scale, offset, signedness, byte order.
   const canSigGetPattern = /msg_sig_get\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*\)/g;
   while ((match = canSigGetPattern.exec(code)) !== null) {
+    if (isCommented(code, match.index)) continue;
     const draftExpr = match[1].trim();
     const sigName = match[2];
     const fullMatch = match[0];
@@ -240,6 +253,7 @@ export function preprocessScript(
   const canMsgSetPattern =
     /msg_sig_set\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*([^)]+)\)/g;
   while ((match = canMsgSetPattern.exec(code)) !== null) {
+    if (isCommented(code, match.index)) continue;
     const draftExpr = match[1].trim();
     const sigName = match[2];
     const valueExpr = match[3].trim();
