@@ -525,7 +525,7 @@ export class Protocol {
 
   /** Begin an OTA session. Returns the max firmware size (bytes) of the
    * target partition. The device erases flash — this can take a few seconds. */
-  otaBegin(): Promise<{ max_size: number }> {
+  otaBegin(): Promise<{ max_size: number; max_frame: number }> {
     return this.call('ota.begin', {}, 30_000);
   }
 
@@ -560,16 +560,15 @@ export class Protocol {
     bin: Uint8Array,
     onProgress?: (sent: number, total: number) => void,
   ): Promise<void> {
-    const { max_size } = await this.otaBegin();
+    const { max_size, max_frame } = await this.otaBegin();
     if (bin.length > max_size) {
       await this.otaAbort();
       throw new Error(`Firmware too large (${bin.length} bytes, max ${max_size})`);
     }
 
-    // Send raw bytes in a binary frame — no base64 inflation, no JSON
-    // parse on the firmware side.  16 KB stays under the device's 32 KB
-    // RX buffer with room for the 8-byte header + stack headroom.
-    const CHUNK = 16384;
+    // Clamp frame payload to stay within the firmware's RX buffer.
+    // overhead = 4-byte length hdr + 4-byte request id.
+    const CHUNK = max_frame ? Math.min(1024, max_frame - 8) : 1024;
     let sent = 0;
     while (sent < bin.length) {
       const end = Math.min(sent + CHUNK, bin.length);

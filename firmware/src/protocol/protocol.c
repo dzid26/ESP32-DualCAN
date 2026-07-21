@@ -997,6 +997,7 @@ static void handle_ota_begin(int id)
     }
     cJSON *result = cJSON_CreateObject();
     cJSON_AddNumberToObject(result, "max_size", (double)max_size);
+    cJSON_AddNumberToObject(result, "max_frame", (double)RX_BUF_MAX);
     send_ok(id, result);
 }
 
