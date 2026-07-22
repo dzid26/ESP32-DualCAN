@@ -5,7 +5,7 @@
 # Requires: Tesla Model 3/Y vehicle CAN DBC loaded on bus 0.
 #
 # Polls VCLEFT_doorStatus / VCRIGHT_doorStatus and reads front/rear
-# handlePulled bits. Sends GOTO_PERCENT_RELATIVE commands on
+# doorClosureStatus and handlePulled bits. Sends GOTO_PERCENT_RELATIVE commands on
 # UI_vehicleControl3 (0x294/660) to drop the corresponding window(s).
 #
 # UI_windowRequest values:
@@ -13,8 +13,8 @@
 #   4=GOTO_OPEN, 5=GOTO_CLOSED_CARWASH, 6=GOTO_PERCENT_RELATIVE
 # UI_windowRequestedFL/FR/RL/RR: 1-bit per-window select.
 
-var DOOR_CLOSED = 1
-var DOOR_OPEN = 4
+var DOOR_CLOSED = 2
+var DOOR_OPENED = 1
 
 var prev_handle_fl = 0, prev_handle_fr = 0, prev_handle_rl = 0, prev_handle_rr = 0
 var prev_door_fl = 0, prev_door_fr = 0, prev_door_rl = 0, prev_door_rr = 0
@@ -49,14 +49,12 @@ def poll()
   var m = can_msg_new("UI_vehicleControl3")
 
   # --- Left side: handles + door state + window state ---
+  var msg_l = can_msg_get(0, "VCLEFT_doorStatus")
+  var msg_wl  = can_msg_get(0, "VCLEFT_windowStatus")
 
-  var msg_dl2 = can_msg_get(0, "VCLEFT_doorStatus2")   # door state (open/closed etc.)
-  var msg_dl  = can_msg_get(0, "VCLEFT_doorStatus")    # handle state
-  var msg_wl  = can_msg_get(0, "VCLEFT_windowStatus")  # window state
-
-  if msg_dl2 != nil
-    var door_fl = msg_sig_get(msg_dl2, "VCLEFT_frontDoorState")
-    var door_rl = msg_sig_get(msg_dl2, "VCLEFT_rearDoorState")
+  if msg_l != nil
+    var door_fl = msg_sig_get(msg_l, "VCLEFT_doorClosureStatusFront")
+    var door_rl = msg_sig_get(msg_l, "VCLEFT_doorClosureStatusRear")
 
     # --- FL corner ---
     if door_fl == DOOR_CLOSED
@@ -65,28 +63,26 @@ def poll()
         was_window_closed_fl = window_closed(fl_pos)
         was_auto_dropped_fl = false
       end
-      if prev_door_fl != DOOR_CLOSED && was_auto_dropped_fl == true && was_window_closed_fl == true  # restore on closed rising edge
+      if prev_door_fl != DOOR_CLOSED && was_auto_dropped_fl == true && was_window_closed_fl == true
         print("FL door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedFL", 1)
         send_window_close(m)
         was_auto_dropped_fl = false
       end
-    elif door_fl == DOOR_OPEN
-      if msg_dl != nil
-        var handle_fl = msg_sig_get(msg_dl, "VCLEFT_frontHandlePulled")
-        if handle_fl > 0 && prev_handle_fl == 0
-          print("FL handle pulled, easy-entry drop")
-          msg_sig_set(m, "UI_windowRequestedFL", 1)
-          send_window_drop(m)
-          was_auto_dropped_fl = true
-        end
-        if handle_fl == 0 && prev_handle_fl == 1
-          print("FL handle released")
-          msg_sig_set(m, "UI_windowRequestedFL", 1)
-          send_window_stop(m)
-        end
-        prev_handle_fl = handle_fl
+    elif door_fl == DOOR_OPENED
+      var handle_fl = msg_sig_get(msg_l, "VCLEFT_frontHandlePulled")
+      if handle_fl > 0 && prev_handle_fl == 0
+        print("FL handle pulled, easy-entry drop")
+        msg_sig_set(m, "UI_windowRequestedFL", 1)
+        send_window_drop(m)
+        was_auto_dropped_fl = true
       end
+      if handle_fl == 0 && prev_handle_fl == 1
+        print("FL handle released")
+        msg_sig_set(m, "UI_windowRequestedFL", 1)
+        send_window_stop(m)
+      end
+      prev_handle_fl = handle_fl
     end
     prev_door_fl = door_fl
 
@@ -97,41 +93,37 @@ def poll()
         was_window_closed_rl = window_closed(rl_pos)
         was_auto_dropped_rl = false
       end
-      if prev_door_rl != DOOR_CLOSED && was_auto_dropped_rl == true && was_window_closed_rl == true  # restore on closed rising edge
+      if prev_door_rl != DOOR_CLOSED && was_auto_dropped_rl == true && was_window_closed_rl == true
         print("RL door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedRL", 1)
         send_window_close(m)
         was_auto_dropped_rl = false
       end
-    elif door_rl == DOOR_OPEN
-      if msg_dl != nil
-        var handle_rl = msg_sig_get(msg_dl, "VCLEFT_rearHandlePulled")
-        if handle_rl > 0 && prev_handle_rl == 0
-          print("RL handle pulled, easy-entry drop")
-          msg_sig_set(m, "UI_windowRequestedRL", 1)
-          send_window_drop(m)
-          was_auto_dropped_rl = true
-        end
-        if handle_rl == 0 && prev_handle_rl == 1
-          print("RL handle released")
-          msg_sig_set(m, "UI_windowRequestedRL", 1)
-          send_window_stop(m)
-        end
-        prev_handle_rl = handle_rl
+    elif door_rl == DOOR_OPENED
+      var handle_rl = msg_sig_get(msg_l, "VCLEFT_rearHandlePulled")
+      if handle_rl > 0 && prev_handle_rl == 0
+        print("RL handle pulled, easy-entry drop")
+        msg_sig_set(m, "UI_windowRequestedRL", 1)
+        send_window_drop(m)
+        was_auto_dropped_rl = true
       end
+      if handle_rl == 0 && prev_handle_rl == 1
+        print("RL handle released")
+        msg_sig_set(m, "UI_windowRequestedRL", 1)
+        send_window_stop(m)
+      end
+      prev_handle_rl = handle_rl
     end
     prev_door_rl = door_rl
   end
 
   # --- Right side: handles + door state + window state ---
+  var msg_r = can_msg_get(0, "VCRIGHT_doorStatus")
+  var msg_wr  = can_msg_get(0, "VCRIGHT_windowStatus")
 
-  var msg_dr2 = can_msg_get(0, "VCRIGHT_doorStatus2")  # door state (open/closed etc.)
-  var msg_dr  = can_msg_get(0, "VCRIGHT_doorStatus")   # handle state
-  var msg_wr  = can_msg_get(0, "VCRIGHT_windowStatus") # window state
-
-  if msg_dr2 != nil
-    var door_fr = msg_sig_get(msg_dr2, "VCRIGHT_frontDoorState")
-    var door_rr = msg_sig_get(msg_dr2, "VCRIGHT_rearDoorState")
+  if msg_r != nil
+    var door_fr = msg_sig_get(msg_r, "VCRIGHT_doorClosureStatusFront")
+    var door_rr = msg_sig_get(msg_r, "VCRIGHT_doorClosureStatusRear")
 
     # --- FR corner ---
     if door_fr == DOOR_CLOSED
@@ -140,28 +132,26 @@ def poll()
         was_window_closed_fr = window_closed(fr_pos)
         was_auto_dropped_fr = false
       end
-      if prev_door_fr != DOOR_CLOSED && was_auto_dropped_fr == true && was_window_closed_fr == true  # restore on closed rising edge
+      if prev_door_fr != DOOR_CLOSED && was_auto_dropped_fr == true && was_window_closed_fr == true
         print("FR door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedFR", 1)
         send_window_close(m)
         was_auto_dropped_fr = false
       end
-    elif door_fr == DOOR_OPEN
-      if msg_dr != nil
-        var handle_fr = msg_sig_get(msg_dr, "VCRIGHT_frontHandlePulled")
-        if handle_fr > 0 && prev_handle_fr == 0
-          print("FR handle pulled, easy-entry drop")
-          msg_sig_set(m, "UI_windowRequestedFR", 1)
-          send_window_drop(m)
-          was_auto_dropped_fr = true
-        end
-        if handle_fr == 0 && prev_handle_fr == 1
-          print("FR handle released")
-          msg_sig_set(m, "UI_windowRequestedFR", 1)
-          send_window_stop(m)
-        end
-        prev_handle_fr = handle_fr
+    elif door_fr == DOOR_OPENED
+      var handle_fr = msg_sig_get(msg_r, "VCRIGHT_frontHandlePulled")
+      if handle_fr > 0 && prev_handle_fr == 0
+        print("FR handle pulled, easy-entry drop")
+        msg_sig_set(m, "UI_windowRequestedFR", 1)
+        send_window_drop(m)
+        was_auto_dropped_fr = true
       end
+      if handle_fr == 0 && prev_handle_fr == 1
+        print("FR handle released")
+        msg_sig_set(m, "UI_windowRequestedFR", 1)
+        send_window_stop(m)
+      end
+      prev_handle_fr = handle_fr
     end
     prev_door_fr = door_fr
 
@@ -172,28 +162,26 @@ def poll()
         was_window_closed_rr = window_closed(rr_pos)
         was_auto_dropped_rr = false
       end
-      if prev_door_rr != DOOR_CLOSED && was_auto_dropped_rr == true && was_window_closed_rr == true  # restore on closed rising edge
+      if prev_door_rr != DOOR_CLOSED && was_auto_dropped_rr == true && was_window_closed_rr == true
         print("RR door closed, restoring window")
         msg_sig_set(m, "UI_windowRequestedRR", 1)
         send_window_close(m)
         was_auto_dropped_rr = false
       end
-    elif door_rr == DOOR_OPEN
-      if msg_dr != nil
-        var handle_rr = msg_sig_get(msg_dr, "VCRIGHT_rearHandlePulled")
-        if handle_rr > 0 && prev_handle_rr == 0
-          print("RR handle pulled, easy-entry drop")
-          msg_sig_set(m, "UI_windowRequestedRR", 1)
-          send_window_drop(m)
-          was_auto_dropped_rr = true
-        end
-        if handle_rr == 0 && prev_handle_rr == 1
-          print("RR handle released")
-          msg_sig_set(m, "UI_windowRequestedRR", 1)
-          send_window_stop(m)
-        end
-        prev_handle_rr = handle_rr
+    elif door_rr == DOOR_OPENED
+      var handle_rr = msg_sig_get(msg_r, "VCRIGHT_rearHandlePulled")
+      if handle_rr > 0 && prev_handle_rr == 0
+        print("RR handle pulled, easy-entry drop")
+        msg_sig_set(m, "UI_windowRequestedRR", 1)
+        send_window_drop(m)
+        was_auto_dropped_rr = true
       end
+      if handle_rr == 0 && prev_handle_rr == 1
+        print("RR handle released")
+        msg_sig_set(m, "UI_windowRequestedRR", 1)
+        send_window_stop(m)
+      end
+      prev_handle_rr = handle_rr
     end
     prev_door_rr = door_rr
   end
