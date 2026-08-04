@@ -67,7 +67,7 @@ See [docs/ble.md](docs/ble.md) for LED feedback and full pairing details.
 
 ## ICs
 - ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
-    - alternatively ESP32-C6-Zero 
+    - DIY alternative ESP32-C6-Zero (requires mirrored mounting using header pins)
 - 2x CAN transceivers TCAN1044
 - TI LV2862 DC/DC converter
 
