@@ -66,8 +66,7 @@ flow and troubleshooting.
 See [docs/ble.md](docs/ble.md) for LED feedback and full pairing details.
 
 ## ICs
-- ESP32-C6-SuperMini (integrated antenna, 2x TWAI CAN2.0 controllers, RGB LED)
-    - DIY alternative ESP32-C6-Zero (requires mirrored mounting using header pins)
+- ESP32-C6-Zero (ESP32-C6FH8, 8MB, BLE + WiFi, 2x TWAI CAN2.0 controllers)
 - 2x CAN transceivers TCAN1044
 - TI LV2862 DC/DC converter
 
@@ -75,11 +74,12 @@ See [docs/ble.md](docs/ble.md) for LED feedback and full pairing details.
 - Size 19.5 x 41.5mm
 - 5-58V operating range (e.g. cybertruck)
 - Dual CAN
-- BLE + WiFi
+- integrated 2.4GHz antenna
+- RGB LED
 - USB-C for programming and debugging
 
 ## Images
-- ESP32-C6-SuperMini chiplet and Molex connector:
+- ESP32-C6-Zero chiplet and Molex connector:
 
 <img width="555"  alt="image" src="https://github.com/user-attachments/assets/e7944936-6bc0-426c-abbd-16756143bc65" />
 
