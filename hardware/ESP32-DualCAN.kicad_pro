@@ -725,7 +725,7 @@
       "include_excluded_from_bom": true,
       "name": "",
       "sort_asc": true,
-      "sort_field": "Reference"
+      "sort_field": "${DNP}"
     },
     "bus_aliases": {},
     "connection_grid_size": 50.0,
@@ -776,7 +776,7 @@
         "uuid": "a48c7dca-4b22-4e27-9aac-33c63a3c6130"
       }
     ],
-    "used_designators": "#PWR15,#PWR29-34,U6-7,C6,J8-9",
+    "used_designators": "D1,#PWR15,#PWR29-34,U6-7,C6,J8-9",
     "variants": []
   },
   "sheets": [
