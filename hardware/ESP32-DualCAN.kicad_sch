@@ -4577,6 +4577,14 @@
 		(at 129.54 29.21)
 		(uuid "384dd2b1-ba14-477a-993f-70f6ad9e75f1")
 	)
+	(no_connect
+		(at 54.61 15.24)
+		(uuid "4a22bc8a-72ff-4437-a8fa-41dfcc2e0b8c")
+	)
+	(no_connect
+		(at 58.42 15.24)
+		(uuid "5ff21854-5cba-4165-8cb1-76c1259eea6e")
+	)
 	(wire
 		(pts
 			(xy 228.6 81.28) (xy 228.6 80.01)
@@ -4809,6 +4817,16 @@
 	)
 	(wire
 		(pts
+			(xy 58.42 15.24) (xy 66.04 15.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2fc43c9c-f5d4-434f-b000-ffbf705ef799")
+	)
+	(wire
+		(pts
 			(xy 99.06 24.13) (xy 115.57 24.13)
 		)
 		(stroke
@@ -4936,16 +4954,6 @@
 			(type default)
 		)
 		(uuid "48bfd69a-cbde-4f03-b0f1-93cd3160e12d")
-	)
-	(wire
-		(pts
-			(xy 44.45 15.24) (xy 66.04 15.24)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4b63204d-7e3c-4242-95f9-dec3e059e4b2")
 	)
 	(wire
 		(pts
@@ -5246,6 +5254,16 @@
 			(type default)
 		)
 		(uuid "7ffa2701-4e24-40e7-ba98-bcc7770f54b7")
+	)
+	(wire
+		(pts
+			(xy 44.45 15.24) (xy 54.61 15.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "81dfba12-afe1-4b77-a3f3-5bf05573b32c")
 	)
 	(wire
 		(pts
@@ -12716,8 +12734,19 @@
 				)
 			)
 		)
-		(property "LCSC" "C3234993"
+		(property "LCSC" "C1852061"
 			(at 233.68 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Alternative" "TCAN1044V without extended ESD certification"
+			(at 228.6 99.06 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -12826,7 +12855,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C576517"
+		(property "LCSC" "C5156756"
 			(at 93.98 27.94 0)
 			(hide yes)
 			(show_name no)
@@ -13020,7 +13049,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5e7e39b5-0b00-40ce-8824-6f5420e45373")
 		(property "Reference" "FB1"
@@ -14208,7 +14237,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp yes)
+		(dnp no)
 		(uuid "8d940dbb-64f7-4b59-8afc-cf74e5703d80")
 		(property "Reference" "R3"
 			(at 61.976 25.654 90)
@@ -14276,8 +14305,8 @@
 				)
 			)
 		)
-		(property "LCSC Part #" "C25271"
-			(at 60.96 24.13 0)
+		(property "LCSC" "C25271"
+			(at 60.96 24.13 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -15340,7 +15369,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C3193152"
+		(property "LCSC" "C42403103"
 			(at 139.7 26.67 0)
 			(hide yes)
 			(show_name no)
@@ -15646,7 +15675,7 @@
 		(in_bom yes)
 		(on_board yes)
 		(in_pos_files yes)
-		(dnp yes)
+		(dnp no)
 		(uuid "bfe52bde-b81f-4e28-9a0c-81aa3a629f8e")
 		(property "Reference" "D4"
 			(at 83.312 35.56 90)
@@ -16084,7 +16113,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C3234993"
+		(property "LCSC" "C1852061"
 			(at 233.68 153.67 0)
 			(hide yes)
 			(show_name no)
