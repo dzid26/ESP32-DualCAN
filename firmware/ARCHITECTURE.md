@@ -28,7 +28,7 @@ This document captures the intended design. It is a living spec — update it wh
 
 Existing, designed and fabricated:
 
-- **MCU**: ESP32-C6-SuperMini (single RISC-V core @ 160 MHz, 320 KB SRAM, 512 KB ROM, 4 MB flash, BLE 5 + WiFi 6, 2× TWAI CAN 2.0 controllers, integrated antenna, RGB LED).
+- **MCU**: ESP32-C6-Zero (single RISC-V core @ 160 MHz, 320 KB SRAM, 512 KB ROM, 8 MB flash, BLE 5 + WiFi 6, 2× TWAI CAN 2.0 controllers, integrated antenna, RGB LED).
 - **Transceivers**: 2× TCAN1044 (CAN FD capable, we use CAN 2.0).
 - **Power**: TI LV2862 DC/DC, 5–58 V input.
 - **Connector**: Molex, compatible with Enhauto Tesla harnesses.
