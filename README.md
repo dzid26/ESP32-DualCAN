@@ -7,33 +7,36 @@ See **[firmware/README.md](firmware/README.md)** for the user-facing install gui
 
 See **[docs/scripting.md](docs/scripting.md)** for the Berry scripting API reference.
 
-## Getting Started
+## Flashing
 
-Clone with submodules (required — the BLE and Berry components are git submodules):
+### Option A: Web UI (wireless OTA update)
 
-```bash
-git clone https://github.com/dzid26/ESP32-DualCAN.git --recurse-submodules
-```
+1. Connect via BLE (see [firmware/README.md — Step 2](firmware/README.md#step-2--connect-over-ble)).
+2. Go to **Settings → Firmware** in the [Dorky Commander web UI](https://dzid26.github.io/ESP32-DualCAN/).
+3. Click **Upload .bin** and select a firmware `.bin` from disk (download from [GitHub Releases](https://github.com/dzid26/ESP32-DualCAN/releases) if needed).
+4. The progress bar shows transfer status. The device reboots automatically when done.
 
-Or update submodules later:
-```bash
-git submodule update --init --recursive
-```
+### Option B: USB
+
+**Download prebuilt binary:**
+
+1. Download the latest `dorky-commander-vX.Y.Z.bin` from [GitHub Releases](https://github.com/dzid26/ESP32-DualCAN/releases).
+2. Connect the board via USB-C. Easiest: open the [Espressif Web Flasher](https://espressif.github.io/esptool-js/) in Chrome and flash the `.bin` — no install needed.
+
+   CLI alternative:
+
+   ```bash
+   pip install esptool
+   esptool.py --chip esp32c6 write_flash 0x10000 dorky-commander-vX.Y.Z.bin
+   ```
+
+To build from source, see [firmware/README.md — Step 1](firmware/README.md#step-1--flash-the-firmware) (PlatformIO extension recommended).
 
 ## Development
 
 ### Firmware
 
-Requires [PlatformIO](https://platformio.org/).
-
-```bash
-cd firmware
-pio run                              # build production firmware
-pio run -t upload                    # flash to board
-pio device monitor                   # serial console
-pio test -e tests-native             # run host unit tests (needs gcc)
-pio test -e esp32-c6-tests-arduino   # run hardware smoke tests (board connected)
-```
+See [firmware/README.md — Development](firmware/README.md#development) for build, flash, and test instructions. Recommended: [PlatformIO IDE extension for VS Code](https://platformio.org/install).
 
 ### Web UI
 

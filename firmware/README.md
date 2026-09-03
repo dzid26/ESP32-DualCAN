@@ -15,24 +15,13 @@ Open-source alternative to the S3XY Commander. ESP32-C6 with dual CAN, Berry scr
 
 ## Step 1 — Flash the firmware
 
-### Option A: Download prebuilt binary (recommended)
+To build from source:
 
-1. Download the latest `dorky-commander-vX.Y.Z.bin` from [GitHub Releases](https://github.com/dzid26/ESP32-DualCAN/releases).
-2. Connect the board via USB-C.
-3. Flash with `esptool.py`:
+Recommended: [PlatformIO IDE extension for VS Code](https://platformio.org/install) — open the `firmware` folder in VS Code and use **Build** / **Upload** from the sidebar.
 
-```bash
-pip install esptool
-esptool.py --chip esp32c6 write_flash 0x10000 dorky-commander-vX.Y.Z.bin
-```
-
-Or use the [Espressif Web Flasher](https://espressif.github.io/esptool-js/) in Chrome — no install needed.
-
-### Option B: Build from source
+CLI alternative (requires [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/index.html)):
 
 ```bash
-# Requires Python + PlatformIO
-pip install platformio
 cd firmware
 pio run -e esp32-c6          # build
 pio run -e esp32-c6 -t upload # build + flash
@@ -167,14 +156,32 @@ end
 
 ---
 
-## OTA firmware update
+## Development
 
-You can update the firmware without USB:
+Clone with submodules (required — the BLE and Berry components are git submodules):
 
-1. Go to **Settings → Firmware**.
-2. Click **Check GitHub** to fetch the latest release, then **Download & flash**.
-   Or click **Upload .bin** to flash a file from disk.
-3. The progress bar shows transfer status. The device reboots automatically when done.
+```bash
+git clone https://github.com/dzid26/ESP32-DualCAN.git --recurse-submodules
+```
+
+Or update submodules later:
+
+```bash
+git submodule update --init --recursive
+```
+
+Recommended: [PlatformIO IDE extension for VS Code](https://platformio.org/install) — open the `firmware` folder in VS Code and build / upload / monitor from the PlatformIO sidebar.
+
+CLI alternative (requires [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/index.html)):
+
+```bash
+cd firmware
+pio run -e esp32-c6              # build
+pio run -e esp32-c6 -t upload    # flash
+pio device monitor               # serial console (115200 baud)
+pio test -e tests-native         # host unit tests (gcc required)
+pio test -e esp32-c6-tests-arduino  # hardware smoke tests (board connected)
+```
 
 ---
 
@@ -188,16 +195,5 @@ You can update the firmware without USB:
 | Device unresponsive after bad script | Power-cycle the board. Bad scripts are isolated; others still run. |
 | OTA stuck at 0% | BLE MTU negotiation can take a few seconds — wait 10 s before aborting. |
 
----
-
-## Development
-
-```bash
-cd firmware
-pio run -e esp32-c6              # build
-pio run -e esp32-c6 -t upload    # flash
-pio device monitor               # serial console (115200 baud)
-pio test -e tests-native         # host unit tests (gcc required)
-```
 
 See [`../README.md`](../README.md) for hardware schematic and pin assignments.
