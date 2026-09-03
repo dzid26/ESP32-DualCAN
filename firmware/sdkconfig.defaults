@@ -53,8 +53,9 @@ CONFIG_ESP_SYSTEM_USE_FRAME_POINTER=y
 # default main_task stack. 16 KB gives comfortable headroom.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
 
-# WiFi STA — second transport (after BLE) for the web UI. Credentials are
-# stored in NVS via the wifi.* protocol ops; if none, the STA driver just
-# stays idle.
-CONFIG_ESP_WIFI_ENABLED=y
-CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+# WiFi STA — second transport for the web UI. Credentials stored in NVS via
+# wifi.* protocol ops; if none, the STA driver just stays idle.
+# TEMP (testing): WiFi disabled to measure flash savings.
+# Also keep coexistence off — it force-selects WiFi back in.
+# CONFIG_ESP_COEX_SW_COEXIST_ENABLE is not set
+# CONFIG_ESP_WIFI_ENABLED is not set
