@@ -35,11 +35,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install KiCad
+      - name: Install KiCad 10
         run: |
-          sudo add-apt-repository --yes ppa:kicad/kicad-8.0-releases
+          sudo add-apt-repository --yes ppa:kicad/kicad-10.0-releases
           sudo apt-get update -qq
           sudo apt-get install --yes --no-install-recommends kicad
+          kicad-cli version
 
       - name: Resolve release metadata
         id: meta
