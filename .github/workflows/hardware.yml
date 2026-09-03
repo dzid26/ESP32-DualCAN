@@ -77,8 +77,8 @@ jobs:
       - name: Generate iBOM (dark)
         run: |
           # KiCad installation provides pcbnew; skip wxpython GUI dep
-          pip install interactivehtmlbom --no-deps
-          python -m interactivehtmlbom.generate_interactive_bom \
+          pip install --break-system-packages --no-deps interactivehtmlbom
+          python3 -m InteractiveHtmlBom.generate_interactive_bom \
             --dark-mode \
             --no-browser \
             --dest-dir hardware/ \
