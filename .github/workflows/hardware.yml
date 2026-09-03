@@ -39,7 +39,7 @@ jobs:
         run: |
           sudo add-apt-repository --yes ppa:kicad/kicad-10.0-releases
           sudo apt-get update -qq
-          sudo apt-get install --yes --no-install-recommends kicad
+          sudo apt-get install --yes --no-install-recommends kicad xvfb
           kicad-cli version
 
       - name: Resolve release metadata
@@ -78,7 +78,7 @@ jobs:
         run: |
           # KiCad installation provides pcbnew; skip wxpython GUI dep
           pip install --break-system-packages --no-deps interactivehtmlbom
-          python3 -m InteractiveHtmlBom.generate_interactive_bom \
+          xvfb-run -a python3 -m InteractiveHtmlBom.generate_interactive_bom \
             --dark-mode \
             --no-browser \
             --dest-dir hardware/ \
