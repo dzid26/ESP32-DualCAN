@@ -48,7 +48,7 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/hw-v* ]]; then
             VERSION="${GITHUB_REF#refs/tags/hw-v}"
             echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-            echo "name=Hardware ${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+            echo "name=Dorky Commander - ${VERSION}" >> "$GITHUB_OUTPUT"
             echo "draft=false" >> "$GITHUB_OUTPUT"
             if [[ "$VERSION" == *-* ]]; then
               echo "prerelease=true" >> "$GITHUB_OUTPUT"
@@ -57,7 +57,7 @@ jobs:
             fi
           else
             echo "tag=hw-next" >> "$GITHUB_OUTPUT"
-            echo "name=Hardware - next (draft)" >> "$GITHUB_OUTPUT"
+            echo "name=Dorky Commander - v.XX (draft)" >> "$GITHUB_OUTPUT"
             echo "draft=true" >> "$GITHUB_OUTPUT"
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
           fi
@@ -81,8 +81,8 @@ jobs:
           xvfb-run -a python3 -m InteractiveHtmlBom.generate_interactive_bom \
             --dark-mode \
             --no-browser \
-            --dest-dir hardware/ \
-            --output-file-name ESP32-DualCAN-ibom.html \
+            --dest-dir hardware \
+            --name-format ESP32-DualCAN-ibom.html \
             hardware/ESP32-DualCAN.kicad_pcb
 
       - name: Create or update release
