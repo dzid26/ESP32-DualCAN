@@ -85,7 +85,7 @@ The browser keeps the DBC locally in the browser for autocomplete and for prepro
 
 ---
 
-## Install first script
+## Install a script
 
 1. Open **Gallery** in the left rail → **Scripts** tab.
 2. Find **Hello log** and click **Install** — it opens **Automations** with the file preloaded (or use **Automations → Load… → Hello log**).
@@ -135,7 +135,7 @@ Start small: copy a Gallery script, tweak it in the editor, **Save & enable**, a
 
 ### Brand scripting — adding scripts to the Gallery
 
-See [`scripts/README.md`](scripts/README.md) for the full guide — Gallery pulls from `scripts/<brand>/*.be` at npn build time (`import.meta.glob`). Create `scripts/<brand>/your_script.be` with `# @name` / `# @description` / `# @bus` file header, implement `def setup()`, and verify in **Gallery → Scripts → Install**.
+See [`scripts/README.md`](scripts/README.md) for the full guide — Gallery pulls from `scripts/<brand>/*.be` at npm build time (`import.meta.glob`). Create `scripts/<brand>/your_script.be` with `# @name` / `# @description` / `# @bus` file header, implement `def setup()`, and verify in **Gallery → Scripts → Install**.
 
 ### Firmware
 
@@ -143,11 +143,14 @@ See [firmware/README.md — Development](firmware/README.md#development) for bui
 
 ### Web UI
 
-Requires [Node.js](https://nodejs.org/).
-
+First time
 ```bash
 cd webui
-npm run dev       # dev server at http://localhost:5173
+npm install
+```
+Then
+```
+npm run dev   # open http://localhost:5173
 ```
 
-Open in Chrome (required for Web Bluetooth). The DBC upload/parse works offline. BLE connect requires the board powered and flashed.
+Requires [Node.js](https://nodejs.org/).
