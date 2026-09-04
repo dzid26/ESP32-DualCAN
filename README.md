@@ -3,15 +3,15 @@ Dorky Commander - open source alternative to S3XY Commander.
 
 Uses Molex connector compatible with Enhauto harnesses.
 
-See **[firmware/README.md](firmware/README.md)** for the user-facing install guide and first-use walkthrough.
-
 See **[docs/scripting.md](docs/scripting.md)** for the Berry scripting API reference.
 
-## Flashing
+See **[firmware/README.md](firmware/README.md)** for firmware Development (build/flash from source).
+
+## Step 1 — Flash the firmware
 
 ### Option A: Web UI (wireless OTA update)
 
-1. Connect via BLE (see [firmware/README.md — Step 2](firmware/README.md#step-2--connect-over-ble)).
+1. Connect via BLE (see [Step 2 — Connect over BLE](#step-2--connect-over-ble)).
 2. Go to **Settings → Firmware** in the [Dorky Commander web UI](https://dzid26.github.io/ESP32-DualCAN/).
 3. Click **Upload .bin** and select a firmware `.bin` from disk (download from [GitHub Releases](https://github.com/dzid26/ESP32-DualCAN/releases) if needed).
 4. The progress bar shows transfer status. The device reboots automatically when done.
@@ -30,7 +30,70 @@ See **[docs/scripting.md](docs/scripting.md)** for the Berry scripting API refer
    esptool.py --chip esp32c6 write_flash 0x10000 dorky-commander-vX.Y.Z.bin
    ```
 
-To build from source, see [firmware/README.md — Step 1](firmware/README.md#step-1--flash-the-firmware) (PlatformIO extension recommended).
+To build from source, see [firmware/README.md — Development — Build & Flash](firmware/README.md#build--flash) (PlatformIO extension recommended).
+
+---
+
+## Step 2 — Connect over BLE
+
+1. Open the [Dorky Commander web UI](https://dzid26.github.io/ESP32-DualCAN/) in Chrome.
+   *(Or install it as an app: Settings → Install app → Add to home screen.)*
+2. Click **Connect** in the status bar.
+3. Select **Dorky Commander** from the Bluetooth pairing dialog.
+4. The status bar turns green and shows the firmware version.
+
+> [!NOTE]
+> The board advertises as `Dorky Commander`. Once paired, the pairing window stays closed for security — new devices cannot pair until you re-open it with a short-press of the B button or from the web UI on a bonded device (**Settings → Bluetooth → Open pairing window**). 
+
+> [!TIP]
+> If the board will be hidden behind car trim, pair with at least two devices (e.g., phone + laptop) — this avoids needing to reach the button, in case you loose a bond with the device.
+
+See [docs/ble.md](docs/ble.md) for the full flow and troubleshooting.
+
+
+### B button — Bluetooth / Reset / Boot
+
+| Press | Action |
+|---|---|
+| Short press — release within 15 s | Open BLE pairing window for 60 s |
+| Hold ≥15 s | Factory reset — wipes BLE bonds, credentials, and scripts |
+
+See [docs/ble.md](docs/ble.md) for LED feedback and full pairing details.
+
+---
+
+## Step 3 — Load a DBC
+
+The device needs a compiled DBC to decode signals by name.
+
+1. Go to **DBC** in the left rail.
+2. Paste or load a `.dbc` file. The Tesla Model 3/Y vehicle DBC is bundled — click **Load example**.
+3. Select the target bus (0 = vehicle CAN, 1 = chassis CAN on Tesla).
+4. Click **Upload to device**. The binary blob is sent over BLE and stored in flash.
+
+---
+
+## Step 4 — Write your first script
+
+1. Go to **Scripts**.
+2. Click **Load example…** → select `hello_log.be`.
+3. Click **Save**, then toggle the **Enable** switch.
+4. Open the **Log** panel (bottom right) — you should see `hello_log: setup` followed by heartbeat lines every 5 seconds.
+
+The script runs on the device. `print()` output streams over BLE to the log panel.
+
+---
+
+## Step 5 — Run an action
+
+1. Go to **Events** in the left rail.
+2. Click **+ Add event** — this loads the `tiles_demo.be` example into the Scripts editor. Save and enable it.
+3. Back on the **Events** page, four tiles appear: `blip_red`, `blip_green`, `blip_blue`, `rainbow`.
+4. Tap a tile — the onboard LED blinks.
+
+This proves the full path: BLE → firmware → Berry → hardware.
+
+---
 
 ## Development
 
@@ -50,23 +113,6 @@ npm run build     # production build to dist/
 ```
 
 Open in Chrome (required for Web Bluetooth). The DBC upload/parse works offline. BLE connect requires the board powered and flashed.
-
-### Bluetooth pairing
-
-The device requires bonded pairing — first-time setup needs an open pairing
-window (boot defaults to OPEN until first bond, BOOT button or web UI re-opens
-later). Pairing uses **Secure Connections only**; very old centrals (BLE 4.0,
-pre-2014) won't pair. See [docs/ble.md](docs/ble.md) for the full connection
-flow and troubleshooting.
-
-### BOOT button
-
-| Press | Action |
-|---|---|
-| Short press | Open BLE pairing window for 60 s |
-| Hold 15 s | Factory reset — wipes bonds, credentials, and scripts |
-
-See [docs/ble.md](docs/ble.md) for LED feedback and full pairing details.
 
 ## ICs
 - ESP32-C6-Zero (ESP32-C6FH8, 8MB, BLE + WiFi, 2x TWAI CAN2.0 controllers)

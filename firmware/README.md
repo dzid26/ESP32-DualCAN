@@ -9,68 +9,9 @@ Open-source alternative to the S3XY Commander. ESP32-C6 with dual CAN, Berry scr
 - **Dorky Commander board** (ESP32-C6-SuperMini + dual TCAN1044 transceivers)
 - **USB-C cable** for first flash
 - **Chrome or Chromium** (required for Web Bluetooth on all platforms)
-- A Tesla (or any vehicle with a supported DBC)
+- A Tesla (or any vehicle with a supported DBC) for CANbus interaction
 
----
-
-## Step 1 — Flash the firmware
-
-To build from source:
-
-Recommended: [PlatformIO IDE extension for VS Code](https://platformio.org/install) — open the `firmware` folder in VS Code and use **Build** / **Upload** from the sidebar.
-
-CLI alternative (requires [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/index.html)):
-
-```bash
-cd firmware
-pio run -e esp32-c6          # build
-pio run -e esp32-c6 -t upload # build + flash
-```
-
----
-
-## Step 2 — Connect over BLE
-
-1. Open the [Dorky Commander web UI](https://dzid26.github.io/ESP32-DualCAN/) in Chrome.
-   *(Or install it as an app: Settings → Install app → Add to home screen.)*
-2. Click **Connect** in the status bar.
-3. Select **Dorky Commander** from the Bluetooth pairing dialog.
-4. The status bar turns green and shows the firmware version.
-
-> **Tip:** The board advertises as `Dorky Commander`. If you don't see it, hold the board's BOOT button for 3 s to reset BLE state.
-
----
-
-## Step 3 — Load a DBC
-
-The device needs a compiled DBC to decode signals by name.
-
-1. Go to **DBC** in the left rail.
-2. Paste or load a `.dbc` file. The Tesla Model 3/Y vehicle DBC is bundled — click **Load example**.
-3. Select the target bus (0 = vehicle CAN, 1 = chassis CAN on Tesla).
-4. Click **Upload to device**. The binary blob is sent over BLE and stored in flash.
-
----
-
-## Step 4 — Write your first script
-
-1. Go to **Scripts**.
-2. Click **Load example…** → select `hello_log.be`.
-3. Click **Save**, then toggle the **Enable** switch.
-4. Open the **Log** panel (bottom right) — you should see `hello_log: setup` followed by heartbeat lines every 5 seconds.
-
-The script runs on the device. `print()` output streams over BLE to the log panel.
-
----
-
-## Step 5 — Run an action
-
-1. Go to **Events** in the left rail.
-2. Click **+ Add event** — this loads the `tiles_demo.be` example into the Scripts editor. Save and enable it.
-3. Back on the **Events** page, four tiles appear: `blip_red`, `blip_green`, `blip_blue`, `rainbow`.
-4. Tap a tile — the onboard LED blinks.
-
-This proves the full path: BLE → firmware → Berry → hardware.
+See [../README.md](../README.md) for the first-use walkthrough (flashing, BLE connection, DBC, scripts, and actions).
 
 ---
 
@@ -170,7 +111,9 @@ Or update submodules later:
 git submodule update --init --recursive
 ```
 
-Recommended: [PlatformIO IDE extension for VS Code](https://platformio.org/install) — open the `firmware` folder in VS Code and build / upload / monitor from the PlatformIO sidebar.
+### Build & Flash
+
+Recommended: [PlatformIO IDE extension for VS Code](https://platformio.org/install) — open the `firmware` folder in VS Code and use **Build** / **Upload** from the sidebar.
 
 CLI alternative (requires [PlatformIO Core](https://docs.platformio.org/en/latest/core/installation/index.html)):
 
@@ -178,6 +121,12 @@ CLI alternative (requires [PlatformIO Core](https://docs.platformio.org/en/lates
 cd firmware
 pio run -e esp32-c6              # build
 pio run -e esp32-c6 -t upload    # flash
+```
+
+### Monitor & Test
+
+```bash
+cd firmware
 pio device monitor               # serial console (115200 baud)
 pio test -e tests-native         # host unit tests (gcc required)
 pio test -e esp32-c6-tests-arduino  # hardware smoke tests (board connected)
