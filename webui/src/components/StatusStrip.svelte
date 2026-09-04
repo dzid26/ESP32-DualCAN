@@ -2,6 +2,7 @@
   import { app } from '../lib/store.svelte';
   import { isMobile, modKey } from '../lib/platform';
   import Icon from './Icon.svelte';
+  import FilledIcon from './FilledIcon.svelte';
   import VersionPip from './VersionPip.svelte';
   import BusPip from './BusPip.svelte';
   import CarPip from './CarPip.svelte';
@@ -127,4 +128,15 @@
       <Icon name="power" size={14} /><span>{app.killed ? 'Release' : 'Kill'}</span>
     </button>
   {/if}
+
+  <a
+    class="btn btn--sm btn--ghost"
+    href="https://github.com/dzid26/ESP32-DualCAN"
+    target="_blank"
+    rel="noreferrer"
+    title="View on GitHub"
+    aria-label="GitHub repository"
+  >
+    <FilledIcon name="github" size={16} />
+  </a>
 </div>

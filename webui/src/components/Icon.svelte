@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { ICON_PATHS, type IconName } from '../lib/icons';
+  import { STROKE_ICONS, type StrokeIconName } from '../lib/icons';
 
-  let { name, size = 18, title }: { name: IconName; size?: number; title?: string } = $props();
-  const paths = $derived(ICON_PATHS[name]);
+  let { name, size = 18, title }: { name: StrokeIconName; size?: number; title?: string } = $props();
+  const paths = STROKE_ICONS[name];
 </script>
 
 <svg

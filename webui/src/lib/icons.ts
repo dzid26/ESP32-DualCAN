@@ -1,14 +1,7 @@
-// Inline-SVG icon registry — stroke-only, 24×24 grid, 1.75 stroke.
-// Mirrors the design bundle's icons.jsx so the bundle stays tiny (no Lucide).
-export type IconName =
-  | 'scripts' | 'dbc' | 'dash' | 'trace' | 'capture' | 'settings' | 'tesla'
-  | 'gallery' | 'log' | 'play' | 'pause' | 'stop' | 'down' | 'up' | 'filter'
-  | 'power' | 'ble' | 'wifi' | 'sim' | 'check' | 'x' | 'chevD' | 'search'
-  | 'plug' | 'trash' | 'engine' | 'volume' | 'mute' | 'events' | 'ai'
-  | 'bolt' | 'sparkle' | 'tool' | 'radio'
-  | 'alert-triangle' | 'upload';
+// Inline-SVG icon registry — mirrors the design bundle's icons.jsx so the
+// bundle stays tiny (no Lucide). Stroke = 24×24 outline, Filled = solid.
 
-export const ICON_PATHS: Record<IconName, string[]> = {
+export const STROKE_ICONS = {
   scripts:  ['M8 4h9l3 3v13H8z', 'M4 8h12v12H4z', 'M7 12h6', 'M7 15h4'],
   dbc:      ['M4 6 C4 3.3,20 3.3,20 6 C20 8.7,4 8.7,4 6', 'M4 6v4a8 2 0 0 0 16 0v-4', 'M4 10v5a8 2 0 0 0 16 0v-5', 'M4 15v5a8 2 0 0 0 16 0v-5'],
   dash:     ['M3 18a9 9 0 0 1 18 0', 'M12 18l5-6'],
@@ -49,4 +42,14 @@ export const ICON_PATHS: Record<IconName, string[]> = {
   radio:    ['M3 9h18v9H3z', 'M3 9L20 3', 'M19.2 3A0.8 0.8 0 1 0 20.8 3A0.8 0.8 0 1 0 19.2 3', 'M6 12.5A2.5 2.5 0 1 0 11 13.5A2.5 2.5 0 1 0 6 13.5', 'M14 12h5', 'M14 15h5'],
   'alert-triangle': ['M12 3l10 18H2z', 'M12 12v4', 'M12 17v1'],
   upload:  ['M12 4v12', 'M7 9l5-5 5 5', 'M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2'],
-};
+} as const;
+
+export const FILLED_ICONS = {
+  github: {
+    viewBox: '0 0 16 16',
+    path: 'M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z',
+  },
+} as const;
+
+export type StrokeIconName = keyof typeof STROKE_ICONS;
+export type FilledIconName = keyof typeof FILLED_ICONS;

@@ -1,10 +1,10 @@
 import type { ViewId } from './store.svelte';
-import type { IconName } from './icons';
+import type { StrokeIconName } from './icons';
 
 export type NavItem = {
   id: ViewId;
   label: string;
-  icon: IconName;
+  icon: StrokeIconName;
   group: string;
 };
 
