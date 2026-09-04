@@ -1,6 +1,7 @@
 # Dorky Commander — Firmware
 
-Open-source alternative to the S3XY Commander. ESP32-C6 with dual CAN, Berry scripting, and a web UI over BLE.
+Open-source alternative to the S3XY Commander based on ESP32-C6 with dual CAN. Provides BLE transport for webui, scripting VM, CAN caching, wifi file server, OTA, TeslaBLE.
+
 
 ---
 
@@ -65,6 +66,8 @@ function name, or inline code.
 | `state_set/state_get/state_remove` | — | no | NVS flash storage |
 | `millis()` | int | no | Milliseconds since boot |
 | `print(msg)` | — | no | Log to web UI |
+
+For the full functions reference with examples, see [scripting.md](../docs/scripting.md).
 
 ### Example: blink LED when speed exceeds 100 km/h
 
