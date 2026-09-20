@@ -75,6 +75,8 @@
 
   // Bluetooth pairing
   let bleStatus = $state<{ pairing_open: boolean; bond_count: number } | null>(null);
+  const bondsSafe = $derived(!!bleStatus && bleStatus.bond_count >= 2);
+  const pairingLocked = $derived(!!bleStatus && !bleStatus.pairing_open);
   let bleBusy = $state(false);
   let bleError = $state<string | null>(null);
   let confirmResetPairs = $state(false);
@@ -391,10 +393,16 @@
       {#if bleStatus}
         <div class="field">
           <span>Status</span>
-          <span class="mono ghost">
-            {bleStatus.bond_count} bond{bleStatus.bond_count === 1 ? '' : 's'}
-            · pairing {bleStatus.pairing_open ? 'OPEN' : 'locked'}
-          </span>
+          <div class="mono" style="display: flex; flex-direction: column; gap: 2px">
+            <span style={bondsSafe ? 'color: var(--dc-ok)' : 'color: var(--dc-text-fade)'}>
+              {bleStatus.bond_count} bond{bleStatus.bond_count === 1 ? '' : 's'} stored
+              {#if bondsSafe}<span style="margin-left: 4px">✓</span>{/if}
+            </span>
+            <span style={pairingLocked ? 'color: var(--dc-ok)' : 'color: #6e8efb'}>
+              pairing {bleStatus.pairing_open ? 'open...' : 'locked'}
+              {#if pairingLocked}<span style="margin-left: 4px">✓</span>{/if}
+            </span>
+          </div>
         </div>
       {/if}
       <div class="field">
@@ -406,6 +414,9 @@
           </button>
           <span class="muted" style="font-size: 11px">
             Same effect as a short press on the BOOT button. Useful when the device is hidden in the car.
+          </span>
+          <span class="muted" style="font-size: 11px">
+            It's best to pair with at least two devices (e.g., phone + laptop) to avoid loosing wireless access if one is lost or wiped.
           </span>
         </div>
       </div>
