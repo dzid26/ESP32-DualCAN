@@ -2,7 +2,7 @@
 // Wires the real BleTransport + Protocol from ../transport/* through to the
 // status strip, banners, and views. Per-view local state stays in the views.
 
-import { BleTransport } from '../transport/ble';
+import { BleTransport, type DisconnectKind } from '../transport/ble';
 import { Protocol } from '../transport/protocol';
 import type { BusStatus, LogLevel } from '../transport/protocol';
 
@@ -94,6 +94,8 @@ class AppState {
 
   connected = $state(false);
   connecting = $state(false);
+  /** True while an automatic reconnect (post-reboot or unexpected drop) is in flight. */
+  reconnecting = $state(false);
   /** Surfaced as the transport pip subtitle. */
   transport: Transport = 'ble';
   connectError = $state<string | null>(null);
@@ -205,17 +207,66 @@ class AppState {
       this.pushLog(`restartNotifications failed: ${m}`, 'warn', 'ble');
     }
 
-    // Level 2: full reconnect.
+    // Level 2: full reconnect. No chooser fallback — this runs without a user
+    // gesture, so an unprompted picker would be rejected by the browser.
     this.pushLog('reconnecting BLE transport', 'warn', 'ble');
     this.proto.reset();
     try {
-      await this.ble.reconnect();
+      await this.ble.reconnect({ allowPicker: false });
       // onConnChange(true) handles re-initialising protocol state
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.pushLog(`BLE reconnect failed: ${msg}`, 'error', 'ble');
     } finally {
       this.recovering = false;
+    }
+  }
+
+  /** After an unexpected drop (or an OTA/reboot) the device may need a moment
+   *  to re-advertise. Retry a chooser-less reconnect with backoff. The silent
+   *  path (getDevices + connect) needs no user gesture; if it can't find the saved
+   *  device we ask the user to tap Connect rather than popping the chooser.
+   *
+   *  @param context why the link came down. 'reboot' is the expected OTA/reboot
+   *  drop; any DisconnectKind is a surprise drop. Tailors the log + give-up copy. */
+  private async attemptReconnect(context: 'reboot' | DisconnectKind): Promise<void> {
+    if (this.reconnecting) return;
+    this.reconnecting = true;
+    const delaysMs = [2500, 4000, 6000, 8000];
+    const isReboot = context === 'reboot';
+    this.pushLog(
+      isReboot
+        ? 'Waiting for device to reboot and re-advertise…'
+        : 'Connection lost — attempting to reconnect…',
+      'info', 'ble',
+    );
+    try {
+      for (let attempt = 0; attempt < delaysMs.length; attempt++) {
+        await new Promise(r => setTimeout(r, delaysMs[attempt]));
+        if (this.connected) return;
+        try {
+          await this.ble.reconnect({ allowPicker: false });
+          if (this.connected) {
+            this.pushLog(isReboot ? 'Reconnected after reboot' : 'Reconnected automatically', 'info', 'ble');
+            return;
+          }
+        } catch (e) {
+          const m = e instanceof Error ? e.message : String(e);
+          this.pushLog(`Reconnect attempt ${attempt + 1}/${delaysMs.length} failed: ${m}`, 'warn', 'ble');
+        }
+      }
+      this.connectError = isReboot
+        ? 'Device rebooted — tap Connect to reconnect.'
+        : 'Connection lost — tap Connect to reconnect.';
+      toast.show({
+        severity: 'warn',
+        message: isReboot
+          ? 'Device rebooted but did not come back automatically. Tap Connect to reconnect.'
+          : 'Dorky did not come back automatically. Tap Connect to reconnect.',
+        duration: 20000,
+      });
+    } finally {
+      this.reconnecting = false;
     }
   }
 
@@ -245,6 +296,22 @@ class AppState {
   constructor() {
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.ble.onDisconnect((kind) => {
+      // A deliberate user teardown (Disconnect tap) must stay disconnected.
+      // BleTransport already distinguishes it: disconnect() sets an internal
+      // userInitiatedDisconnect flag before calling BleClient.disconnect, and
+      // onDisconnected reports the resulting event as 'user'. That single
+      // classification is the source of truth here — every other kind is a
+      // surprise drop we try to recover from.
+      if (kind === 'user') return;
+
+      // An OTA/reboot drop is expected — wait for the device to come back
+      // instead of leaving the UI stuck disconnected.
+      if (this.suppressUnexpectedDisconnect) {
+        this.suppressUnexpectedDisconnect = false;
+        this.pushLog('Expected BLE drop (device rebooting) — will reconnect', 'info', 'ble');
+        void this.attemptReconnect('reboot');
+        return;
+      }
       if (kind === 'auth_fail') {
         toast.show({
           severity: 'error',
@@ -258,17 +325,10 @@ class AppState {
           message: 'Dorky taken over by another client.',
           duration: 6000,
         });
-      } else if (kind === 'unexpected') {
-        if (this.suppressUnexpectedDisconnect) {
-          this.suppressUnexpectedDisconnect = false;
-          return;
-        }
-        toast.show({
-          severity: 'warn',
-          message: 'Dorky disconnected unexpectedly. Out of range or powered off.',
-          duration: 6000,
-        });
       }
+      // Every unexpected drop: retry the saved device with backoff. The
+      // "tap Connect" toast is only surfaced once those attempts are exhausted.
+      void this.attemptReconnect(kind);
     });
     const IDF_LEVEL: Record<string, LogLine['level']> = {
       I: 'info', W: 'warn', E: 'error', D: 'debug', V: 'debug',
@@ -346,7 +406,7 @@ class AppState {
   }
 
   async toggleConnect(): Promise<void> {
-    if (this.connecting) return;
+    if (this.connecting || this.reconnecting) return;
     this.connectError = null;
     try {
       if (this.connected) {
@@ -531,8 +591,10 @@ class AppState {
   }
 
   async rebootDevice(): Promise<void> {
+    // Set before the command: the reboot drops the link and we want the
+    // disconnect handler to wait for the device to come back.
+    this.suppressUnexpectedDisconnect = true;
     try {
-      this.suppressUnexpectedDisconnect = true;
       await this.proto.systemReboot();
       toast.show({
         severity: 'info',
@@ -542,9 +604,17 @@ class AppState {
       this.pushLog('Device reboot command sent', 'info', 'system');
       this.otaStatus = 'Rebooting…';
     } catch (e) {
-      this.suppressUnexpectedDisconnect = false;
+      // The device can reboot before acknowledging, so don't clear the
+      // suppression here — that would prevent the auto-reconnect. If the
+      // link is still up shortly after, the command really failed.
       const msg = e instanceof Error ? e.message : String(e);
-      this.pushLog(`Reboot failed: ${msg}`, 'error', 'system');
+      this.pushLog(`Reboot command error (link may have dropped): ${msg}`, 'warn', 'system');
+      setTimeout(() => {
+        if (this.connected) {
+          this.suppressUnexpectedDisconnect = false;
+          this.pushLog('Reboot did not take — device still connected', 'error', 'system');
+        }
+      }, 3000);
     }
   }
 

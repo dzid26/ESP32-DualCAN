@@ -16,14 +16,16 @@
 
   function handleConnClick() {
     if (app.connected) { confirmDisconn = true; return; }
+    if (app.connecting || app.reconnecting) return;
     app.toggleConnect();
   }
 
   const connState = $derived(
-    app.connecting ? 'connecting' :
+    app.connecting || app.reconnecting ? 'connecting' :
     app.connected ? 'ok' : 'err'
   );
   const stateLabel = $derived(
+    app.reconnecting ? 'Reconnecting…' :
     app.connecting ? 'Connecting…' :
     app.connected
       ? (app.transport === 'ws' ? 'WiFi · dorky.local' : `BLE · ${app.deviceName ?? 'Dorky'}`)

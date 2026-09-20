@@ -1,10 +1,17 @@
 import type { Transport } from './types';
-import { BleClient } from '@capacitor-community/bluetooth-le';
+import { BleClient, type BleDevice, type RequestBleDeviceOptions } from '@capacitor-community/bluetooth-le';
+import { Capacitor } from '@capacitor/core';
 
 // Nordic UART Service UUIDs (must match firmware ble_transport.c)
 const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const RX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write to device
 const TX_CHAR_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notify from device
+
+/** Firmware advertises as "Dorky-XXXX"; used as the chooser filter fallback. */
+const DEVICE_NAME_PREFIX = 'Dorky';
+
+/** Namespaced localStorage key for the last successfully-connected device. */
+const STORAGE_KEY = 'dc-ble-device';
 
 /** How the link came down, as inferred from timing + intent. */
 export type DisconnectKind =
@@ -16,9 +23,28 @@ export type DisconnectKind =
 /** Disconnects faster than this are treated as authentication failures. */
 const AUTH_FAIL_THRESHOLD_MS = 1500;
 
+interface PersistedDevice {
+  deviceId: string;
+  name: string | null;
+}
+
+/** True when running in a browser (as opposed to the Capacitor native shell). */
+function isWebPlatform(): boolean {
+  try {
+    return Capacitor.getPlatform() === 'web';
+  } catch {
+    return true;
+  }
+}
+
 export class BleTransport implements Transport {
   private deviceId: string | null = null;
   private deviceName_: string | null = null;
+  /** Last successfully-connected device, durable across disconnects + reloads.
+   *  Kept separate from deviceId so a dropped link can still be re-established
+   *  without reshowing the system/browser chooser. */
+  private lastDeviceId: string | null = null;
+  private lastDeviceName: string | null = null;
   private receiveCb: ((data: Uint8Array) => void) | null = null;
   private changeCbs: Array<(connected: boolean) => void> = [];
   private disconnectCbs: Array<(kind: DisconnectKind) => void> = [];
@@ -34,6 +60,39 @@ export class BleTransport implements Transport {
   /** Set by onNotification when the firmware signals the reason for the
    *  upcoming disconnect via a [0xFD, reason] notification. */
   private pendingDisconnectReason: DisconnectKind | null = null;
+
+  constructor() {
+    const saved = BleTransport.loadPersistedDevice();
+    this.lastDeviceId = saved?.deviceId ?? null;
+    this.lastDeviceName = saved?.name ?? null;
+  }
+
+  private static loadPersistedDevice(): PersistedDevice | null {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { deviceId?: unknown; name?: unknown };
+      if (parsed && typeof parsed.deviceId === 'string' && parsed.deviceId) {
+        return { deviceId: parsed.deviceId, name: typeof parsed.name === 'string' ? parsed.name : null };
+      }
+    } catch { /* ignore (private mode / SSR) */ }
+    return null;
+  }
+
+  /** Remember the device so future connects can skip the chooser. */
+  private rememberDevice(id: string, name: string | null): void {
+    this.lastDeviceId = id;
+    this.lastDeviceName = name;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ deviceId: id, name }));
+    } catch { /* ignore (private mode / quota) */ }
+  }
+
+  /** Last known device id, or null if none has been saved. */
+  get savedDeviceId(): string | null { return this.lastDeviceId; }
+
+  /** Advertised name of the last known device, or null. */
+  get savedDeviceName(): string | null { return this.lastDeviceName; }
 
   private readonly onNotification = (value: DataView): void => {
     const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
@@ -70,6 +129,8 @@ export class BleTransport implements Transport {
     }
     this.userInitiatedDisconnect = false;
     this.connectedAt = 0;
+    // Only the live session is cleared — lastDeviceId/Name persist so the
+    // next connect can skip the chooser.
     this.deviceId = null;
     this.deviceName_ = null;
     this.setConnected(false);
@@ -116,20 +177,45 @@ export class BleTransport implements Transport {
     await BleClient.startNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID, this.onNotification);
   }
 
-  async connect(): Promise<void> {
-    await this.ensureInitialized();
+  /** Web Bluetooth's getDevices() is not implemented in every browser and the
+   *  Capacitor plugin does not guard it on web, so feature-detect before use. */
+  private canGetDevices(): boolean {
+    if (!isWebPlatform()) return true;
+    if (typeof navigator === 'undefined') return false;
+    const bt = (navigator as unknown as { bluetooth?: { getDevices?: unknown } }).bluetooth;
+    return !!bt && typeof bt.getDevices === 'function';
+  }
 
+  /** Resolve a previously-permitted device handle without showing a chooser. */
+  private async getSavedDevice(id: string): Promise<BleDevice | null> {
+    if (!this.canGetDevices()) return null;
     try {
-      const device = await BleClient.requestDevice({
-        services: [SERVICE_UUID],
-        optionalServices: [SERVICE_UUID],
-      });
+      const devices = await BleClient.getDevices([id]);
+      return devices.find(d => d.deviceId === id) ?? devices[0] ?? null;
+    } catch (e) {
+      console.log('BLE getDevices failed:', e);
+      return null;
+    }
+  }
 
-      this.deviceId = device.deviceId;
-      this.deviceName_ = device.name ?? null;
-      this.disconnectHandled = false;
+  /** Clear only the live session; the saved device id/name are preserved. */
+  private async teardownAfterFailedConnect(): Promise<void> {
+    const id = this.deviceId;
+    this.deviceId = null;
+    this.deviceName_ = null;
+    this.connectedAt = 0;
+    this.setConnected(false);
+    if (id) { try { await BleClient.disconnect(id); } catch { /* ignore */ } }
+  }
 
-      await BleClient.connect(device.deviceId, this.onDisconnected);
+  /** Establish GATT + notifications for a known device, then mark connected. */
+  private async establishSession(id: string, name: string | null): Promise<void> {
+    this.deviceId = id;
+    this.deviceName_ = name;
+    this.disconnectHandled = false;
+    this.userInitiatedDisconnect = false;
+    try {
+      await BleClient.connect(id, this.onDisconnected);
       this.connectedAt = Date.now();
 
       // Race startNotifications against a timeout — it can hang on Windows.
@@ -140,19 +226,42 @@ export class BleTransport implements Transport {
 
       // If the connection dropped during notification setup (e.g. auth
       // failure), onDisconnected cleared deviceId — don't override.
-      if (!this.deviceId) return;
+      if (this.deviceId !== id) return;
 
       this.setConnected(true);
-      console.log('BLE connected to', device.name);
+      this.rememberDevice(id, name);
+      console.log('BLE connected to', name);
     } catch (e) {
-      // Null our state and tell the plugin to release any lingering
-      // connection so the next attempt starts fresh.
-      const id = this.deviceId;
-      this.deviceId = null;
-      this.deviceName_ = null;
-      this.connectedAt = 0;
-      this.setConnected(false);
-      if (id) { try { await BleClient.disconnect(id); } catch { /* ignore */ } }
+      await this.teardownAfterFailedConnect();
+      throw e;
+    }
+  }
+
+  private async connectViaPicker(useNamePrefix: boolean): Promise<void> {
+    const options: RequestBleDeviceOptions = useNamePrefix
+      ? { namePrefix: DEVICE_NAME_PREFIX, optionalServices: [SERVICE_UUID] }
+      : { services: [SERVICE_UUID], optionalServices: [SERVICE_UUID] };
+    const device = await BleClient.requestDevice(options);
+    await this.establishSession(device.deviceId, device.name ?? null);
+  }
+
+  async connect(): Promise<void> {
+    await this.ensureInitialized();
+
+    // Prefer a picker-less reconnect to the last known device.
+    if (this.lastDeviceId) {
+      try {
+        await this.reconnect({ allowPicker: false });
+        return;
+      } catch (e) {
+        console.log('BLE silent reconnect unavailable — showing device picker:', e);
+      }
+    }
+
+    try {
+      await this.connectViaPicker(false);
+    } catch (e) {
+      await this.teardownAfterFailedConnect();
       throw e;
     }
   }
@@ -181,47 +290,57 @@ export class BleTransport implements Transport {
     await this.subscribeNotifications();
   }
 
-  /** Disconnect and reconnect to the same device without showing the
-   *  Bluetooth picker. Useful for recovering a wedged transport. */
-  async reconnect(): Promise<void> {
-    const id = this.deviceId;
-    if (!id) throw new Error('No device to reconnect to');
+  /** Disconnect and reconnect to the last device without showing the
+   *  Bluetooth chooser. Useful for recovering a wedged transport and for
+   *  coming back after an OTA reboot.
+   *
+   *  @param opts.allowPicker when false (default true), never fall back to
+   *  the system/browser chooser — required for gesture-less auto-reconnect. */
+  async reconnect(opts: { allowPicker?: boolean } = {}): Promise<void> {
+    const allowPicker = opts.allowPicker !== false;
+    const id = this.lastDeviceId;
 
     this.reconnecting = true;
-    this.userInitiatedDisconnect = true;
-
     try {
       // Tear down the current session in the plugin — onDisconnected will
       // see reconnecting=true and skip to avoid corrupting state.
-      try { await BleClient.disconnect(id); } catch { /* ignore */ }
-      this.connectedAt = 0;
-      this.setConnected(false);
+      if (this.deviceId || this._connected) {
+        const current = this.deviceId ?? id;
+        this.userInitiatedDisconnect = true;
+        if (current) { try { await BleClient.disconnect(current); } catch { /* ignore */ } }
+        this.connectedAt = 0;
+        this.setConnected(false);
+      }
 
       // New session — allow disconnect events to be processed normally.
       this.reconnecting = false;
       this.disconnectHandled = false;
 
-      await BleClient.connect(id, this.onDisconnected);
-      this.deviceId = id;
-      this.connectedAt = Date.now();
+      if (!id) {
+        if (!allowPicker) throw new Error('No device to reconnect to');
+        await this.connectViaPicker(true);
+        return;
+      }
 
-      await this.subscribeNotifications();
+      // Silent path: getDevices() returns devices this origin already has
+      // permission for, so connect() needs no chooser.
+      const saved = await this.getSavedDevice(id);
+      const targetId = saved?.deviceId ?? id;
+      const targetName = saved?.name ?? this.lastDeviceName;
+      try {
+        await this.establishSession(targetId, targetName);
+        return;
+      } catch (e) {
+        if (!allowPicker) throw e;
+        console.log('BLE reconnect failed — showing device picker:', e);
+      }
 
-      // If the connection dropped during notification setup, deviceId
-      // was already cleared by onDisconnected.
-      if (!this.deviceId) return;
-
-      this.setConnected(true);
-      console.log('BLE reconnected');
+      await this.connectViaPicker(true);
     } catch (e) {
-      // Null our state and tell the plugin to release any lingering
-      // connection so the next attempt starts fresh.
-      this.deviceId = null;
-      this.deviceName_ = null;
-      this.connectedAt = 0;
-      this.setConnected(false);
-      try { await BleClient.disconnect(id); } catch { /* ignore */ }
+      await this.teardownAfterFailedConnect();
       throw e;
+    } finally {
+      this.reconnecting = false;
     }
   }
 
