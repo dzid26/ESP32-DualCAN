@@ -37,7 +37,18 @@ function isWebPlatform(): boolean {
   }
 }
 
+/** Exposed for tests
+ *  The slice of the plugin's client that `BleTransport` actually calls. Derived
+ *  from the real `BleClient` surface so the signatures can never drift; `Pick`
+ *  keeps only public methods, so tests can inject a plain mock without
+ *  importing the production plugin client. */
+type BleClientMethod =
+  | 'initialize' | 'requestDevice' | 'getDevices' | 'connect' | 'disconnect'
+  | 'writeWithoutResponse' | 'startNotifications' | 'stopNotifications';
+export type BleClientPort = Pick<typeof BleClient, BleClientMethod>;
+
 export class BleTransport implements Transport {
+  private readonly client: BleClientPort;
   private deviceId: string | null = null;
   private deviceName_: string | null = null;
   /** Last successfully-connected device, durable across disconnects + reloads.
@@ -61,7 +72,8 @@ export class BleTransport implements Transport {
    *  upcoming disconnect via a [0xFD, reason] notification. */
   private pendingDisconnectReason: DisconnectKind | null = null;
 
-  constructor() {
+  constructor(client: BleClientPort = BleClient) {
+    this.client = client;
     const saved = BleTransport.loadPersistedDevice();
     this.lastDeviceId = saved?.deviceId ?? null;
     this.lastDeviceName = saved?.name ?? null;
@@ -165,7 +177,7 @@ export class BleTransport implements Transport {
 
   private async ensureInitialized(): Promise<void> {
     if (!this.initialized) {
-      await BleClient.initialize();
+      await this.client.initialize();
       this.initialized = true;
     }
   }
@@ -173,8 +185,8 @@ export class BleTransport implements Transport {
   private async subscribeNotifications(): Promise<void> {
     if (!this.deviceId) throw new Error('Not connected');
     // stop + start to replace any stale callback from a previous session
-    try { await BleClient.stopNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID); } catch { /* ignore */ }
-    await BleClient.startNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID, this.onNotification);
+    try { await this.client.stopNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID); } catch { /* ignore */ }
+    await this.client.startNotifications(this.deviceId, SERVICE_UUID, TX_CHAR_UUID, this.onNotification);
   }
 
   /** Web Bluetooth's getDevices() is not implemented in every browser and the
@@ -190,7 +202,7 @@ export class BleTransport implements Transport {
   private async getSavedDevice(id: string): Promise<BleDevice | null> {
     if (!this.canGetDevices()) return null;
     try {
-      const devices = await BleClient.getDevices([id]);
+      const devices = await this.client.getDevices([id]);
       return devices.find(d => d.deviceId === id) ?? devices[0] ?? null;
     } catch (e) {
       console.log('BLE getDevices failed:', e);
@@ -205,7 +217,7 @@ export class BleTransport implements Transport {
     this.deviceName_ = null;
     this.connectedAt = 0;
     this.setConnected(false);
-    if (id) { try { await BleClient.disconnect(id); } catch { /* ignore */ } }
+    if (id) { try { await this.client.disconnect(id); } catch { /* ignore */ } }
   }
 
   /** Establish GATT + notifications for a known device, then mark connected. */
@@ -215,7 +227,7 @@ export class BleTransport implements Transport {
     this.disconnectHandled = false;
     this.userInitiatedDisconnect = false;
     try {
-      await BleClient.connect(id, this.onDisconnected);
+      await this.client.connect(id, this.onDisconnected);
       this.connectedAt = Date.now();
 
       // Race startNotifications against a timeout — it can hang on Windows.
@@ -241,7 +253,7 @@ export class BleTransport implements Transport {
     const options: RequestBleDeviceOptions = useNamePrefix
       ? { namePrefix: DEVICE_NAME_PREFIX, optionalServices: [SERVICE_UUID] }
       : { services: [SERVICE_UUID], optionalServices: [SERVICE_UUID] };
-    const device = await BleClient.requestDevice(options);
+    const device = await this.client.requestDevice(options);
     await this.establishSession(device.deviceId, device.name ?? null);
   }
 
@@ -269,7 +281,7 @@ export class BleTransport implements Transport {
   async disconnect(): Promise<void> {
     this.userInitiatedDisconnect = true;
     if (this.deviceId) {
-      await BleClient.disconnect(this.deviceId);
+      await this.client.disconnect(this.deviceId);
     }
     this.deviceId = null;
     this.deviceName_ = null;
@@ -280,7 +292,7 @@ export class BleTransport implements Transport {
   async send(data: Uint8Array): Promise<void> {
     if (!this.deviceId) throw new Error('Not connected');
     const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    await BleClient.writeWithoutResponse(this.deviceId, SERVICE_UUID, RX_CHAR_UUID, dv);
+    await this.client.writeWithoutResponse(this.deviceId, SERVICE_UUID, RX_CHAR_UUID, dv);
   }
 
   /** Re-subscribe to TX characteristic notifications.
@@ -307,7 +319,7 @@ export class BleTransport implements Transport {
       if (this.deviceId || this._connected) {
         const current = this.deviceId ?? id;
         this.userInitiatedDisconnect = true;
-        if (current) { try { await BleClient.disconnect(current); } catch { /* ignore */ } }
+        if (current) { try { await this.client.disconnect(current); } catch { /* ignore */ } }
         this.connectedAt = 0;
         this.setConnected(false);
       }

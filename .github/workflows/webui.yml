@@ -21,6 +21,10 @@ jobs:
     defaults:
       run:
         working-directory: webui
+    env:
+      # Defense in depth: `npm test` never collects tests/e2e/, but force-skip the
+      # real-hardware tier if it is ever wired into CI (it needs a visible browser).
+      BLE_SKIP_REAL_DEVICE: "1"
     steps:
       - uses: actions/checkout@v4
 

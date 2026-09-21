@@ -81,10 +81,23 @@ function nowTs(): string {
   return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}.${p3(d.getMilliseconds())}`;
 }
 
-class AppState {
+/** Backoff schedule (ms) between automatic reconnect attempts after an unexpected drop. */
+export const RECONNECT_BACKOFF_MS: readonly number[] = [1500, 2500, 4000, 6000, 8000];
+
+/** Injectable dependencies for {@link AppState}. Production uses the defaults. */
+export interface AppStateDeps {
+  /** Transport to drive. Defaults to a real {@link BleTransport}. */
+  ble?: BleTransport;
+  /** Delay primitive used between automatic reconnect attempts (overridable in tests). */
+  sleep?: (ms: number) => Promise<void>;
+}
+
+export class AppState {
   // Real transport + protocol — singletons for the whole app.
-  readonly ble = new BleTransport();
-  readonly proto = new Protocol(this.ble);
+  readonly ble: BleTransport;
+  readonly proto: Protocol;
+  /** Delay used between automatic reconnect attempts. */
+  private readonly sleep: (ms: number) => Promise<void>;
 
   // ---- Reactive UI state ----
   view = $state<ViewId>(loadView());
@@ -232,7 +245,7 @@ class AppState {
   private async attemptReconnect(context: 'reboot' | DisconnectKind): Promise<void> {
     if (this.reconnecting) return;
     this.reconnecting = true;
-    const delaysMs = [2500, 4000, 6000, 8000];
+    const delaysMs = RECONNECT_BACKOFF_MS;
     const isReboot = context === 'reboot';
     this.pushLog(
       isReboot
@@ -242,7 +255,7 @@ class AppState {
     );
     try {
       for (let attempt = 0; attempt < delaysMs.length; attempt++) {
-        await new Promise(r => setTimeout(r, delaysMs[attempt]));
+        await this.sleep(delaysMs[attempt]);
         if (this.connected) return;
         try {
           await this.ble.reconnect({ allowPicker: false });
@@ -293,7 +306,10 @@ class AppState {
      (navigator as any).standalone === true),
   );
 
-  constructor() {
+  constructor(deps: AppStateDeps = {}) {
+    this.ble = deps.ble ?? new BleTransport();
+    this.proto = new Protocol(this.ble);
+    this.sleep = deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.ble.onConnectionChange((c) => this.onConnChange(c));
     this.ble.onDisconnect((kind) => {
       // A deliberate user teardown (Disconnect tap) must stay disconnected.

@@ -13,6 +13,12 @@ dist-ssr
 .vite
 *.local
 
+# Playwright (opt-in real-device tier artifacts)
+/test-results/
+/playwright-report/
+/blob-report/
+/.playwright/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
