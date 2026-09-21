@@ -226,8 +226,8 @@ button { font: inherit; color: inherit; }
 /* Default: hide labels (icon-only rail). Overridden by the wide-rail query below. */
 .railItem__label { display: none; }
 
-/* === Wide rail — labels visible at ≥1100px === */
-@media (min-width: 1100px) {
+/* === Wide rail — make  labels visible on wider screens === */
+@media (min-width: 900px) {
   .rail { flex: 0 0 148px; }
 
   /* Brand: horizontal logo + wordmark side by side */
@@ -291,7 +291,7 @@ button { font: inherit; color: inherit; }
 
 /* ===== Status strip ===== */
 .status {
-  flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+  flex: 0 0 auto; display: flex; align-items: flex-start; gap: 6px;
   padding: 6px 10px; background: var(--dc-surface-deep);
   background-image:
     repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,0.18) 2px 3px),
@@ -301,11 +301,27 @@ button { font: inherit; color: inherit; }
   position: relative;
   min-height: 44px;
 }
-/* Decorative green pulse pip used to live on the left edge of the strip;
- * removed because it competed with the actual transport pip's dot. */
-@media (max-width: 720px) {
-  .status { flex-wrap: wrap; }
+/* Single wrapping flow that packs the strip. The GitHub link is a sibling of
+ * the flow (not inside it) so it stays pinned to the top-right corner while the
+ * rest of the strip wraps and packs underneath. */
+.status__flow {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
 }
+.status__item { display: flex; align-items: center; gap: 6px; }
+/* Per-row alignment is applied inline by the packer: the first right-aligned
+ * item on a row is pushed to the right edge, everything else stays left. */
+/* Pinned out of flow so lower rows can use the full width underneath it. */
+.status__github { position: absolute; top: 6px; right: 10px; }
+.bus-group {
+  display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+}
+/* Sim/Kill hug each other; they only grow when they wrap off the first row.
+ * Heights are constants, never viewport- or media-dependent. */
+.sim-kill-group { display: flex; align-items: center; gap: 6px; }
+.sim-kill-group .btn { height: 22px; padding: 0 8px; font-size: 11.5px; }
+/* Height only, so growing never changes the group's width (keeps packing stable). */
+.sim-kill-group--big .btn { height: 32px; }
 
 .ota-pip {
   display: flex; align-items: center; gap: 8px;
