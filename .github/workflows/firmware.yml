@@ -22,14 +22,16 @@ jobs:
             ~/.cache/pip
             ~/.platformio
             firmware/.cache
-          key: pio-native-${{ hashFiles('firmware/platformio.ini') }}
+          key: pio-native-${{ hashFiles('firmware/platformio.ini') }}-core6.2.0
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      # Pinned for reproducibility — platform 55.03.312 requires Core >=6.2.0.
+      # Upstream drift is surfaced deliberately by the scheduled canary workflow.
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install "platformio==6.2.0"
 
       - name: Run native tests
         run: pio test -d firmware -e tests-native
@@ -49,14 +51,16 @@ jobs:
             ~/.platformio
             firmware/.cache
             firmware/.pio
-          key: pio-esp32c6-${{ hashFiles('firmware/platformio.ini', 'firmware/sdkconfig.defaults') }}
+          key: pio-esp32c6-${{ hashFiles('firmware/platformio.ini', 'firmware/sdkconfig.defaults') }}-core6.2.0
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      # Pinned for reproducibility — platform 55.03.312 requires Core >=6.2.0.
+      # Upstream drift is surfaced deliberately by the scheduled canary workflow.
       - name: Install PlatformIO
-        run: pip install platformio
+        run: pip install "platformio==6.2.0"
 
       - name: Build production firmware
         run: pio run -d firmware -e esp32-c6

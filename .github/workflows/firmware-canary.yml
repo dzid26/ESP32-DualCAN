@@ -1,0 +1,38 @@
+name: Firmware canary
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Latest PlatformIO Core (Python 3.12)
+            python: '3.12'
+            pip_args: --upgrade platformio
+          - name: Latest Python (PlatformIO 6.2.0)
+            python: '3.x'
+            pip_args: '"platformio==6.2.0"'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install PlatformIO
+        run: pip install ${{ matrix.pip_args }}
+
+      - name: Build production firmware
+        run: pio run -d firmware -e esp32-c6
