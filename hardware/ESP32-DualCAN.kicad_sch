@@ -11564,7 +11564,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "101e3dda-ffd1-4fae-b0b1-05beaaacfc08")
@@ -14239,7 +14239,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(in_pos_files yes)
+		(in_pos_files no)
 		(dnp no)
 		(uuid "6ecde7bc-853f-4e76-98f1-1832f92bfbf5")
 		(property "Reference" "JP1"
