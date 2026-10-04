@@ -1,6 +1,5 @@
 <script lang="ts">
   import { app } from '../../lib/store.svelte';
-  import { BleClient } from '@capacitor-community/bluetooth-le';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
   import { AlertDialog } from 'bits-ui';
@@ -19,44 +18,6 @@
   let confirmReset = $state(false);
   let vinInput     = $state('');
   let vinSaving    = $state(false);
-
-  /* ---- phone-side Web Bluetooth scanner (no Dorky needed) ---- */
-  type WebBleDevice = { name: string; connected: boolean; version?: string };
-  let webBleDevice   = $state<WebBleDevice | null>(null);
-  let webBleScanning = $state(false);
-  const TESLA_SVC    = '00000211-b2d1-43f0-9b88-960cebf8b91e';
-  const TESLA_VER    = '00000214-b2d1-43f0-9b88-960cebf8b91e';
-  // The Capacitor plugin handles BLE availability detection per platform.
-  const webBleSupported = true;
-
-  async function webBleScan(): Promise<void> {
-    webBleScanning = true;
-    webBleDevice = null;
-    try {
-      const device = await BleClient.requestDevice({
-        services: [TESLA_SVC],
-        optionalServices: [TESLA_SVC],
-      });
-
-      const name = device.name ?? '(unknown)';
-      webBleDevice = { name, connected: false };
-
-      try {
-        await BleClient.connect(device.deviceId, () => {});
-        const val = await BleClient.read(device.deviceId, TESLA_SVC, TESLA_VER);
-        const bytes = Array.from(new Uint8Array(val.buffer));
-        webBleDevice = { ...webBleDevice, connected: true,
-          version: bytes.map(b => b.toString(16).padStart(2,'0')).join(' ') };
-        await BleClient.disconnect(device.deviceId);
-      } catch { /* version read optional */ }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!/cancel|user/i.test(msg))
-        toast.show({ severity: 'info', message: msg, duration: 4000 });
-    } finally {
-      webBleScanning = false;
-    }
-  }
 
   async function refresh(): Promise<void> {
     if (!app.connected) return;
@@ -140,37 +101,10 @@
 
   {#if !app.connected}
 
-    <!-- Disconnected: phone-side scanner only -->
-    <div class="frame scanner-frame">
-      <div class="frame__head">Nearby Teslas</div>
-      <div class="frame__body" style="display:flex;flex-direction:column;gap:10px">
-          <div style="font-size:12px;color:var(--dc-text-dim);line-height:1.5">
-            Scan for nearby Tesla VCSEC advertisements directly from this device
-            — no Dorky connection needed.
-          </div>
-          <button class="btn btn--sm btn--info" style="align-self:flex-start"
-            onclick={webBleScan} disabled={webBleScanning}>
-            {webBleScanning ? 'Scanning…' : 'Scan'}
-          </button>
-          {#if webBleDevice}
-            <div class="device-row">
-              <div style="flex:1;min-width:0">
-                <div class="mono" style="font-size:12px">{webBleDevice.name}</div>
-                {#if webBleDevice.connected && webBleDevice.version}
-                  <div class="mono ghost" style="font-size:10px">ver {webBleDevice.version}</div>
-                {:else if webBleDevice.connected}
-                  <div class="ghost" style="font-size:10px">reachable ✓</div>
-                {/if}
-              </div>
-              <span style="font-size:10px;color:var(--dc-text-ghost)">
-                {webBleDevice.connected ? '●' : '○'}
-              </span>
-            </div>
-            <div style="font-size:10px;color:var(--dc-text-ghost);line-height:1.5">
-              <span class="mono">S…C</span> name = SHA‑1(VIN)[0..8].
-              Connect Dorky to pair.
-            </div>
-          {/if}
+    <div class="frame">
+      <div class="frame__head">Tesla-BLE</div>
+      <div class="frame__body" style="font-size:12px;color:var(--dc-text-dim);line-height:1.5">
+        Connect to Dorky to manage the Tesla key and scan for vehicles.
       </div>
     </div>
 
@@ -325,12 +259,6 @@
   .tv-root {
     padding: 12px; overflow-y: auto;
     flex: 1; display: flex; flex-direction: column; gap: 10px;
-  }
-  .scanner-frame {
-    border-color: var(--dc-accent) !important;
-  }
-  .scanner-frame :global(.frame__head) {
-    color: var(--dc-accent);
   }
   .field {
     display: grid; grid-template-columns: 90px 1fr; gap: 8px;
