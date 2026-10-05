@@ -3,9 +3,10 @@
 /*
  * Tesla BLE — central role.
  *
- * Phase 2 step 1: scan for cars advertising the Tesla VCSEC service.
- * The actual pair / connect / discover flow gets layered on top of this
- * in later steps once we know scanning works on the hardware.
+ * Phase 2 step 1: scan for cars by Tesla advertisement name (legacy
+ * "S<hex><C|R|D|P>" or "Tesla <last6>") or the VCSEC service UUID when
+ * present. The actual pair / connect / discover flow gets layered on top
+ * of this in later steps once we know scanning works on the hardware.
  *
  * Threading: the result callback fires from the NimBLE host task. cJSON
  * + dorky_ble_notify are safe from that context (the existing trace +
@@ -35,7 +36,8 @@ typedef void (*tesla_scan_done_cb_t)(const tesla_scan_result_t *results,
                                      size_t count,
                                      void *ctx);
 
-/* Start a scan filtered on the Tesla VCSEC service UUID. Returns
+/* Start a scan filtered on Tesla advertisement names (both the legacy
+ * "S<hex>C" and current "Tesla <last6>" formats). Returns
  * ESP_ERR_INVALID_STATE if a scan is already in progress or the host
  * isn't ready yet. On ESP_OK the callback is invoked exactly once when
  * the scan window ends; on any other return the callback is NOT called

@@ -6,8 +6,9 @@
  * and we already require that for the WebUI pairing path.
  *
  * Tesla VCSEC service UUID: 00000211-b2d1-43f0-9b88-960cebf8b91e.
- * Tesla cars advertise that UUID in the complete-128-bit-services field,
- * plus a short local name shaped "S<8-hex-VIN-hash>C".
+ * Discovery matches the advertised name ("S<16-hex-VIN-hash><C|R|D|P>" or
+ * "Tesla <last 6 VIN chars>") or the VCSEC service UUID when present in the
+ * advertisement. The name may arrive in the scan response, so scan actively.
  *
  * Connect / discover state machine:
  *   IDLE → CONNECTING → DISC_SVC → DISC_RX_CHR → DISC_TX_CHR
@@ -17,6 +18,7 @@
 
 #include "tesla_ble/tesla_central.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include "esp_log.h"
@@ -54,18 +56,41 @@ static const ble_uuid128_t TESLA_TX_CHR_UUID = {
 
 #define MAX_RESULTS 8
 
+/* Serial diagnostics: log the first N advertisements of every scan. */
+#define ADV_LOG_LIMIT 20
+
 static struct {
     bool                  active;
     tesla_scan_done_cb_t  cb;
     void                 *ctx;
     tesla_scan_result_t   results[MAX_RESULTS];
     size_t                count;
+    uint32_t              adv_seen;
 } s_scan;
 
-static bool addr_already_seen(const uint8_t addr[6])
+static bool is_hex_digit(char c)
 {
-    for (size_t i = 0; i < s_scan.count; i++) {
-        if (memcmp(s_scan.results[i].addr, addr, 6) == 0) return true;
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+static bool is_tesla_name(const char *name)
+{
+    size_t n = strlen(name);
+    if (n == 18 && name[0] == 'S') {
+        for (size_t i = 1; i <= 16; i++) {
+            if (!is_hex_digit(name[i])) return false;
+        }
+        char suffix = name[17];
+        return suffix == 'C' || suffix == 'R' || suffix == 'D' || suffix == 'P';
+    }
+    if (n == 12 && strncmp(name, "Tesla ", 6) == 0) {
+        for (size_t i = 6; i < 12; i++) {
+            char c = name[i];
+            bool alnum = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z')
+                      || (c >= 'A' && c <= 'Z');
+            if (!alnum) return false;
+        }
+        return true;
     }
     return false;
 }
@@ -109,9 +134,42 @@ static int scan_event_cb(struct ble_gap_event *event, void *arg)
 {
     switch (event->type) {
     case BLE_GAP_EVENT_DISC: {
-        if (!adv_contains_tesla_uuid(event->disc.data,
-                                     event->disc.length_data)) return 0;
-        if (addr_already_seen(event->disc.addr.val)) return 0;
+        char name[31];
+        copy_adv_name(event->disc.data, event->disc.length_data,
+                      name, sizeof(name));
+        bool name_ok = is_tesla_name(name);
+        bool svc_ok  = adv_contains_tesla_uuid(event->disc.data,
+                                               event->disc.length_data);
+
+        /* Diagnostic: at debug level, log the first few advertisements so a
+         * serial capture shows whether the radio hears anything, and exactly
+         * what the car broadcasts (type 0 = ADV_IND, 4 = SCAN_RSP; vcsec =
+         * 0211 present). Enable via log.set_level / the WebUI Logs view. */
+        if (s_scan.adv_seen < ADV_LOG_LIMIT) {
+            const uint8_t *a = event->disc.addr.val;
+            ESP_LOGD(TAG,
+                     "adv #%u type=%u addr=%02X:%02X:%02X:%02X:%02X:%02X at=%u "
+                     "rssi=%d len=%u name=\"%s\" vcsec=%d",
+                     (unsigned)(s_scan.adv_seen + 1), event->disc.event_type,
+                     a[5], a[4], a[3], a[2], a[1], a[0], event->disc.addr.type,
+                     event->disc.rssi, (unsigned)event->disc.length_data,
+                     name[0] ? name : "(none)", (int)svc_ok);
+        }
+        s_scan.adv_seen++;
+
+        if (!name_ok && !svc_ok) return 0;
+
+        for (size_t i = 0; i < s_scan.count; i++) {
+            if (memcmp(s_scan.results[i].addr, event->disc.addr.val, 6) != 0)
+                continue;
+            if (name[0] != '\0') {
+                snprintf(s_scan.results[i].name, sizeof(s_scan.results[i].name),
+                         "%s", name);
+            }
+            s_scan.results[i].rssi = event->disc.rssi;
+            return 0;
+        }
+
         if (s_scan.count >= MAX_RESULTS) {
             ESP_LOGW(TAG, "scan buffer full, dropping hit");
             return 0;
@@ -120,13 +178,14 @@ static int scan_event_cb(struct ble_gap_event *event, void *arg)
         memcpy(r->addr, event->disc.addr.val, 6);
         r->addr_type = event->disc.addr.type;
         r->rssi      = event->disc.rssi;
-        copy_adv_name(event->disc.data, event->disc.length_data,
-                      r->name, sizeof(r->name));
-        ESP_LOGI(TAG, "found Tesla \"%s\" rssi=%d", r->name, r->rssi);
+        snprintf(r->name, sizeof(r->name), "%s", name);
+        ESP_LOGI(TAG, "found Tesla \"%s\" rssi=%d (name=%d uuid=%d)",
+                 r->name, r->rssi, (int)name_ok, (int)svc_ok);
         return 0;
     }
     case BLE_GAP_EVENT_DISC_COMPLETE:
-        ESP_LOGI(TAG, "scan done: %u match(es)", (unsigned)s_scan.count);
+        ESP_LOGI(TAG, "scan done: %u adv(s) seen, %u match(es)",
+                 (unsigned)s_scan.adv_seen, (unsigned)s_scan.count);
         finish_scan();
         return 0;
     default:
@@ -141,14 +200,15 @@ esp_err_t tesla_central_scan_start(uint32_t duration_ms,
     if (s_scan.active) return ESP_ERR_INVALID_STATE;
     if (!ble_hs_is_enabled()) return ESP_ERR_INVALID_STATE;
 
-    s_scan.active = true;
-    s_scan.cb     = cb;
-    s_scan.ctx    = ctx;
-    s_scan.count  = 0;
+    s_scan.active   = true;
+    s_scan.cb       = cb;
+    s_scan.ctx      = ctx;
+    s_scan.count    = 0;
+    s_scan.adv_seen = 0;
 
     struct ble_gap_disc_params params = {
         .filter_policy     = BLE_HCI_SCAN_FILT_NO_WL,
-        .passive           = 1,
+        .passive           = 0,
         .filter_duplicates = 1,
     };
     int rc = ble_gap_disc(BLE_OWN_ADDR_PUBLIC, duration_ms, &params,
