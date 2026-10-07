@@ -702,6 +702,7 @@ static void tesla_scan_done_cb(const tesla_scan_result_t *results,
         cJSON_AddStringToObject(o, "addr", addr_str);
         cJSON_AddStringToObject(o, "name", r->name);
         cJSON_AddNumberToObject(o, "rssi", r->rssi);
+        cJSON_AddNumberToObject(o, "addr_type", r->addr_type);
         cJSON_AddItemToArray(arr, o);
     }
     cJSON *result = cJSON_CreateObject();
@@ -746,6 +747,29 @@ static bool parse_mac(const char *s, uint8_t out[6])
 
 typedef struct { int id; } tesla_pair_ctx_t;
 
+/* Map a WebUI role name to a Keys_Role number. Returns 3 (driver) for
+ * NULL, or -1 for an unrecognised name. */
+static int tesla_role_from_string(const char *s)
+{
+    if (!s) return 3;
+    char lower[24];
+    size_t i = 0;
+    while (s[i] != '\0' && i < sizeof(lower) - 1) {
+        char c = s[i];
+        lower[i] = (c >= 'A' && c <= 'Z') ? (char)(c + ('a' - 'A')) : c;
+        i++;
+    }
+    lower[i] = '\0';
+    if (strcmp(lower, "owner") == 0)            return 2;
+    if (strcmp(lower, "driver") == 0)          return 3;
+    if (strcmp(lower, "vehicle_monitor") == 0
+        || strcmp(lower, "monitor") == 0)      return 5;
+    if (strcmp(lower, "charging_manager") == 0
+        || strcmp(lower, "charging") == 0)     return 6;
+    if (strcmp(lower, "guest") == 0)           return 8;
+    return -1;
+}
+
 static void tesla_pair_done_cb(bool success, const char *error, void *vctx)
 {
     tesla_pair_ctx_t *ctx = (tesla_pair_ctx_t *)vctx;
@@ -760,6 +784,7 @@ static void handle_tesla_pair(int id, cJSON *req)
 {
     cJSON *addr_item = cJSON_GetObjectItem(req, "addr");
     cJSON *type_item = cJSON_GetObjectItem(req, "addr_type");
+    cJSON *role_item = cJSON_GetObjectItem(req, "role");
     if (!cJSON_IsString(addr_item)) { send_err(id, "missing addr"); return; }
 
     uint8_t addr[6];
@@ -769,17 +794,32 @@ static void handle_tesla_pair(int id, cJSON *req)
     uint8_t addr_type = cJSON_IsNumber(type_item)
                         ? (uint8_t)type_item->valueint : 0;
 
+    /* Key role to request: driver by default (owner is full-privilege and
+     * must be chosen explicitly). */
+    int role = 3;
+    if (cJSON_IsString(role_item)) {
+        role = tesla_role_from_string(role_item->valuestring);
+        if (role < 0) {
+            send_err(id, "role must be one of: driver, owner, "
+                         "vehicle_monitor, charging_manager, guest");
+            return;
+        }
+    }
+
     tesla_pair_ctx_t *ctx = malloc(sizeof(*ctx));
     if (!ctx) { send_err(id, "oom"); return; }
     ctx->id = id;
 
-    esp_err_t err = tesla_vehicle_pair(addr, addr_type,
+    esp_err_t err = tesla_vehicle_pair(addr, addr_type, role,
                                         tesla_pair_done_cb, ctx);
     if (err == ESP_ERR_NOT_FOUND) {
         free(ctx); send_err(id, "no keypair — run tesla.gen_key first"); return;
     }
     if (err == ESP_ERR_INVALID_STATE) {
         free(ctx); send_err(id, "already connected"); return;
+    }
+    if (err == ESP_ERR_INVALID_ARG) {
+        free(ctx); send_err(id, "invalid role"); return;
     }
     if (err != ESP_OK) {
         free(ctx); send_err(id, "connect failed"); return;

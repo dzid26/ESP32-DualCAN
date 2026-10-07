@@ -80,6 +80,12 @@ void tesla_central_disconnect(void);
 /* True when fully connected and ready (subscribe complete). */
 bool tesla_central_is_connected(void);
 
+/* Human-readable suffix for a GAP disconnect reason, e.g.
+ * " (HCI 0x3E: connection failed to be established)". Returns "" when the
+ * code is not a recognised HCI error. The return points at a static buffer
+ * (not thread-safe, log/print immediately). */
+const char *tesla_central_reason_str(int reason);
+
 #ifdef __cplusplus
 }
 #endif

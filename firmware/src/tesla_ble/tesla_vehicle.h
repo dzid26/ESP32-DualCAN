@@ -35,9 +35,13 @@ typedef void (*tesla_vehicle_done_cb_t)(bool success, const char *error,
 esp_err_t tesla_vehicle_init(void);
 
 /* Connect to a car at the given BD_ADDR and initiate the VCSEC whitelist
- * add-key ("pair") handshake.  cb fires when done or on failure; on
- * ESP_OK the connection is in flight and cb owns ctx. */
+ * add-key ("pair") handshake. role is the Keys_Role number to request
+ * (2=owner, 3=driver, 5=vehicle_monitor, 6=charging_manager, 8=guest;
+ * anything else is rejected with ESP_ERR_INVALID_ARG). cb fires when
+ * done or on failure; on ESP_OK the connection is in flight and cb
+ * owns ctx. */
 esp_err_t tesla_vehicle_pair(const uint8_t addr[6], uint8_t addr_type,
+                              int role,
                               tesla_vehicle_done_cb_t cb, void *ctx);
 
 #ifdef __cplusplus

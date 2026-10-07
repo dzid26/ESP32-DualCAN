@@ -179,8 +179,9 @@ static int scan_event_cb(struct ble_gap_event *event, void *arg)
         r->addr_type = event->disc.addr.type;
         r->rssi      = event->disc.rssi;
         snprintf(r->name, sizeof(r->name), "%s", name);
-        ESP_LOGI(TAG, "found Tesla \"%s\" rssi=%d (name=%d uuid=%d)",
-                 r->name, r->rssi, (int)name_ok, (int)svc_ok);
+        ESP_LOGI(TAG, "found Tesla \"%s\" rssi=%d at=%u (name=%d uuid=%d)",
+                 r->name, r->rssi, event->disc.addr.type,
+                 (int)name_ok, (int)svc_ok);
         return 0;
     }
     case BLE_GAP_EVENT_DISC_COMPLETE:
@@ -430,8 +431,9 @@ static int conn_gap_event_cb(struct ble_gap_event *e, void *arg)
         return 0;
 
     case BLE_GAP_EVENT_DISCONNECT:
-        ESP_LOGI(TAG, "disconnected from car reason=%d",
-                 e->disconnect.reason);
+        ESP_LOGI(TAG, "disconnected from car reason=%d%s",
+                 e->disconnect.reason,
+                 tesla_central_reason_str(e->disconnect.reason));
         {
             tesla_central_disconnected_cb_t dcb = s_conn.on_disconnected;
             void *dctx = s_conn.ctx;
@@ -529,4 +531,38 @@ void tesla_central_disconnect(void)
 bool tesla_central_is_connected(void)
 {
     return s_conn.state == TC_READY;
+}
+
+/* NimBLE reports HCI failures offset by BLE_HS_ERR_HCI_BASE (0x200), so
+ * reason 574 = 0x200 + 0x3E = "connection failed to be established". */
+const char *tesla_central_reason_str(int reason)
+{
+    static char buf[72];
+    int hci = reason - 0x200;
+    const char *msg = NULL;
+    if (hci >= 0 && hci <= 0xFF) {
+        switch (hci) {
+        case 0x05: msg = "authentication failure"; break;
+        case 0x06: msg = "pin or key missing"; break;
+        case 0x08: msg = "connection timeout"; break;
+        case 0x13: msg = "terminated by remote user"; break;
+        case 0x14: msg = "terminated by remote (low resources)"; break;
+        case 0x15: msg = "terminated by remote (power off)"; break;
+        case 0x16: msg = "terminated by local host"; break;
+        case 0x1A: msg = "unsupported remote feature"; break;
+        case 0x22: msg = "LL response timeout"; break;
+        case 0x2F: msg = "insufficient security"; break;
+        case 0x3B: msg = "unacceptable connection parameters"; break;
+        case 0x3D: msg = "terminated (MIC failure)"; break;
+        case 0x3E: msg = "connection failed to be established"; break;
+        default:   break;
+        }
+        if (msg) {
+            snprintf(buf, sizeof(buf), " (HCI 0x%02X: %s)", hci, msg);
+        } else {
+            snprintf(buf, sizeof(buf), " (HCI 0x%02X)", hci);
+        }
+        return buf;
+    }
+    return "";
 }

@@ -26,6 +26,8 @@ extern "C" {
 #include "freertos/task.h"
 }
 
+#include <cctype>
+#include <cstdio>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -136,6 +138,20 @@ std::shared_ptr<TeslaBLE::Vehicle> s_vehicle;
 /* Pending pair callback, set in tesla_vehicle_pair(). */
 tesla_vehicle_done_cb_t s_pair_cb  = nullptr;
 void                   *s_pair_ctx = nullptr;
+/* Keys_Role number requested for the pending pair (default = driver). */
+int                     s_pair_role = 3;
+
+static const char *role_name(int role)
+{
+    switch (role) {
+    case 2:  return "owner";
+    case 3:  return "driver";
+    case 5:  return "vehicle_monitor";
+    case 6:  return "charging_manager";
+    case 8:  return "guest";
+    default: return "unknown";
+    }
+}
 
 /* ---- Vehicle loop task ---- */
 
@@ -174,7 +190,7 @@ static void on_central_connected(bool success, void *ctx)
         "Whitelist Add Key",
         [](TeslaBLE::Client *c, uint8_t *buf, size_t *len) {
             return c->build_white_list_message(
-                Keys_Role_ROLE_OWNER,
+                static_cast<Keys_Role>(s_pair_role),
                 VCSEC_KeyFormFactor_KEY_FORM_FACTOR_NFC_CARD,
                 buf, len);
         },
@@ -189,13 +205,26 @@ static void on_central_connected(bool success, void *ctx)
             }
         });
 
-    ESP_LOGI(TAG, "whitelist add-key command queued");
+    ESP_LOGI(TAG, "whitelist add-key command queued (role=%s)", role_name(s_pair_role));
 }
 
 static void on_central_disconnected(int reason, void *ctx)
 {
     if (s_vehicle) s_vehicle->set_connected(false);
-    ESP_LOGI(TAG, "car disconnected reason=%d", reason);
+    ESP_LOGI(TAG, "car disconnected reason=%d%s", reason,
+             tesla_central_reason_str(reason));
+    /* A drop before the whitelist round-trip completes means the pair
+     * request never got an answer — fail it instead of leaving the WebUI
+     * hanging until its client timeout. */
+    if (s_pair_cb) {
+        char msg[96];
+        snprintf(msg, sizeof(msg),
+                 "car disconnected before pairing completed (reason %d%s)",
+                 reason, tesla_central_reason_str(reason));
+        s_pair_cb(false, msg, s_pair_ctx);
+        s_pair_cb  = nullptr;
+        s_pair_ctx = nullptr;
+    }
 }
 
 static void on_central_rx(const uint8_t *data, size_t len, void *ctx)
@@ -230,15 +259,19 @@ extern "C" esp_err_t tesla_vehicle_init(void)
 
 extern "C" esp_err_t tesla_vehicle_pair(const uint8_t addr[6],
                                          uint8_t addr_type,
+                                         int role,
                                          tesla_vehicle_done_cb_t cb,
                                          void *ctx)
 {
     if (!s_vehicle) return ESP_ERR_INVALID_STATE;
     if (tesla_central_is_connected()) return ESP_ERR_INVALID_STATE;
     if (!tesla_ble_has_key()) return ESP_ERR_NOT_FOUND;
+    if (role != 2 && role != 3 && role != 5 && role != 6 && role != 8)
+        return ESP_ERR_INVALID_ARG;
 
-    s_pair_cb  = cb;
-    s_pair_ctx = ctx;
+    s_pair_cb   = cb;
+    s_pair_ctx  = ctx;
+    s_pair_role = role;
 
     return tesla_central_connect(addr, addr_type,
                                   on_central_connected,
