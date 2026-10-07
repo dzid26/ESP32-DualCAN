@@ -7,7 +7,7 @@
   import { toast } from '../../lib/toast.svelte';
 
   type TeslaStatus = { has_key: boolean; public_key_hex?: string; vin?: string };
-  type ScanDevice  = { addr: string; name: string; rssi: number };
+  type ScanDevice  = { addr: string; name: string; rssi: number; addr_type: number };
 
   let status       = $state<TeslaStatus | null>(null);
   let busy         = $state(false);
@@ -18,6 +18,7 @@
   let confirmReset = $state(false);
   let vinInput     = $state('');
   let vinSaving    = $state(false);
+  let pairRole     = $state('driver');
 
   async function refresh(): Promise<void> {
     if (!app.connected) return;
@@ -72,7 +73,7 @@
     pairing = true; err = null;
     toast.show({ severity: 'info', message: `Connecting to ${device.name || device.addr}…`, duration: 35000 });
     try {
-      await app.proto.teslaPair(device.addr);
+      await app.proto.teslaPair(device.addr, device.addr_type, pairRole);
       toast.show({ severity: 'info', duration: 0,
         message: '✓ Whitelist request sent — tap your Tesla keycard or phone on the car\'s NFC reader within 30 s to approve.' });
     } catch (e) {
@@ -120,11 +121,22 @@
           Scan nearby Tesla VCSEC advertisements. After pairing you must physically
           approve the new key inside the car using a keycard or existing phone key.
         </div>
-        <div class="row-flex" style="gap:6px">
+        <div class="row-flex" style="gap:6px;align-items:center">
           <button class="btn btn--sm btn--info" onclick={scan}
             disabled={scanning || pairing}>
             {scanning ? 'Scanning…' : 'Scan (6 s)'}
           </button>
+          <label style="font-size:11px;color:var(--dc-text-dim)">
+            Key role
+            <select bind:value={pairRole} disabled={scanning || pairing}
+              title="Privilege the new key requests. Owner is full-privilege — driver is enough for lock/unlock and charge control.">
+              <option value="driver">Driver</option>
+              <option value="charging_manager">Charging manager</option>
+              <option value="vehicle_monitor">Vehicle monitor</option>
+              <option value="guest">Guest</option>
+              <option value="owner">Owner</option>
+            </select>
+          </label>
         </div>
         {#if devices.length > 0}
           <div style="display:flex;flex-direction:column;gap:6px">

@@ -485,15 +485,16 @@ export class Protocol {
 
   /** Scan for nearby Tesla VCSEC advertisements. The client timeout must
    *  outlast the scan window, or we reject before the device replies. */
-  teslaScan(duration_ms = 6000): Promise<{ devices: Array<{ addr: string; name: string; rssi: number }> }> {
+  teslaScan(duration_ms = 6000): Promise<{ devices: Array<{ addr: string; name: string; rssi: number; addr_type: number }> }> {
     return this.call('tesla.scan', { duration_ms }, duration_ms + 5000);
   }
 
   /** Connect to a Tesla and send the whitelist add-key message. Connect +
    *  discovery can run until the firmware's 30 s connect timeout, so the
-   *  client timeout must be generous. */
-  teslaPair(addr: string, addr_type?: number): Promise<void> {
-    return this.call('tesla.pair', { addr, addr_type: addr_type ?? 0 }, 40_000);
+   *  client timeout must be generous. role defaults to driver on the
+   *  firmware side; owner must be chosen explicitly. */
+  teslaPair(addr: string, addr_type?: number, role?: string): Promise<void> {
+    return this.call('tesla.pair', { addr, addr_type: addr_type ?? 0, ...(role ? { role } : {}) }, 40_000);
   }
 
   wifiStatus(): Promise<{ connected: boolean; ssid: string; ip: string }> {
