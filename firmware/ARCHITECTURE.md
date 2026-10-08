@@ -101,15 +101,18 @@ For every known TX-capable message, the most recent decoded frame is kept so tha
 
 Detected by signal name suffix:
 
-- `*_Checksum` — computed automatically on send. Default algorithm is the [Tesla checksum](https://github.com/commaai/opendbc/blob/901c138423c16f24445732c57432cc5ff73f7e19/opendbc/car/tesla/teslacan.py#L54-L60):
+- `*_Checksum` — currently needs to be manually computed on send. Default algorithm is the [Tesla checksum](https://github.com/commaai/opendbc/blob/901c138423c16f24445732c57432cc5ff73f7e19/opendbc/car/tesla/teslacan.py#L54-L60):
 
-  ```python
-  def tesla_checksum(address, checksum_byte_index, payload):
-      s = (address & 0xFF) + ((address >> 8) & 0xFF)
-      for i, b in enumerate(payload):
-          if i != checksum_byte_index:
-              s += b
-      return s & 0xFF
+  ```berry
+  def tesla_checksum(addr, csum_idx, payload)
+    var s = (addr & 0xFF) + ((addr >> 8) & 0xFF)
+    for i : 0..payload.size() - 1
+      if i != csum_idx
+        s += payload[i]
+      end
+    end
+    return s & 0xFF
+  end
   ```
 
 - `*_Counter` — auto-incremented (mod 2^width) on each send of that message.
