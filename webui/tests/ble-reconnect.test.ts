@@ -103,7 +103,7 @@ test('unexpected drop retries the backoff schedule, then surfaces the Connect pr
   assert.ok(shownToasts.some((t) => /did not come back/i.test(t.message)));
 });
 
-for (const kind of ['unexpected', 'auth_fail', 'replaced'] as const) {
+for (const kind of ['unexpected', 'auth_fail'] as const) {
   test(`reconnect is attempted on a '${kind}' drop`, async () => {
     const { app, transport, state } = makeApp();
     state.reconnectImpl = async () => { throw new Error('down'); };
@@ -115,6 +115,16 @@ for (const kind of ['unexpected', 'auth_fail', 'replaced'] as const) {
     assert.equal(app.reconnecting, false);
   });
 }
+
+test("no reconnect after being replaced by another client (avoids kick ping-pong)", async () => {
+  const { app, transport, state } = makeApp();
+
+  transport.emit('replaced');
+  await settle();
+
+  assert.equal(state.reconnectCalls.length, 0);
+  assert.equal(app.reconnecting, false);
+});
 
 test('user-initiated disconnect does not reconnect', async () => {
   const { app, transport, state } = makeApp();

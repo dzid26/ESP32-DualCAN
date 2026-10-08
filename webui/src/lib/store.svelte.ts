@@ -341,6 +341,9 @@ export class AppState {
           message: 'Dorky taken over by another client.',
           duration: 6000,
         });
+        // Don't auto-reconnect: the other client would retry too and the two
+        // would kick each other out in a loop. The user taps Connect to take back.
+        return;
       }
       // Every unexpected drop: retry the saved device with backoff. The
       // "tap Connect" toast is only surfaced once those attempts are exhausted.
