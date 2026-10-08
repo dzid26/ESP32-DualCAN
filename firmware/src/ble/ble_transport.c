@@ -23,6 +23,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
@@ -62,6 +63,13 @@ static void *s_on_request_ctx;
 static bool s_pairing_open    = false;
 static bool s_conn_authorized = false;
 
+/* Peer we most recently kicked in favour of another client. Clients that
+ * auto-reconnect would otherwise kick each other out in a loop, so refuse the
+ * kicked peer for KICK_COOLDOWN_MS (unless the pairing window is open). */
+#define KICK_COOLDOWN_MS 30000
+static ble_addr_t s_kicked_addr;
+static int64_t   s_kicked_until_ms = 0;
+
 static struct ble_npl_callout s_adv_callout;
 static struct ble_npl_callout s_reject_callout;
 static struct ble_npl_callout s_lock_callout;
@@ -81,6 +89,16 @@ static bool peer_is_bonded(uint16_t conn_handle)
 }
 
 /* ---- Callout callbacks ---- */
+
+static int64_t now_ms(void) { return esp_timer_get_time() / 1000; }
+
+static bool peer_in_kick_cooldown(uint16_t conn_handle)
+{
+    if (now_ms() >= s_kicked_until_ms) return false;
+    struct ble_gap_conn_desc desc;
+    if (ble_gap_conn_find(conn_handle, &desc) != 0) return false;
+    return ble_addr_cmp(&desc.peer_id_addr, &s_kicked_addr) == 0;
+}
 
 static void reject_callout_fn(struct ble_npl_event *ev)
 {
@@ -220,6 +238,13 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             uint16_t new_h = event->connect.conn_handle;
             ble_att_set_preferred_mtu(512);
             bool authorized = s_pairing_open || peer_is_bonded(new_h);
+            if (authorized && !s_pairing_open &&
+                s_conn_handle != BLE_HS_CONN_HANDLE_NONE &&
+                peer_in_kick_cooldown(new_h)) {
+                ESP_LOGI(TAG, "handle=%d reconnected right after being kicked — rejecting",
+                         new_h);
+                authorized = false;
+            }
 
             if (!authorized && s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
                 /* Unauthorized new device — reject it, keep the existing session. */
@@ -230,6 +255,11 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
             } else {
                 if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE) {
                     ESP_LOGI(TAG, "new authorized connection, kicking handle=%d", s_conn_handle);
+                    struct ble_gap_conn_desc old_desc;
+                    if (ble_gap_conn_find(s_conn_handle, &old_desc) == 0) {
+                        s_kicked_addr     = old_desc.peer_id_addr;
+                        s_kicked_until_ms = now_ms() + KICK_COOLDOWN_MS;
+                    }
                     uint8_t msg[] = {0xFD, 0x01};
                     dorky_ble_notify(msg, sizeof(msg));
                     /* Schedule a short delayed terminate so notify can flush. */
