@@ -35,7 +35,8 @@
 
   function handleConnClick() {
     if (app.connected) { confirmDisconn = true; return; }
-    if (app.connecting || app.reconnecting) return;
+    if (app.connecting) return;
+    // A tap while auto-reconnecting cancels the loop (toggleConnect); else connects.
     app.toggleConnect();
   }
 

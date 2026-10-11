@@ -24,6 +24,8 @@ function makeTransport() {
   const state = {
     connected: false,
     connectCalls: 0,
+    disconnectCalls: 0,
+    connectWithPickerCalls: 0,
     reconnectCalls: [] as Array<{ allowPicker?: boolean }>,
     restartCalls: 0,
     connCbs: [] as Array<(c: boolean) => void>,
@@ -37,7 +39,8 @@ function makeTransport() {
     onConnectionChange(cb: (c: boolean) => void) { state.connCbs.push(cb); },
     onDisconnect(cb: (k: DisconnectKind) => void) { state.discCbs.push(cb); },
     async connect() { state.connectCalls++; state.connected = true; state.connCbs.forEach((cb) => cb(true)); },
-    async disconnect() { state.connected = false; state.connCbs.forEach((cb) => cb(false)); },
+    async disconnect() { state.disconnectCalls++; state.connected = false; state.connCbs.forEach((cb) => cb(false)); },
+    async connectWithPicker() { state.connectWithPickerCalls++; state.connected = true; state.connCbs.forEach((cb) => cb(true)); },
     async send() {},
     onReceive() {},
     async restartNotifications() { state.restartCalls++; await state.restartImpl(); },
@@ -363,30 +366,100 @@ test('a link restored during the backoff sleep cancels the pending reconnect att
   assert.equal(app.reconnecting, false);
 });
 
-// ---- toggleConnect lockout ----
+// ---- Cancelling an in-flight reconnect (manual Disconnect wins) ----
 
-test('connect toggle is locked out while an automatic reconnect is in flight', async () => {
+test('connect toggle during auto-reconnect only cancels the loop', async () => {
   const { app, transport, state, releases } = makePacedApp();
+  const toastCount = shownToasts.length;
   state.reconnectImpl = async () => { throw new Error('still down'); };
-  transport.connect = async () => { state.connectCalls++; };
 
   transport.emit('unexpected');
   await settle();
   assert.equal(app.reconnecting, true);
 
+  // The user taps while "Reconnecting…" is showing: the loop is cancelled
+  // and nothing else happens — no picker, no connect.
   await app.toggleConnect();
   await settle();
 
-  assert.equal(state.connectCalls, 0, 'the locked toggle must not start a user connect');
-  assert.equal(app.connecting, false);
+  assert.equal(app.reconnecting, false, 'cancel clears the flag immediately, not after the sleep');
+  assert.equal(state.disconnectCalls, 1, 'cancel tears down any partial session');
+  assert.equal(state.connectWithPickerCalls, 0, 'cancelling must not open the picker');
+  assert.equal(state.connectCalls, 0, 'cancelling must not start a connect');
+  assert.equal(app.connectError, null, 'cancelling is not an error');
 
   while (releases.length) {
     releases.shift()!();
     await settle();
   }
+  assert.equal(state.reconnectCalls.length, 0, 'the cancelled loop attempts nothing');
   assert.equal(app.reconnecting, false);
+  assert.equal(shownToasts.length, toastCount, 'no give-up toast after a cancel');
+});
+
+test('tap on Not connected opens the picker directly', async () => {
+  const { app, transport, state } = makeApp();
 
   await app.toggleConnect();
   await settle();
-  assert.equal(state.connectCalls, 1, 'the toggle works again once the reconnect loop ends');
+
+  assert.equal(state.connectWithPickerCalls, 1, 'manual connect uses the picker, not the silent path');
+  assert.equal(state.connectCalls, 0, 'no silent reconnect on a manual tap');
+  assert.equal(app.connected, true);
+  assert.equal(app.connecting, false);
+});
+
+test('tap during reconnect cancels; next tap opens the picker; next tap disconnects', async () => {
+  const { app, transport, state, releases } = makePacedApp();
+  state.reconnectImpl = async () => { throw new Error('still down'); };
+
+  transport.emit('unexpected');
+  await settle();
+  assert.equal(app.reconnecting, true);
+
+  await app.toggleConnect(); // cancel only
+  await settle();
+  assert.equal(state.connectWithPickerCalls, 0);
+  assert.equal(app.connected, false);
+
+  await app.toggleConnect(); // Not connected → picker
+  await settle();
+  assert.equal(state.connectWithPickerCalls, 1);
+  assert.equal(app.connected, true, 'the picker connect establishes the link');
+
+  await app.toggleConnect(); // now connected → plain disconnect
+  await settle();
+  assert.equal(state.disconnectCalls, 2, 'cancel tore down once, the manual disconnect once');
+  assert.equal(app.connected, false);
+
+  while (releases.length) {
+    releases.shift()!();
+    await settle();
+  }
+  assert.equal(state.reconnectCalls.length, 0, 'the stale loop stays dead');
+});
+
+test('connectWithPicker cancels the loop and forces the picker', async () => {
+  const { app, transport, state, releases } = makePacedApp();
+  const toastCount = shownToasts.length;
+  state.reconnectImpl = async () => { throw new Error('still down'); };
+
+  transport.emit('unexpected');
+  await settle();
+  assert.equal(app.reconnecting, true);
+
+  await app.connectWithPicker();
+  await settle();
+
+  assert.equal(state.connectWithPickerCalls, 1, 'the picker path is used, not the silent reconnect');
+  assert.equal(state.reconnectCalls.length, 0, 'the loop never fires while its replacement connects');
+  assert.equal(app.connecting, false);
+  assert.equal(app.reconnecting, false);
+
+  while (releases.length) {
+    releases.shift()!();
+    await settle();
+  }
+  assert.equal(state.reconnectCalls.length, 0);
+  assert.equal(shownToasts.length, toastCount, 'no give-up toast after a picker connect');
 });

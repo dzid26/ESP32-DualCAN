@@ -194,6 +194,9 @@ export class AppState {
   suppressUnexpectedDisconnect = false;
   /** Guards against concurrent transport recovery attempts. */
   private recovering = false;
+  /** Bumped every time an in-flight auto-reconnect is cancelled by the user,
+   *  so a stale loop can observe it and stop before its next attempt. */
+  private reconnectGen = 0;
 
   /** Attempt to recover a stalled BLE notification stream.
    *  Tries restarting notifications first (gentle), then full reconnect.
@@ -235,6 +238,19 @@ export class AppState {
     }
   }
 
+  /** Cancel an in-flight automatic reconnect (e.g. the user tapped
+   *  Disconnect while "Reconnecting…" was showing, or wants to pick a
+   *  different board). The loop observes the generation bump and stops
+   *  before its next attempt; the flag is cleared immediately so the UI
+   *  responds without waiting out the sleep. */
+  cancelReconnect(): void {
+    if (!this.reconnecting) return;
+    this.reconnectGen++;
+    this.reconnecting = false;
+    this.pushLog('Automatic reconnect cancelled', 'info', 'ble');
+    void this.ble.disconnect().catch(() => { /* best effort teardown */ });
+  }
+
   /** After an unexpected drop (or an OTA/reboot) the device may need a moment
    *  to re-advertise. Retry a chooser-less reconnect with backoff. The silent
    *  path (getDevices + connect) needs no user gesture; if it can't find the saved
@@ -245,6 +261,7 @@ export class AppState {
   private async attemptReconnect(context: 'reboot' | DisconnectKind): Promise<void> {
     if (this.reconnecting) return;
     this.reconnecting = true;
+    const gen = this.reconnectGen;
     const delaysMs = RECONNECT_BACKOFF_MS;
     const isReboot = context === 'reboot';
     this.pushLog(
@@ -256,14 +273,17 @@ export class AppState {
     try {
       for (let attempt = 0; attempt < delaysMs.length; attempt++) {
         await this.sleep(delaysMs[attempt]);
+        if (gen !== this.reconnectGen) return;
         if (this.connected) return;
         try {
           await this.ble.reconnect({ allowPicker: false });
+          if (gen !== this.reconnectGen) return;
           if (this.connected) {
             this.pushLog(isReboot ? 'Reconnected after reboot' : 'Reconnected automatically', 'info', 'ble');
             return;
           }
         } catch (e) {
+          if (gen !== this.reconnectGen) return;
           const m = e instanceof Error ? e.message : String(e);
           this.pushLog(`Reconnect attempt ${attempt + 1}/${delaysMs.length} failed: ${m}`, 'warn', 'ble');
         }
@@ -279,7 +299,9 @@ export class AppState {
         duration: 20000,
       });
     } finally {
-      this.reconnecting = false;
+      // A cancelled loop must not clear a newer loop's flag (see
+      // cancelReconnect): only the owning generation clears it.
+      if (gen === this.reconnectGen) this.reconnecting = false;
     }
   }
 
@@ -425,45 +447,73 @@ export class AppState {
   }
 
   async toggleConnect(): Promise<void> {
-    if (this.connecting || this.reconnecting) return;
+    // A tap while auto-reconnecting cancels the loop — nothing else.
+    if (this.reconnecting) {
+      this.cancelReconnect();
+      return;
+    }
+    if (this.connecting) return;
     this.connectError = null;
     try {
       if (this.connected) {
         await this.ble.disconnect();
       } else {
+        // Manual connect always opens the picker so a different board can be
+        // chosen; the silent fast path is reserved for the automatic loop.
         this.connecting = true;
-        await this.ble.connect();
+        await this.ble.connectWithPicker();
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      /* Match both the explicit cancel string and DOMException name="NotFoundError"
-       * which Chrome throws when the user dismisses the BLE picker without picking. */
-      const isNotFound =
-        (typeof DOMException !== 'undefined' && e instanceof DOMException && e.name === 'NotFoundError') ||
-        /cancell?ed|dismiss|NotFoundError|User cancelled/i.test(msg);
-      if (isNotFound) {
-        this.connectError = 'Connect cancelled';
-        // toast.show({
-        //   severity: 'info',
-        //   message: 'Connect cancelled. Click Connect again and pick a "Dorky-XXXX" device from the browser\'s Bluetooth picker.',
-        //   duration: 7000,
-        // });
-      } else {
-        const message = msg.includes('Web Bluetooth not available')
-          ? msg
-          : 'Connect failed. Check the board is powered, in range, and or un-pair in your OS Bluetooth settings.';
-        this.connectError = message;
-        toast.show({
-          severity: 'error',
-          message,
-          link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
-          duration: 90000,
-        });
-      }
-      this.pushLog(this.connectError, isNotFound ? 'warn' : 'error', 'ble');
+      this.handleConnectFailure(e);
     } finally {
       this.connecting = false;
     }
+  }
+
+  /** Connect via the system/browser picker even when a saved device exists
+   *  (e.g. to switch boards). Cancels any in-flight auto-reconnect first —
+   *  the tap is a user gesture, so the picker is allowed. */
+  async connectWithPicker(): Promise<void> {
+    if (this.connecting) return;
+    if (this.reconnecting) this.cancelReconnect();
+    this.connectError = null;
+    this.connecting = true;
+    try {
+      await this.ble.connectWithPicker();
+    } catch (e) {
+      this.handleConnectFailure(e);
+    } finally {
+      this.connecting = false;
+    }
+  }
+
+  private handleConnectFailure(e: unknown): void {
+    const msg = e instanceof Error ? e.message : String(e);
+    /* Match both the explicit cancel string and DOMException name="NotFoundError"
+     * which Chrome throws when the user dismisses the BLE picker without picking. */
+    const isNotFound =
+      (typeof DOMException !== 'undefined' && e instanceof DOMException && e.name === 'NotFoundError') ||
+      /cancell?ed|dismiss|NotFoundError|User cancelled/i.test(msg);
+    if (isNotFound) {
+      this.connectError = 'Connect cancelled';
+      // toast.show({
+      //   severity: 'info',
+      //   message: 'Connect cancelled. Click Connect again and pick a "Dorky-XXXX" device from the browser\'s Bluetooth picker.',
+      //   duration: 7000,
+      // });
+    } else {
+      const message = msg.includes('Web Bluetooth not available')
+        ? msg
+        : 'Connect failed. Check the board is powered, in range, and or un-pair in your OS Bluetooth settings.';
+      this.connectError = message;
+      toast.show({
+        severity: 'error',
+        message,
+        link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
+        duration: 90000,
+      });
+    }
+    this.pushLog(this.connectError, isNotFound ? 'warn' : 'error', 'ble');
   }
 
   private async onConnChange(c: boolean): Promise<void> {

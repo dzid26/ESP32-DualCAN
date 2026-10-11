@@ -106,6 +106,14 @@ export class BleTransport implements Transport {
   /** Advertised name of the last known device, or null. */
   get savedDeviceName(): string | null { return this.lastDeviceName; }
 
+  /** Forget the last known device so the next connect shows the picker.
+   *  Does not affect the live session. */
+  forgetSavedDevice(): void {
+    this.lastDeviceId = null;
+    this.lastDeviceName = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  }
+
   private readonly onNotification = (value: DataView): void => {
     const data = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
     // Firmware disconnect-reason notification: [0xFD, reason]
@@ -270,6 +278,19 @@ export class BleTransport implements Transport {
       }
     }
 
+    try {
+      await this.connectViaPicker(false);
+    } catch (e) {
+      await this.teardownAfterFailedConnect();
+      throw e;
+    }
+  }
+
+  /** Connect via the system/browser picker even when a saved device exists.
+   *  The newly-picked device becomes the saved device. Requires a user
+   *  gesture (the picker is rejected without one). */
+  async connectWithPicker(): Promise<void> {
+    await this.ensureInitialized();
     try {
       await this.connectViaPicker(false);
     } catch (e) {

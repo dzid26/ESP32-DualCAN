@@ -206,8 +206,7 @@ test('honours the firmware replacement signal and ignores a repeated disconnect'
   assert.deepEqual(kinds, ['replaced']);
 });
 
-test('falls back to the picker when the saved device can no longer be reconnected', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
+test('falls back to the picker when the saved device can no longer be reconnected', async (t) => {  t.mock.timers.enable({ apis: ['setTimeout'] });
   localStorage.clear();
   // A device saved by a previous session, now forgotten/unpaired by the OS.
   localStorage.setItem('dc-ble-device', JSON.stringify({ deviceId: 'gone-1', name: 'Dorky-GONE' }));
@@ -226,4 +225,49 @@ test('falls back to the picker when the saved device can no longer be reconnecte
   assert.equal(state.requestDeviceCalls.length, 1, 'a failed silent reconnect must surface the chooser');
   assert.equal(transport.connected, true);
   assert.equal(transport.savedDeviceId, 'fresh-1', 'the newly-picked device replaces the stale one');
+});
+
+test('connectWithPicker opens the chooser even when a saved device exists', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  localStorage.clear();
+
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+
+  const { client, state } = makeClient();
+  const transport = new BleTransport(client);
+  const kinds: string[] = [];
+  transport.onDisconnect((k) => kinds.push(k));
+  await transport.connect();
+  assert.equal(state.requestDeviceCalls.length, 1, 'first connect uses the picker');
+  assert.equal(transport.savedDeviceId, 'dev-1');
+
+  now += 10_000;
+  state.onDisconnect?.('dev-1');
+  assert.deepEqual(kinds, ['unexpected']);
+
+  // Switching boards: the picker must open instead of silently reusing dev-1.
+  await transport.connectWithPicker();
+  assert.equal(state.requestDeviceCalls.length, 2, 'connectWithPicker must show the chooser');
+  assert.equal(transport.connected, true);
+  assert.equal(transport.savedDeviceId, 'dev-1', 'the newly-picked device is remembered');
+});
+
+test('forgetSavedDevice clears the persisted device so the next connect shows the picker', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  localStorage.clear();
+
+  const { client, state } = makeClient();
+  const transport = new BleTransport(client);
+  await transport.connect();
+  assert.equal(transport.savedDeviceId, 'dev-1');
+
+  transport.forgetSavedDevice();
+  assert.equal(transport.savedDeviceId, null);
+  assert.equal(transport.savedDeviceName, null);
+  assert.equal(localStorage.getItem('dc-ble-device'), null);
+
+  await transport.disconnect();
+  await transport.connect();
+  assert.equal(state.requestDeviceCalls.length, 2, 'no saved device — the chooser must open');
 });
