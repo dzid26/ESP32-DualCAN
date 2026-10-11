@@ -4623,6 +4623,17 @@
 		)
 		(uuid "a9c65f1e-c99f-4c95-9e80-314faf5fd99c")
 	)
+	(text "Tested 0.5A max continuous accross 9-60V at 22C ambient\nbefore thermal shutdown"
+		(exclude_from_sim no)
+		(at 78.232 46.736 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left top)
+		)
+		(uuid "af83d6ef-5bea-4ead-a5c9-3024808f1450")
+	)
 	(text "ESP32-C6-SuperMini also can be attached using pin headers.\nNote, the pin config would need to be changed in the firmware"
 		(exclude_from_sim no)
 		(at 186.436 229.616 0)
@@ -16323,7 +16334,7 @@
 				)
 			)
 		)
-		(property "Value" "LV2862Y"
+		(property "Value" "MLMR16006Y"
 			(at 139.7 22.098 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -16346,7 +16357,7 @@
 				(justify left)
 			)
 		)
-		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/lv2862.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/C42403103.pdf"
 			(at 137.16 26.67 0)
 			(hide yes)
 			(show_name no)
@@ -16368,7 +16379,7 @@
 				)
 			)
 		)
-		(property "Alternative" "LV2862Y, LMR16006Y, LMR51606YF"
+		(property "Alternative" "LV2862Y, LMR16006Y, LMR51606YF, MLMR16006Y"
 			(at 139.7 29.21 0)
 			(hide yes)
 			(show_name no)

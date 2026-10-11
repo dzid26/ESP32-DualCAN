@@ -3,7 +3,8 @@
 <img width="555"  alt="image" src="https://github.com/user-attachments/assets/e7944936-6bc0-426c-abbd-16756143bc65" /> 
 
 ## Characteristics
-- 5-58 V operating range (e.g. Cybertruck)
+- 9-58 V operating range (e.g. Cybertruck),
+- 5V rail: 0.5A continuous at room temp
 - Dual CAN
 - integrated 2.4 GHz antenna
 - RGB LED
