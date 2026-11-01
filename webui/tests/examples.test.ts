@@ -114,6 +114,15 @@ for (const fp of scriptFiles) {
     const result = preprocessScript(code, messages);
     assert.ok(typeof result.code === 'string', `${fn}: code should be a string`);
     assert.equal(result.errors.length, 0, `${fn}: should have 0 errors, got: ${result.errors.join('; ')}`);
+    // Guard against silently-mangled rewrites (e.g. a nested msg_sig_get left
+    // unresolved by an outer msg_sig_set): a resolved call's signal argument is
+    // numeric metadata, never the original quoted DBC name. Comment lines are
+    // ignored (preprocessor_demo.be documents error cases in comments).
+    const executable = result.code.split('\n').filter(l => !/^\s*#/.test(l)).join('\n');
+    assert(
+      !/msg_sig_(?:get|set)\s*\(\s*[^,]+,\s*"/.test(executable),
+      `${fn}: unresolved signal name left in .bep output`,
+    );
   });
 }
 

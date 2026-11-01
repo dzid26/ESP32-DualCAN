@@ -40,6 +40,7 @@
   let showPreprocessed = $state(false);
   let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
+  let preprocessWarnings = $state<string[]>([]);
   let deviceBepCode = $state<string | null>(null);
   let skipPreprocessedEffect = $state(false);
   let editorPaneEl = $state<HTMLDivElement | undefined>();
@@ -137,6 +138,7 @@
     savedCode = '';
     deviceBepCode = null;
     preprocessedCode = '';
+    preprocessWarnings = [];
     selFn = filename;
     editorFilename = filename;
     app.setLastScriptFilename(filename);
@@ -184,6 +186,9 @@
 
       // Then preprocess
       const result = preprocessScript(code, getFullMessages());
+      if (result.warnings.length > 0) {
+        app.pushLog(`scripts: preprocessing warnings — ${result.warnings.join('; ')}`, 'warn', 'scripts');
+      }
       if (result.errors.length > 0) {
         const errMsg = result.errors.join('; ');
         app.pushLog(`scripts: preprocessing errors — ${errMsg}`, 'error', 'scripts');
@@ -325,14 +330,17 @@
     } else if (showPreprocessed && canShowInstalled) {
       // Installed tab: preprocessedCode already set by loadScript / error handler
       preprocessedCode = deviceBepCode ?? '(no preprocessed file on device)';
+      preprocessWarnings = [];
     } else if (showPreprocessed) {
       // Preview tab: preprocess client-side
       const messages = getFullMessages();
       if (messages.length > 0) {
         const result = preprocessScript(code, messages);
         preprocessedCode = result.code;
+        preprocessWarnings = result.warnings;
       } else {
         preprocessedCode = '(no DBC loaded - pick your car)';
+        preprocessWarnings = [];
       }
     }
   });
@@ -623,6 +631,15 @@
 
       <div style="flex: 1; min-height: 0; min-width: 0; display: flex">
         <div bind:this={editorPaneEl} class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
+          {#if preprocessWarnings.length > 0}
+            <div
+              class="mono"
+              title={preprocessWarnings.join('\n')}
+              style="position:absolute;top:0;left:0;right:0;z-index:5;padding:3px 8px;font-size:10px;line-height:1.4;color:var(--dc-warn);background:color-mix(in srgb, var(--dc-warn) 12%, transparent);border-bottom:1px solid color-mix(in srgb, var(--dc-warn) 35%, transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+            >
+              ⚠ {preprocessWarnings.length} preprocessing warning{preprocessWarnings.length > 1 ? 's' : ''}: {preprocessWarnings.join('; ')}
+            </div>
+          {/if}
           <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
           <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>
         </div>

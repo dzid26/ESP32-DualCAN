@@ -10,6 +10,7 @@ const mockMessages = [
     signals: [
       { name: 'DAS_hazardLightRequest', startBit: 0, bitLength: 8, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 },
       { name: 'DAS_wipersControl', startBit: 8, bitLength: 4, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 },
+      { name: 'AMBIG_dup', startBit: 12, bitLength: 1, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 },
     ]
   },
   {
@@ -17,7 +18,8 @@ const mockMessages = [
     name: 'VCLEFT_doorStatus',
     dlc: 8,
     signals: [
-      { name: 'VCLEFT_frontLatchStatus', startBit: 0, bitLength: 2, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 }
+      { name: 'VCLEFT_frontLatchStatus', startBit: 0, bitLength: 2, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 },
+      { name: 'AMBIG_dup', startBit: 4, bitLength: 1, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 },
     ]
   },
   {
@@ -26,6 +28,14 @@ const mockMessages = [
     dlc: 8,
     signals: [
       { name: 'VCRIGHT_frontHandlePulled', startBit: 10, bitLength: 1, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 }
+    ]
+  },
+  {
+    id: 0x334,
+    name: 'UI_powertrainControl',
+    dlc: 8,
+    signals: [
+      { name: 'UI_powertrainControlCounter', startBit: 52, bitLength: 4, isBigEndian: false, isSigned: false, scale: 1, offset: 0, muxType: 0, muxValue: 0 }
     ]
   }
 ];
@@ -225,4 +235,85 @@ test('buildVarToMsgMap does not false-match == comparison', () => {
   const code = 'if msg == nil msg = can_msg_new("DAS_bodyControls", 0) end';
   const map = buildVarToMsgMap(code);
   assert.equal(map.get('msg'), 'DAS_bodyControls', 'should match actual assignment but not ==');
+});
+
+/* ---- Nested / balanced DBC-aware calls ---- */
+
+test('rewrites a msg_sig_get nested inside a msg_sig_set value (counter increment)', () => {
+  const code =
+    'msg_sig_set(msg, "UI_powertrainControlCounter", (int(msg_sig_get(msg, "UI_powertrainControlCounter")) + 1) % 16)';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert.equal(
+    result.code,
+    'msg_sig_set(msg, 52, 4, false, false, 1, 0, (int(msg_sig_get(msg, 52, 4, false, false, 1, 0)) + 1) % 16)',
+  );
+});
+
+test('nested msg_sig_get resolves via the tracked draft message', () => {
+  const code = [
+    'var msg = can_msg_new("UI_powertrainControl")',
+    'msg_sig_set(msg, "UI_powertrainControlCounter", (int(msg_sig_get(msg, "UI_powertrainControlCounter")) + 1) % 16)',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert(
+    result.code.includes('msg_sig_set(msg, 52, 4, false, false, 1, 0, (int(msg_sig_get(msg, 52, 4, false, false, 1, 0)) + 1) % 16)'),
+    `got: ${result.code}`,
+  );
+});
+
+test('balanced value matching keeps commas inside a nested call', () => {
+  const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", max(1, 2) % 16)';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert.equal(result.code, 'msg_sig_set(msg, 52, 4, false, false, 1, 0, max(1, 2) % 16)');
+});
+
+test('reports an unresolved nested msg_sig_get instead of emitting broken code', () => {
+  const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", int(msg_sig_get(msg, "GHOST_SIG")) + 1)';
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.some(e => e.includes('GHOST_SIG')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.code.includes('raise("key_error"'), `got: ${result.code}`);
+});
+
+test('reports unbalanced parentheses rather than silently mangling the call', () => {
+  const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", (1 + 2';
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.some(e => e.includes('unbalanced')), `got: ${JSON.stringify(result.errors)}`);
+  assert(!result.code.includes('52, 4'), 'must not half-rewrite an unparseable call');
+});
+
+/* ---- Ambiguous name resolution ---- */
+
+test('warns (does not fail) when an untracked name matches signals in multiple messages', () => {
+  const code = 'msg_sig_get(someParam, "AMBIG_dup")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 1, `got: ${JSON.stringify(result.warnings)}`);
+  assert(result.warnings[0].includes('AMBIG_dup'));
+  assert(result.warnings[0].includes('DAS_bodyControls'));
+  assert(result.warnings[0].includes('VCLEFT_doorStatus'));
+  // still rewrites using the first match so the script remains usable
+  assert(result.code.includes('msg_sig_get(someParam, 12, 1, false, false, 1, 0)'));
+});
+
+test('does not warn for an unambiguously tracked draft', () => {
+  const code = [
+    'var msg = can_msg_get(0, "VCLEFT_doorStatus")',
+    'msg_sig_get(msg, "VCLEFT_frontLatchStatus")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 0);
+});
+
+test('errors when a tracked draft lacks the signal but several messages have it', () => {
+  const code = 'var msg = can_msg_get(0, "VCRIGHT_doorStatus")\nmsg_sig_get(msg, "AMBIG_dup")';
+  const result = preprocessScript(code, mockMessages);
+  const err = result.errors.find(e => e.includes('AMBIG_dup'));
+  assert(err, `expected an error, got: ${JSON.stringify(result.errors)}`);
+  assert(err.includes('multiple messages'), `got: ${err}`);
+  assert(err.includes('DAS_bodyControls'));
+  assert(err.includes('VCLEFT_doorStatus'));
 });
