@@ -14,6 +14,9 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  // The offline tier needs a built app and its own server, so it has its own
+  // config and script.
+  testIgnore: '**/offline-sw.spec.ts',
   globalSetup: './playwright.ble.global-setup.ts',
   fullyParallel: false,
   workers: 1,
