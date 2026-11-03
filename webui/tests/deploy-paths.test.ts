@@ -44,3 +44,34 @@ test('no source file fetches from the origin root', () => {
       offenders.join(', '),
   );
 });
+
+test('the manifest uses paths relative to itself', () => {
+  const manifestPath = join(WEBUI, 'public', 'manifest.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+    start_url?: string;
+    scope?: string;
+    icons?: { src: string; sizes?: string }[];
+  };
+
+  // Manifest URLs resolve against the manifest, so a relative one follows the
+  // deploy base with no build step. A leading slash pins them to the origin
+  // root, which is where the install icon 404d and a start_url pointed at a
+  // different site.
+  const urls = [
+    ['start_url', manifest.start_url],
+    ['scope', manifest.scope],
+    ...(manifest.icons ?? []).map((icon, i) => [`icons[${i}].src`, icon.src] as const),
+  ] as const;
+
+  const pinned = urls.filter(([, value]) => value?.startsWith('/'));
+  assert.deepEqual(
+    pinned.map(([name, value]) => `${name}=${value}`),
+    [],
+    'these manifest URLs start at the origin root and break under the deploy base',
+  );
+
+  // Chrome on Android wants a 192 and a 512 raster icon.
+  const sizes = new Set((manifest.icons ?? []).map((icon) => icon.sizes));
+  assert.ok(sizes.has('192x192'), 'the manifest needs a 192x192 icon');
+  assert.ok(sizes.has('512x512'), 'the manifest needs a 512x512 icon');
+});
