@@ -63,6 +63,11 @@ Metadata fields (`@name`, `@description`, `@bus`) appear in the web UI.
 | `str(v)` | string | Convert any value to string |
 | `format(fmt, ...)` | string | C-style string formatting |
 
+Timers and actions belong to the script that registered them, including when
+they are registered from inside a timer callback or an action. Disabling the
+script cancels them. `teardown()` runs before that sweep, so a timer started
+from `teardown()` is cancelled too — `teardown()` cannot defer work.
+
 **Renamed or rewritten by the preprocessor** (the call you write is replaced
 at compile time — writing them without a DBC loaded will produce errors):
 

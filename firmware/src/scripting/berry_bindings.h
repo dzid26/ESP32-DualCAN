@@ -16,11 +16,16 @@ void berry_register_bindings(bvm *vm);
 /* ---- Per-script context ----
  * Bindings that register callbacks (timer.*, actions.register) tag each
  * entry with the "current script id". The script_loader sets this before
- * calling a script's setup() and clears it after. On disable, the loader
+ * calling a script's setup() and restores it after. On disable, the loader
  * calls berry_cleanup_script(id) to revoke every tagged registration.
  *
- * Use 0 for "no script context" (e.g. registrations from C). 0 is reserved
- * and is never cleaned up. */
+ * Stored callbacks re-install their owner's context while they run, so a
+ * timer/action registered from inside a callback inherits the same owner
+ * and is revoked with it.
+ *
+ * 0 means "no script context". It is shared by every ownerless registration
+ * and is never cleaned up, so bindings called with no owner log a warning:
+ * such an entry would leak past disable. */
 void berry_set_current_script(int script_id);
 int  berry_current_script(void);
 

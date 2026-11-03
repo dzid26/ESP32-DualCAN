@@ -228,17 +228,19 @@ int script_loader_disable(script_loader_t *loader, int idx)
     bvm *vm = loader->vm;
 
     /* Call teardown via captured ref (any new registrations from teardown
-     * still get tagged with this script's id so cleanup catches them). */
+     * still get tagged with this script's id so cleanup catches them).
+     * disable() can run inside a tick, so restore the caller's context. */
+    int prev_ctx = berry_current_script();
     berry_set_current_script(s->script_id);
     if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref, NULL, 0, NULL, 0);
 
-    /* Revoke every can.on / timer / action tagged to this script. */
+    /* Revoke every timer / action tagged to this script. */
     berry_cleanup_script(s->script_id);
     berry_release_ref(vm, s->setup_ref);
     berry_release_ref(vm, s->teardown_ref);
     s->setup_ref = -1;
     s->teardown_ref = -1;
-    berry_set_current_script(0);
+    berry_set_current_script(prev_ctx);
 
     s->loaded = false;
     s->enabled = false;
