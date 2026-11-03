@@ -1,6 +1,8 @@
 // Minimal service worker — existence enables PWA installability.
-// No aggressive caching; the app needs BLE which requires HTTPS anyway.
-const CACHE = 'dorky-v1';
+// Network-first for everything: a cached shell or asset must never outlive
+// the network copy, otherwise a restart or redeploy leaves the app unstyled
+// until the user clears site data.
+const CACHE = 'dorky-v2';
 const PRECACHE = ['/', '/manifest.json', '/favicon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -18,15 +20,9 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Navigation requests: network-first so updates land immediately.
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('/') ),
-    );
-    return;
-  }
-  // Assets: cache-first.
+  if (e.request.method !== 'GET') return;
+  // Network first; cache only as an offline fallback.
   e.respondWith(
-    caches.match(e.request).then((hit) => hit ?? fetch(e.request)),
+    fetch(e.request).catch(() => caches.match(e.request)),
   );
 });
