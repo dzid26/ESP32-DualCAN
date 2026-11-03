@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from './lib/store.svelte';
+  import { app } from './lib/app';
   import type { ViewId } from './lib/store.svelte';
   import Shell from './components/Shell.svelte';
   import CarPicker from './components/CarPicker.svelte';

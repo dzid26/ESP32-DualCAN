@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
   import { Checkbox, Progress, AlertDialog } from 'bits-ui';

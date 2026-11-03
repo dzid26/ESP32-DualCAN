@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../lib/store.svelte';
+  import { app } from '../lib/app';
   import Rail from './Rail.svelte';
   import StatusStrip from './StatusStrip.svelte';
   import CommandPalette from './CommandPalette.svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../lib/store.svelte';
+  import { app } from '../lib/app';
   import { dbcStore } from '../dbcStore.svelte';
   import type { BusStatus } from '../transport/protocol';
 

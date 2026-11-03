@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import SectionHead from '../SectionHead.svelte';
 
   let prevView = $state(app.view);
