@@ -18,7 +18,9 @@ import { test, expect } from '@playwright/test';
  * worker saved nothing.
  */
 test('the app starts with the network cut', async ({ page, context }) => {
-  await page.goto('/');
+  // './' keeps the deployment base: the root install and the sub-path
+  // install have to reach their own copy of the app.
+  await page.goto('./');
   await expect(page.locator('#app')).not.toBeEmpty();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
 

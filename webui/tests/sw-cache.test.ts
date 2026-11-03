@@ -271,3 +271,27 @@ test('activating drops the caches the earlier workers wrote', async () => {
 
   assert.deepEqual([...cacheStore.keys()], [current]);
 });
+
+test('the worker precaches under its own base path, not the origin root', async () => {
+  reset();
+  // A worker served from a sub-path has to precache that path. On a
+  // sub-path install the origin root belongs to something else, and addAll
+  // fails the whole install when one of the URLs is a 404.
+  listeners.clear();
+  workerGlobal.location = new URL(`${ORIGIN}/ESP32-DualCAN/sw.js`);
+  await import('../public/sw.js?subpath=1');
+
+  await runLifecycleEvent('install');
+
+  const stored = [...cacheStore.values()].flatMap((store) => [...store.keys()]).sort();
+  assert.deepEqual(stored, [
+    `${ORIGIN}/ESP32-DualCAN/`,
+    `${ORIGIN}/ESP32-DualCAN/favicon.svg`,
+    `${ORIGIN}/ESP32-DualCAN/manifest.json`,
+  ]);
+
+  // Put the module state back the way the file started.
+  listeners.clear();
+  workerGlobal.location = new URL(`${ORIGIN}/sw.js`);
+  await import('../public/sw.js?restore=1');
+});

@@ -6,7 +6,13 @@
 // A successful response is saved, so a start with no connection finds the
 // bundles and not just the precached shell.
 const CACHE = 'dorky-v3';
-const PRECACHE = ['/', '/manifest.json', '/favicon.svg'];
+
+// The worker is served next to the app, so the deployment base is the
+// directory this file lives in. On a sub-path install the origin root
+// belongs to something else: asking it for the shell would either fail the
+// install or cache a page that has nothing to do with this app.
+const BASE = new URL('./', self.location).pathname;
+const PRECACHE = [`${BASE}`, `${BASE}manifest.json`, `${BASE}favicon.svg`];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
