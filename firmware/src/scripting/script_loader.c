@@ -140,6 +140,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
     bvm *vm = loader->vm;
 
     /* Tag every binding registration during load + setup with this id. */
+    int prev_ctx = berry_current_script();
     s->script_id = s_next_script_id++;
     berry_set_current_script(s->script_id);
 
@@ -160,7 +161,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
         berry_stack_restore(vm, stack_base);
         s->errored = true;
         ESP_LOGE(TAG, "%s", s->error);
-        berry_set_current_script(0);
+        berry_set_current_script(prev_ctx);
         berry_cleanup_script(s->script_id);
         free(code);
         return -1;
@@ -203,7 +204,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
                 snprintf(s->error, sizeof(s->error), "%s", buf);
             }
             s->errored = true;
-            berry_set_current_script(0);
+            berry_set_current_script(prev_ctx);
             berry_release_ref(vm, s->setup_ref);
             berry_release_ref(vm, s->teardown_ref);
             s->setup_ref = -1;
@@ -213,7 +214,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
         }
     }
 
-    berry_set_current_script(0);
+    berry_set_current_script(prev_ctx);
     s->loaded = true;
     s->enabled = true;
     s->errored = false;

@@ -203,10 +203,12 @@ typedef struct {
 /* Registry of all active timers. Index == handle returned to Berry. */
 static timer_entry_t s_timers[MAX_TIMERS];
 
-static int alloc_timer(int ref, uint32_t period_ms, uint32_t now_ms)
+static int alloc_timer(int ref, const char *binding, uint32_t period_ms, uint32_t now_ms)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
         if (!s_timers[i].in_use) {
+            if (s_current_script_id == SCRIPT_ID_NONE)
+                ESP_LOGW(TAG_BB, "%s: no script owner - not revoked on disable", binding);
             s_timers[i] = (timer_entry_t){
                 .in_use = true, .ref = ref,
                 .script_id = s_current_script_id,
@@ -228,11 +230,9 @@ static int l_timer_after(bvm *vm)
     CHECK_TYPE(vm, 1, be_isint(vm, 1), "int");
     CHECK_TYPE(vm, 2, be_isfunction(vm, 2), "function");
     uint32_t ms = (uint32_t)be_toint(vm, 1);
-    if (s_current_script_id == 0)
-        ESP_LOGW(TAG_BB, "timer.after: no script owner - not cancelled on disable");
     int ref = refs_alloc(vm, 2);
     uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-    int h = alloc_timer(ref, ms, now);
+    int h = alloc_timer(ref, "timer.after", ms, now);
     if (h < 0) {
         refs_free(vm, ref);
         ESP_LOGE(TAG_BB, "timer.after: registry full");
@@ -252,11 +252,9 @@ static int l_timer_every(bvm *vm)
     CHECK_TYPE(vm, 1, be_isint(vm, 1), "int");
     CHECK_TYPE(vm, 2, be_isfunction(vm, 2), "function");
     uint32_t ms = (uint32_t)be_toint(vm, 1);
-    if (s_current_script_id == 0)
-        ESP_LOGW(TAG_BB, "timer.every: no script owner - not cancelled on disable");
     int ref = refs_alloc(vm, 2);
     uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-    int h = alloc_timer(ref, ms, now);
+    int h = alloc_timer(ref, "timer.every", ms, now);
     if (h < 0) {
         refs_free(vm, ref);
         ESP_LOGE(TAG_BB, "timer.every: registry full");
@@ -288,8 +286,8 @@ void berry_timer_tick(uint32_t now_ms)
         if (!t->in_use) continue;
         if ((int32_t)(now_ms - t->next_fire_ms) < 0) continue;
 
-        /* A one-shot frees its slot before the call, so the callback may
-         * reuse this entry; snapshot what it needs first. */
+        /* Snapshot owner/ref before the call: a one-shot frees its slot and
+         * the callback may reuse it. */
         int ref = t->ref;
         int owner = t->script_id;
         bool one_shot = (t->period_ms == 0);
@@ -354,8 +352,6 @@ static int l_action_register(bvm *vm)
     CHECK_TYPE(vm, 1, be_isstring(vm, 1), "string");
     CHECK_TYPE(vm, 2, be_isfunction(vm, 2), "function");
     const char *name = be_tostring(vm, 1);
-    if (s_current_script_id == 0)
-        ESP_LOGW(TAG_BB, "action_register: no script owner - not removed on disable");
 
     int existing = find_action(name);
     if (existing >= 0) {
@@ -371,6 +367,8 @@ static int l_action_register(bvm *vm)
         ESP_LOGE(TAG_BB, "actions registry full");
         be_return_nil(vm);
     }
+    if (s_current_script_id == SCRIPT_ID_NONE)
+        ESP_LOGW(TAG_BB, "action_register: no script owner - not revoked on disable");
 
     int ref = refs_alloc(vm, 2);
     s_actions[slot].in_use = true;
@@ -447,7 +445,7 @@ int berry_action_invoke(const char *name)
 
 void berry_cleanup_script(int script_id)
 {
-    if (script_id == 0) return;
+    if (script_id == SCRIPT_ID_NONE) return;
 
     /* Cancel timers */
     for (int i = 0; i < MAX_TIMERS; i++) {

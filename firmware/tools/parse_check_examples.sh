@@ -40,7 +40,7 @@ if [ "$#" -gt 0 ]; then
   files=("$@")
 else
   shopt -s nullglob
-  files=( "$ROOT"/test_scripts/*.be )
+  files=( "$ROOT"/test_scripts/*.be "$ROOT"/test_scripts/manual/*.be )
 fi
 
 if [ "${#files[@]}" -eq 0 ]; then

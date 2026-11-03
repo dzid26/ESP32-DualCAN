@@ -23,9 +23,10 @@ void berry_register_bindings(bvm *vm);
  * timer/action registered from inside a callback inherits the same owner
  * and is revoked with it.
  *
- * 0 means "no script context". It is shared by every ownerless registration
- * and is never cleaned up, so bindings called with no owner log a warning:
- * such an entry would leak past disable. */
+ * SCRIPT_ID_NONE means "no script context". It is shared by every ownerless
+ * registration and is never reclaimed, so registering with no owner logs a
+ * warning: such an entry would outlive its script. */
+#define SCRIPT_ID_NONE 0
 void berry_set_current_script(int script_id);
 int  berry_current_script(void);
 
@@ -46,7 +47,8 @@ int  berry_capture_global(bvm *vm, const char *global_name);
 void berry_release_ref(bvm *vm, int ref);
 
 /* Call a captured ref with no args. Returns 0 on success, -1 if ref is invalid,
- * -2 if the call errored (logged). */
+ * -2 if the call errored (logged). Does not install a script context: a caller
+ * invoking a stored script callback must set the owner first. */
 int  berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size);
 
 /* Poll all timers; fire any whose next_fire_ms has passed. Call once per
