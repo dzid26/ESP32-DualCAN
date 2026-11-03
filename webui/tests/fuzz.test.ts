@@ -1,28 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parseDbc, type Message } from '../src/dbc/parser.ts';
 import { preprocessScript, formatDiagnostic } from '../src/lib/preprocessor.ts';
 import { tokenize } from '../src/lib/berry/lexer.ts';
 import { buildCalls } from '../src/lib/berry/calls.ts';
 import type { ArgRange } from '../src/lib/berry/calls.ts';
 import type { Token } from '../src/lib/berry/lexer.ts';
+import { loadDbcMessages } from './helpers/corpus.ts';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO = join(__dirname, '..', '..');
 const ITERATIONS = Number(process.env.FUZZ_ITERATIONS ?? 200);
-
-function loadMessages(): Message[] {
-  const messages: Message[] = [];
-  for (const file of readdirSync(join(REPO, 'dbc')).filter(f => f.endsWith('.dbc')).sort()) {
-    messages.push(...parseDbc(readFileSync(join(REPO, 'dbc', file), 'latin1')));
-  }
-  return messages;
-}
-
-const messages = loadMessages();
+const messages = loadDbcMessages();
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;

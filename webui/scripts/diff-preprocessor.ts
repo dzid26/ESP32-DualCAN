@@ -7,12 +7,13 @@
  * any unexplained output, error-count, or warning-count difference.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { parseDbc, type Message } from '../src/dbc/parser.ts';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import type { Message } from '../src/dbc/parser.ts';
 import { preprocessScript as newPreprocess } from '../src/lib/preprocessor.ts';
+import { REPO, loadDbcMessages, realScriptFiles } from '../tests/helpers/corpus.ts';
 
 interface OldResult {
   code: string;
@@ -22,8 +23,6 @@ interface OldResult {
 
 type OldPreprocess = (source: string, messages: Message[]) => OldResult;
 
-const here = dirname(fileURLToPath(import.meta.url));
-const repo = join(here, '..', '..');
 const oldIndex = process.argv.indexOf('--old');
 const oldRev = oldIndex >= 0 ? process.argv[oldIndex + 1] : 'bc24000';
 
@@ -34,7 +33,7 @@ const oldPath = join(tempDir, 'preprocessor-old.mts');
 writeFileSync(
   oldPath,
   execFileSync('git', ['show', `${oldRev}:webui/src/lib/preprocessor.ts`], {
-    cwd: repo,
+    cwd: REPO,
     encoding: 'utf8',
   }),
 );
@@ -42,10 +41,7 @@ writeFileSync(
 const oldModule = await import(pathToFileURL(oldPath).href);
 const oldPreprocess = oldModule.preprocessScript as OldPreprocess;
 
-const messages: Message[] = [];
-for (const file of readdirSync(join(repo, 'dbc')).filter(f => f.endsWith('.dbc')).sort()) {
-  messages.push(...parseDbc(readFileSync(join(repo, 'dbc', file), 'latin1')));
-}
+const messages = loadDbcMessages();
 
 function firstDiff(oldCode: string, newCode: string): string {
   const oldLines = oldCode.split('\n');
@@ -81,14 +77,9 @@ function compare(label: string, source: string, scoped: Message[]): boolean {
 
 console.log(`old=${oldRev}`);
 let realDiffs = 0;
-const realFiles: string[] = [];
-for (const dir of ['firmware/test_scripts', 'scripts/tesla']) {
-  for (const file of readdirSync(join(repo, dir)).filter(f => f.endsWith('.be')).sort()) {
-    realFiles.push(join(repo, dir, file));
-  }
-}
+const realFiles = realScriptFiles();
 for (const file of realFiles) {
-  const label = file.slice(repo.length + 1).replace(/\\/g, '/');
+  const label = file.slice(REPO.length + 1).replace(/\\/g, '/');
   if (!compare(label, readFileSync(file, 'utf8'), messages)) realDiffs++;
 }
 console.log(`real: ${realFiles.length} cases, ${realDiffs} diffs`);

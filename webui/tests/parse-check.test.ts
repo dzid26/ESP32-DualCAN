@@ -8,36 +8,15 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { parseDbc, type Message } from '../src/dbc/parser.ts';
 import { preprocessScript, formatDiagnostic } from '../src/lib/preprocessor.ts';
+import { REPO, loadDbcMessages, realScriptFiles } from './helpers/corpus.ts';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO = join(__dirname, '..', '..');
 const FIRMWARE = join(REPO, 'firmware');
 const BERRY = join(FIRMWARE, 'components/berry');
 const CACHE = join(FIRMWARE, '.cache/preprocessor-oracle');
 const BIN = join(CACHE, process.platform === 'win32' ? 'parse_check.exe' : 'parse_check');
-
-function loadMessages(): Message[] {
-  const messages: Message[] = [];
-  for (const file of readdirSync(join(REPO, 'dbc')).filter(f => f.endsWith('.dbc')).sort()) {
-    messages.push(...parseDbc(readFileSync(join(REPO, 'dbc', file), 'latin1')));
-  }
-  return messages;
-}
-
-function sourceFiles(): string[] {
-  const files: string[] = [];
-  for (const dir of ['firmware/test_scripts', 'scripts/tesla']) {
-    for (const file of readdirSync(join(REPO, dir)).filter(f => f.endsWith('.be')).sort()) {
-      files.push(join(REPO, dir, file));
-    }
-  }
-  return files;
-}
 
 function gccAvailable(): boolean {
   const result = spawnSync('gcc', ['--version'], { encoding: 'utf8' });
@@ -92,8 +71,8 @@ test('generated scripts compile with the firmware parser', (t) => {
     return;
   }
 
-  const messages = loadMessages();
-  const inputs = sourceFiles();
+  const messages = loadDbcMessages();
+  const inputs = realScriptFiles();
   const generated: string[] = [];
   mkdirSync(CACHE, { recursive: true });
 
