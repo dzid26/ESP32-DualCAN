@@ -34,7 +34,7 @@ jobs:
         run: pip install "platformio==6.2.0"
 
       - name: Run native tests
-        run: pio test -d firmware -e tests-native
+        run: pio test -d firmware -e tests-native -e tests-native-berry
 
   build:
     name: Firmware build
