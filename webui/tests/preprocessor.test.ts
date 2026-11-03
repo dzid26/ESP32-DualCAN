@@ -47,11 +47,10 @@ test('preprocesses can_msg_get with bus-first order', () => {
   assert.equal(result.errors.length, 0);
 });
 
-test('name-first can_msg_get passes through unchanged', () => {
+test('errors on name-first can_msg_get', () => {
   const code = `can_msg_get("DAS_bodyControls", 0)`;
   const result = preprocessScript(code, mockMessages);
-  assert.equal(result.code, code);
-  assert.equal(result.errors.length, 0);
+  assert(result.errors.some(e => e.includes('bus first')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('inlines msg_sig_get into msg_sig_get with inline metadata', () => {
@@ -402,6 +401,25 @@ test('handles escaped quotes in a signal literal', () => {
   const code = 'msg_sig_get(msg, "OG\\"SIG")';
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.some(e => e.includes('OG"SIG')), `got: ${JSON.stringify(result.errors)}`);
+});
+
+test('errors on a malformed signal literal', () => {
+  const code = 'msg_sig_get(msg, "UI_" .. "counter")';
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.some(e => e.includes('malformed signal name')), `got: ${JSON.stringify(result.errors)}`);
+});
+
+test('errors on a malformed message literal', () => {
+  const code = 'can_msg_get(0, "DAS" .. "_bodyControls")';
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.some(e => e.includes('malformed message name')), `got: ${JSON.stringify(result.errors)}`);
+});
+
+test('leaves numeric-id can_msg_get unchanged', () => {
+  const code = 'can_msg_get(0, msgIdVar)';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.code, code);
+  assert.equal(result.errors.length, 0);
 });
 
 test('leaves already-inlined low-level calls unchanged', () => {

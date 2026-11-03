@@ -28,6 +28,13 @@ import type { Message, Signal } from '../dbc/parser';
 // before uploading a script when versions don't match.
 export const SCRIPTING_API_VERSION = 1;
 
+/** Result of preprocessing one script. */
+export interface PreprocessResult {
+  code: string;
+  errors: string[];
+  warnings: string[];
+}
+
 /* Build signal-decode/encode arg list from a Signal. */
 function sigMeta(s: Signal): string {
   return [
@@ -111,20 +118,26 @@ function scanArgs(text: string, open: number): { close: number; args: string[] }
   return null;
 }
 
-/* Return the contents of a plain string-literal expression, or null. */
-function stringLiteralValue(expr: string): string | null {
+type StringLiteral =
+  | { kind: 'literal'; value: string }
+  | { kind: 'code' }
+  | { kind: 'malformed' };
+
+/* Classify an argument expression as a plain string literal, other code, or a broken literal. */
+function parseStringLiteral(expr: string): StringLiteral {
   const t = expr.trim();
-  if (t.length < 2) return null;
+  if (t.length === 0) return { kind: 'code' };
   const quote = t[0];
-  if ((quote !== '"' && quote !== "'") || t[t.length - 1] !== quote) return null;
+  if (quote !== '"' && quote !== "'") return { kind: 'code' };
+  if (t.length < 2 || t[t.length - 1] !== quote) return { kind: 'malformed' };
   let value = '';
   for (let i = 1; i < t.length - 1; i++) {
     const c = t[i];
     if (c === '\\') { value += t[++i] ?? ''; continue; }
-    if (c === quote) return null; // unescaped quote inside the literal
+    if (c === quote) return { kind: 'malformed' };
     value += c;
   }
-  return value;
+  return { kind: 'literal', value };
 }
 
 /* ---- Track variable → message name mappings ---- */
@@ -170,7 +183,7 @@ export function buildVarToMsgMap(source: string): Map<string, string> {
 export function preprocessScript(
   sourceCode: string,
   messages: Message[]
-): { code: string; errors: string[]; warnings: string[] } {
+): PreprocessResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -212,57 +225,58 @@ export function preprocessScript(
     const scanned = scanArgs(expr, call[0].length - 1);
     if (!scanned || scanned.close !== expr.length - 1) return null;
     for (const arg of scanned.args) {
-      const name = stringLiteralValue(arg);
-      if (name !== null) return name;
+      const literal = parseStringLiteral(arg);
+      if (literal.kind === 'literal') return literal.value;
     }
     return null;
   }
+
+  type ResolveResult =
+    | { ok: true; sig: Signal; warning: string | null }
+    | { ok: false; error: string };
 
   function resolveSignalInDraft(
     draftExpr: string,
     sigName: string,
     context: string
-  ): { sig: Signal | null; error: string | null; warning: string | null } {
+  ): ResolveResult {
     const ownerName = draftMessageName(draftExpr);
 
     if (ownerName) {
       const sig = findSigInMsg(ownerName, sigName);
-      if (sig) return { sig, error: null, warning: null };
+      if (sig) return { ok: true, sig, warning: null };
 
       // Signal not in the owning message — report where it does live.
       const owners = [...new Set(signalMatches(sigName).map(m => m.msg.name))]
         .filter(n => n !== ownerName);
       if (owners.length === 1) {
         return {
-          sig: null,
+          ok: false,
           error: `${context}: signal '${sigName}' belongs to '${owners[0]}', not '${ownerName}'`,
-          warning: null,
         };
       }
       if (owners.length > 1) {
         return {
-          sig: null,
+          ok: false,
           error: `${context}: signal '${sigName}' is not in message '${ownerName}', but is present in multiple messages (${owners.join(', ')})`,
-          warning: null,
         };
       }
       return {
-        sig: null,
+        ok: false,
         error: `${context}: signal '${sigName}' not found in message '${ownerName}'`,
-        warning: null,
       };
     }
 
     // Untracked or multi-assigned variable — fall back to global search.
     const matches = signalMatches(sigName);
     if (matches.length === 0) {
-      return { sig: null, error: `${context}: signal '${sigName}' not found`, warning: null };
+      return { ok: false, error: `${context}: signal '${sigName}' not found` };
     }
     const owners = [...new Set(matches.map(m => m.msg.name))];
     const warning = owners.length > 1
       ? `${context}: signal '${sigName}' exists in multiple messages (${owners.join(', ')}); using '${matches[0].msg.name}' — assign the draft via can_msg_get/can_msg_new to disambiguate`
       : null;
-    return { sig: matches[0].sig, error: null, warning };
+    return { ok: true, sig: matches[0].sig, warning };
   }
 
   function raiseFor(message: string): string {
@@ -302,24 +316,37 @@ export function preprocessScript(
         if (args.length !== 2) {
           replacement = raiseFor('can_msg_get: expected 2 arguments');
         } else {
-          const msgName = stringLiteralValue(args[1]);
-          if (msgName !== null) {
-            const msg = findMsg(msgName);
+          const msgName = parseStringLiteral(args[1]);
+          if (msgName.kind === 'literal') {
+            const msg = findMsg(msgName.value);
             replacement = msg === null
-              ? raiseFor(`can_msg_get: message '${msgName}' not found`)
+              ? raiseFor(`can_msg_get: message '${msgName.value}' not found`)
               : `can_msg_get(${rewrite(draft)}, 0x${msg.id.toString(16)})`;
+          } else if (msgName.kind === 'malformed') {
+            replacement = raiseFor('can_msg_get: malformed message name');
+          } else if (parseStringLiteral(args[0]).kind === 'literal') {
+            replacement = raiseFor('can_msg_get: message name must be the second argument (bus first)');
           }
         }
       } else if (name === 'can_msg_new') {
-        const msgName = stringLiteralValue(args[0])
-          ?? (args[1] ? stringLiteralValue(args[1]) : null);
         if (args.length > 2) {
           replacement = raiseFor('can_msg_new: expected 1 or 2 arguments');
-        } else if (msgName !== null) {
-          const msg = findMsg(msgName);
-          replacement = msg === null
-            ? raiseFor(`can_msg_new: message '${msgName}' not found`)
-            : `can_msg_new(0x${msg.id.toString(16)}, ${msg.dlc})`;
+        } else {
+          let msgName: string | null = null;
+          let malformed = false;
+          for (const arg of args) {
+            const literal = parseStringLiteral(arg);
+            if (literal.kind === 'literal') msgName ??= literal.value;
+            else if (literal.kind === 'malformed') malformed = true;
+          }
+          if (malformed) {
+            replacement = raiseFor('can_msg_new: malformed message name');
+          } else if (msgName !== null) {
+            const msg = findMsg(msgName);
+            replacement = msg === null
+              ? raiseFor(`can_msg_new: message '${msgName}' not found`)
+              : `can_msg_new(0x${msg.id.toString(16)}, ${msg.dlc})`;
+          }
         }
       } else if (name === 'msg_sig_get') {
         if (args.length === 7) {
@@ -327,15 +354,19 @@ export function preprocessScript(
         } else if (args.length !== 2) {
           replacement = raiseFor('msg_sig_get: expected 2 arguments (or 7 for the inline form)');
         } else {
-          const sigName = stringLiteralValue(args[1]);
-          if (sigName === null) {
+          const sigName = parseStringLiteral(args[1]);
+          if (sigName.kind === 'malformed') {
+            replacement = raiseFor('msg_sig_get: malformed signal name');
+          } else if (sigName.kind === 'code') {
             replacement = raiseFor('msg_sig_get: signal name must be a string literal');
           } else {
-            const resolved = resolveSignalInDraft(draft, sigName, 'msg_sig_get');
-            if (resolved.warning) warnings.push(resolved.warning);
-            replacement = resolved.sig
-              ? `msg_sig_get(${rewrite(draft)}, ${sigMeta(resolved.sig)})`
-              : raiseFor(resolved.error!);
+            const resolved = resolveSignalInDraft(draft, sigName.value, 'msg_sig_get');
+            if (!resolved.ok) {
+              replacement = raiseFor(resolved.error);
+            } else {
+              if (resolved.warning) warnings.push(resolved.warning);
+              replacement = `msg_sig_get(${rewrite(draft)}, ${sigMeta(resolved.sig)})`;
+            }
           }
         }
       } else if (name === 'msg_sig_set') {
@@ -344,15 +375,19 @@ export function preprocessScript(
         } else if (args.length !== 3) {
           replacement = raiseFor('msg_sig_set: expected 3 arguments (or 8 for the inline form)');
         } else {
-          const sigName = stringLiteralValue(args[1]);
-          if (sigName === null) {
+          const sigName = parseStringLiteral(args[1]);
+          if (sigName.kind === 'malformed') {
+            replacement = raiseFor('msg_sig_set: malformed signal name');
+          } else if (sigName.kind === 'code') {
             replacement = raiseFor('msg_sig_set: signal name must be a string literal');
           } else {
-            const resolved = resolveSignalInDraft(draft, sigName, 'msg_sig_set');
-            if (resolved.warning) warnings.push(resolved.warning);
-            replacement = resolved.sig
-              ? `msg_sig_set(${rewrite(draft)}, ${sigMeta(resolved.sig)}, ${rewrite(value)})`
-              : raiseFor(resolved.error!);
+            const resolved = resolveSignalInDraft(draft, sigName.value, 'msg_sig_set');
+            if (!resolved.ok) {
+              replacement = raiseFor(resolved.error);
+            } else {
+              if (resolved.warning) warnings.push(resolved.warning);
+              replacement = `msg_sig_set(${rewrite(draft)}, ${sigMeta(resolved.sig)}, ${rewrite(value)})`;
+            }
           }
         }
       }
