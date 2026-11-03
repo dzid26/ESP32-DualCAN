@@ -6,7 +6,11 @@
 
 #define SCRIPT_MAX_COUNT    16
 #define SCRIPT_MAX_NAME     64
+#ifdef SCRIPT_DIR_TEST
+#define SCRIPT_DIR          "berry_test_scripts"   /* host tests, CWD = firmware/ */
+#else
 #define SCRIPT_DIR          "/littlefs/scripts"
+#endif
 
 typedef struct {
     char    filename[SCRIPT_MAX_NAME];  /* e.g. "fold_mirrors.be" */

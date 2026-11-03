@@ -1,11 +1,18 @@
 #include "scripting/script_loader.h"
-#include "scripting/berry_bindings.h"
+#include "scripting/berry_log.h"
+#include "scripting/berry_registry.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#define fs_mkdir(path) _mkdir(path)
+#else
+#define fs_mkdir(path) mkdir((path), 0755)
+#endif
 
 #include "esp_log.h"
 
@@ -57,7 +64,7 @@ int script_loader_scan(script_loader_t *loader, bvm *vm)
 
     struct stat st;
     if (stat(SCRIPT_DIR, &st) != 0) {
-        mkdir(SCRIPT_DIR, 0755);
+        fs_mkdir(SCRIPT_DIR);
         ESP_LOGI(TAG, "Created %s", SCRIPT_DIR);
     }
 

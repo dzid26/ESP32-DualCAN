@@ -6,17 +6,9 @@
  * registered from inside a callback must inherit that callback's owner, so
  * berry_cleanup_script() revokes it.
  */
-/* berry.h's be_loadstring() macro calls strlen. */
-#include <stdio.h>
-#include <string.h>
-
 #include <unity.h>
 
-#include "berry.h"
-#include "scripting/berry_registry.h"
-
-/* Moves the clock esp_timer_get_time() reports (see stubs.c). */
-void stub_set_now_ms(unsigned ms);
+#include "berry_test.h"
 
 static const char *SCRIPT =
     "var beats = 0\n"
@@ -54,44 +46,9 @@ void tearDown(void)
     vm = NULL;
 }
 
-static int global_int(const char *name)
-{
-    be_getglobal(vm, name);
-    int value = (int)be_toint(vm, -1);
-    be_pop(vm, 1);
-    return value;
-}
-
-static int run_source(const char *src)
-{
-    int base = be_top(vm);
-    if (be_loadstring(vm, src) != 0 || be_pcall(vm, 0) != 0) {
-        printf("berry error: %s\n", be_tostring(vm, -1));
-        berry_stack_restore(vm, base);
-        return -1;
-    }
-    berry_stack_restore(vm, base);
-    return 0;
-}
-
-/* Enable a script the way script_loader_enable does: tag the owner, run the
- * chunk, capture setup() and call it. The owner tag is what setup()'s
- * registrations inherit. */
-static int enable_script(int owner)
-{
-    berry_set_current_script(owner);
-    if (run_source(SCRIPT) != 0) return -1;
-    int setup_ref = berry_capture_global(vm, "setup");
-    char err[128] = "";
-    int rc = berry_call_ref(vm, setup_ref, err, sizeof(err), NULL, 0);
-    berry_set_current_script(SCRIPT_ID_NONE);
-    if (rc != 0) printf("setup error: %s\n", err);
-    return rc;
-}
-
 void test_timer_registered_in_timer_callback_is_revoked(void)
 {
-    TEST_ASSERT_EQUAL_INT(0, enable_script(7));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 7, SCRIPT));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
     stub_set_now_ms(1000);
@@ -99,7 +56,7 @@ void test_timer_registered_in_timer_callback_is_revoked(void)
     stub_set_now_ms(1600);
     berry_timer_tick(1600);         /* inner timer beats once */
 
-    TEST_ASSERT_EQUAL_INT(1, global_int("beats"));
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
     berry_cleanup_script(7);
@@ -108,20 +65,20 @@ void test_timer_registered_in_timer_callback_is_revoked(void)
     stub_set_now_ms(3600);
     berry_timer_tick(3600);
 
-    TEST_ASSERT_EQUAL_INT(1, global_int("beats"));
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
 void test_timer_registered_in_action_is_revoked(void)
 {
-    TEST_ASSERT_EQUAL_INT(0, enable_script(8));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 8, SCRIPT));
 
     TEST_ASSERT_EQUAL_INT(0, berry_action_invoke("arm"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
     stub_set_now_ms(600);
     berry_timer_tick(600);
-    TEST_ASSERT_EQUAL_INT(1, global_int("beats"));
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
 
     berry_cleanup_script(8);
     stub_set_now_ms(1600);          /* the pending one-shot was due here */
@@ -129,13 +86,13 @@ void test_timer_registered_in_action_is_revoked(void)
     stub_set_now_ms(2600);
     berry_timer_tick(2600);
 
-    TEST_ASSERT_EQUAL_INT(1, global_int("beats"));
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
 void test_failed_calls_balance_stack(void)
 {
-    TEST_ASSERT_EQUAL_INT(0, run_source("def bad_cb() raise 'x', 'y' end"));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_run_source(vm, "def bad_cb() raise 'x', 'y' end"));
     int bad_ref = berry_capture_global(vm, "bad_cb");
     int base = be_top(vm);
 
