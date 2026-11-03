@@ -503,3 +503,64 @@ test('deduplicates identical ambiguity warnings', () => {
   const result = preprocessScript(code, mockMessages);
   assert.equal(result.warnings.length, 1, `got: ${JSON.stringify(result.warnings)}`);
 });
+
+/* ---- Table-driven call matrix ---- */
+
+const callMatrix: Array<{ name: string; source: string; code: string }> = [
+  {
+    name: 'can_msg_get with a literal bus',
+    source: 'can_msg_get(0, "DAS_bodyControls")',
+    code: 'can_msg_get(0, 0x3e9)',
+  },
+  {
+    name: 'can_msg_get with a non-literal bus',
+    source: 'can_msg_get(bus, "DAS_bodyControls")',
+    code: 'can_msg_get(bus, 0x3e9)',
+  },
+  {
+    name: 'can_msg_new bus-first',
+    source: 'can_msg_new(0, "DAS_bodyControls")',
+    code: 'can_msg_new(0x3e9, 8)',
+  },
+  {
+    name: 'msg_sig_get from a tracked draft',
+    source: 'var d = can_msg_get(0, "VCLEFT_doorStatus")\nmsg_sig_get(d, "VCLEFT_frontLatchStatus")',
+    code: 'var d = can_msg_get(0, 0x102)\nmsg_sig_get(d, 0, 2, false, false, 1, 0)',
+  },
+  {
+    name: 'msg_sig_get from an inline draft',
+    source: 'msg_sig_get(can_msg_get(0, "VCLEFT_doorStatus"), "AMBIG_dup")',
+    code: 'msg_sig_get(can_msg_get(0, 0x102), 4, 1, false, false, 1, 0)',
+  },
+  {
+    name: 'msg_sig_set with a plain value',
+    source: 'msg_sig_set(msg, "UI_powertrainControlCounter", 1)',
+    code: 'msg_sig_set(msg, 52, 4, false, false, 1, 0, 1)',
+  },
+  {
+    name: 'msg_sig_set with a nested get',
+    source:
+      'msg_sig_set(msg, "UI_powertrainControlCounter", (int(msg_sig_get(msg, "UI_powertrainControlCounter")) + 1) % 16)',
+    code:
+      'msg_sig_set(msg, 52, 4, false, false, 1, 0, (int(msg_sig_get(msg, 52, 4, false, false, 1, 0)) + 1) % 16)',
+  },
+  {
+    name: 'comment inside a call',
+    source: 'msg_sig_set(msg, "UI_powertrainControlCounter", 1  # note (\n)',
+    code: 'msg_sig_set(msg, 52, 4, false, false, 1, 0, 1  # note (\n)',
+  },
+  {
+    name: 'call-shaped text inside a string',
+    source: `print("msg_sig_get(d, 'DAS_hazardLightRequest')")`,
+    code: `print("msg_sig_get(d, 'DAS_hazardLightRequest')")`,
+  },
+];
+
+for (const c of callMatrix) {
+  test(`matrix: ${c.name}`, () => {
+    const result = preprocessScript(c.source, mockMessages);
+    assert.equal(result.errors.length, 0, `got: ${JSON.stringify(result.errors)}`);
+    assert.equal(result.warnings.length, 0, `got: ${JSON.stringify(result.warnings)}`);
+    assert.equal(result.code, c.code);
+  });
+}
