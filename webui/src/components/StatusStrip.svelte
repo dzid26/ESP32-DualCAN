@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../lib/store.svelte';
+  import { app } from '../lib/app';
   import { isMobile, modKey } from '../lib/platform';
   import Icon from './Icon.svelte';
   import FilledIcon from './FilledIcon.svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import type { TraceFrame } from '../../transport/protocol';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';

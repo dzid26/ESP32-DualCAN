@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import { parseDbcInWorker, type Message, type Signal } from '../../dbc/parser';
   import { dbcStore } from '../../dbcStore.svelte';
   import SectionHead from '../SectionHead.svelte';
