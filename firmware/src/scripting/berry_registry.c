@@ -48,25 +48,57 @@ static void script_ctx_leave(int prev)
  * Keeps a hidden global list ".refs" on the VM containing function references
  * that C code holds across script invocations (timers, actions). Each ref is
  * just the list index. When the function is no longer needed, the list slot
- * is set to nil (refs_free). This prevents GC from collecting the closures. */
+ * is set to nil (refs_free). This prevents GC from collecting the closures.
+ *
+ * A freed slot is nil and stays nil, but refs_alloc() reuses the first nil
+ * slot instead of appending. The list therefore tracks the peak number of
+ * live refs and stays bounded under register/cancel churn. Reuse overwrites a
+ * hole in place, so a ref that a timer or action still holds never moves. */
+
+/* Push .refs, creating the list when it does not exist yet. Leaves the list on
+ * the stack. */
+static void refs_ensure_list(bvm *vm)
+{
+    be_getglobal(vm, ".refs");
+    if (be_islist(vm, -1)) return;
+    be_pop(vm, 1);
+    be_newlist(vm);
+    be_setglobal(vm, ".refs");   /* leaves the list on the stack */
+    be_pop(vm, 1);
+    be_getglobal(vm, ".refs");
+}
+
+/* Index of the first nil slot in the list on top of the stack, or the list
+ * size when every slot is live. */
+static int refs_first_free(bvm *vm)
+{
+    int size = be_data_size(vm, -1);
+    for (int i = 0; i < size; i++) {
+        be_pushint(vm, i);
+        be_getindex(vm, -2);        /* list, key, value */
+        bool free_slot = be_isnil(vm, -1);
+        be_pop(vm, 2);
+        if (free_slot) return i;
+    }
+    return size;
+}
 
 static int refs_alloc(bvm *vm, int fn_index)
 {
     if (fn_index < 0) fn_index = be_top(vm) + fn_index + 1;
 
-    be_getglobal(vm, ".refs");
-    if (be_isnil(vm, -1)) {
-        be_pop(vm, 1);
-        be_newlist(vm);
-        be_setglobal(vm, ".refs");   /* leaves the list on the stack */
-        be_pop(vm, 1);
-        be_getglobal(vm, ".refs");
+    refs_ensure_list(vm);
+    int ref = refs_first_free(vm);
+    if (ref < be_data_size(vm, -1)) {
+        be_pushint(vm, ref);        /* list, key */
+        be_pushvalue(vm, fn_index); /* list, key, value */
+        be_setindex(vm, -3);
+        be_pop(vm, 3);              /* value, key, list */
+    } else {
+        be_pushvalue(vm, fn_index);
+        be_data_push(vm, -2);
+        be_pop(vm, 2);              /* value, list */
     }
-    be_pushvalue(vm, fn_index);
-    be_data_push(vm, -2);
-    be_pop(vm, 1);
-    int ref = be_data_size(vm, -1) - 1;
-    be_pop(vm, 1);
     return ref;
 }
 
@@ -74,7 +106,7 @@ static void refs_free(bvm *vm, int ref)
 {
     if (ref < 0) return;
     be_getglobal(vm, ".refs");
-    if (be_isnil(vm, -1)) { be_pop(vm, 1); return; }
+    if (!be_islist(vm, -1)) { be_pop(vm, 1); return; }
     be_pushint(vm, ref);
     be_pushnil(vm);
     be_setindex(vm, -3);
