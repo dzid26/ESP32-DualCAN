@@ -1,0 +1,60 @@
+name: Worktree webui
+
+# A fresh git worktree has no webui/node_modules. `npm test` must need none, and
+# `npm run check` must install its own without touching the main checkout.
+
+on:
+  push:
+    paths:
+      - 'tools/ensure-webui-deps.mjs'
+      - 'webui/package.json'
+      - 'webui/package-lock.json'
+      - '.github/workflows/worktree-webui.yml'
+  pull_request:
+    paths:
+      - 'tools/ensure-webui-deps.mjs'
+      - 'webui/package.json'
+      - 'webui/package-lock.json'
+      - '.github/workflows/worktree-webui.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-worktree:
+    name: Fresh worktree (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      BLE_SKIP_REAL_DEVICE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: webui/package-lock.json
+
+      - name: Add a worktree
+        run: |
+          git config user.email ci@example.com
+          git config user.name CI
+          git worktree add --detach "${{ runner.temp }}/wt" HEAD
+
+      - name: The worktree starts without dependencies
+        run: node -e "if (require('fs').existsSync(process.env.RUNNER_TEMP + '/wt/webui/node_modules')) process.exit(1)"
+
+      - name: npm test needs no dependencies
+        working-directory: ${{ runner.temp }}/wt/webui
+        run: npm test
+
+      - name: npm run check installs what it needs
+        working-directory: ${{ runner.temp }}/wt/webui
+        run: npm run check
+
+      - name: The main checkout was not touched
+        run: node -e "if (require('fs').existsSync('webui/node_modules')) process.exit(1)"
