@@ -111,6 +111,12 @@ void test_failed_calls_balance_stack(void)
  * reclaimed and would relocate into the next test's slot budget.
  */
 
+static void tick_at(unsigned now_ms)
+{
+    stub_set_now_ms(now_ms);
+    berry_timer_tick(now_ms);
+}
+
 /* Run a chunk the way a script body runs, with an owner installed and no
  * setup() capture. Keeps .refs countable: only the bindings allocate. */
 static int run_as_owner(int owner, const char *src)
@@ -263,6 +269,200 @@ void test_action_table_holds_32_and_cleanup_frees_slots(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
+/* ---- P4: scheduling semantics ------------------------------------------- */
+
+/* One-shot fires once, then its slot is free again. */
+static const char *ONE_SHOT_SCRIPT =
+    "var beats = 0\n"
+    "var h = -1\n"
+    "def cb()\n"
+    "  beats += 1\n"
+    "end\n"
+    "def setup()\n"
+    "  h = timer_after(1000, cb)\n"
+    "end\n";
+
+void test_one_shot_fires_once_and_frees_its_slot(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 31, ONE_SHOT_SCRIPT));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "h"));
+
+    tick_at(1000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
+
+    tick_at(2000);
+    tick_at(3000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+
+    TEST_ASSERT_EQUAL_INT(0, run_as_owner(31,
+        "var h2 = timer_after(1000, cb)\n"));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "h2"));
+}
+
+/* Repeat fires once per period, and cancel stops it. */
+static const char *REPEAT_SCRIPT =
+    "var beats = 0\n"
+    "var hr = -1\n"
+    "def tick()\n"
+    "  beats += 1\n"
+    "end\n"
+    "def setup()\n"
+    "  hr = timer_every(1000, tick)\n"
+    "end\n";
+
+void test_repeat_fires_per_period_and_cancel_stops_it(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 32, REPEAT_SCRIPT));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "hr"));
+
+    tick_at(999);
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "beats"));
+    tick_at(1000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
+    tick_at(1500);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "beats"));
+    tick_at(2000);
+    TEST_ASSERT_EQUAL_INT(2, berry_test_global_int(vm, "beats"));
+    tick_at(3000);
+    TEST_ASSERT_EQUAL_INT(3, berry_test_global_int(vm, "beats"));
+
+    TEST_ASSERT_EQUAL_INT(0, berry_test_run_source(vm, "timer_cancel(hr)\n"));
+    tick_at(4000);
+    tick_at(5000);
+    TEST_ASSERT_EQUAL_INT(3, berry_test_global_int(vm, "beats"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
+/* A callback may cancel itself; the sweep must not resurrect it. */
+void test_cancel_from_inside_callback(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 33,
+        "var beats = 0\n"
+        "var self_h = -1\n"
+        "def tick()\n"
+        "  beats += 1\n"
+        "  if beats == 2\n"
+        "    timer_cancel(self_h)\n"
+        "  end\n"
+        "end\n"
+        "def setup()\n"
+        "  self_h = timer_every(1000, tick)\n"
+        "end\n"));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "self_h"));
+
+    tick_at(1000);
+    tick_at(2000);
+    TEST_ASSERT_EQUAL_INT(2, berry_test_global_int(vm, "beats"));
+
+    tick_at(3000);
+    tick_at(4000);
+    TEST_ASSERT_EQUAL_INT(2, berry_test_global_int(vm, "beats"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
+/* A one-shot callback registering a new timer gets its own freed slot back. */
+void test_one_shot_callback_reuses_its_own_slot(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 34,
+        "var n = 0\n"
+        "var outer_h = -1\n"
+        "var inner_h = -99\n"
+        "def inner()\n"
+        "  n += 10\n"
+        "end\n"
+        "def outer()\n"
+        "  n += 1\n"
+        "  inner_h = timer_after(1000, inner)\n"
+        "end\n"
+        "def setup()\n"
+        "  outer_h = timer_after(1000, outer)\n"
+        "end\n"));
+
+    tick_at(1000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "n"));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "inner_h"));
+
+    tick_at(2000);
+    TEST_ASSERT_EQUAL_INT(11, berry_test_global_int(vm, "n"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
+/* Two timers due in the same tick both fire during that one call. */
+void test_two_timers_due_in_one_tick_both_fire(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 35,
+        "var a = 0\n"
+        "var b = 0\n"
+        "def da()\n"
+        "  a += 1\n"
+        "end\n"
+        "def db()\n"
+        "  b += 1\n"
+        "end\n"
+        "def setup()\n"
+        "  timer_after(1000, da)\n"
+        "  timer_every(1000, db)\n"
+        "end\n"));
+
+    tick_at(1000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "a"));
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "b"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
+/* Due-time comparison must be signed: a timer armed just before the 32-bit
+ * millisecond clock wraps is not due in the low numbers that follow. */
+void test_due_comparison_survives_clock_wrap(void)
+{
+    stub_set_now_ms(0xFFFFFF00u);   /* 256 ms before the wrap */
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 36,
+        "var w = 0\n"
+        "def wcb()\n"
+        "  w += 1\n"
+        "end\n"
+        "def setup()\n"
+        "  timer_every(500, wcb)\n"
+        "end\n"));
+
+    tick_at(200);                   /* unsigned: 200 - 244 looks huge */
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "w"));
+    tick_at(244);                   /* wrapped due time */
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "w"));
+    tick_at(300);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "w"));
+    tick_at(744);
+    TEST_ASSERT_EQUAL_INT(2, berry_test_global_int(vm, "w"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
+/* timer_every(0) is documented behaviour: period 0 means "one-shot" (see
+ * timer_entry_t.period_ms and the one_shot snapshot in berry_timer_tick), so
+ * the callback runs once and the slot is freed. It is a quirk worth a design
+ * decision, not a crash or a leak, so the test pins the current semantics. */
+void test_timer_every_zero_behaves_as_one_shot(void)
+{
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 37,
+        "var z = 0\n"
+        "def zcb()\n"
+        "  z += 1\n"
+        "end\n"
+        "def setup()\n"
+        "  timer_every(0, zcb)\n"
+        "end\n"));
+
+    tick_at(1000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "z"));
+    tick_at(2000);
+    tick_at(3000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "z"));
+    /* The slot came back, so an ordinary one-shot reuses it. */
+    TEST_ASSERT_EQUAL_INT(0, run_as_owner(37,
+        "var hz2 = timer_after(1000, zcb)\n"));
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "hz2"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
 /* The native platform links no test main of its own, so the suite provides
  * one, like the other tests-native suites. */
 int main(void)
@@ -273,5 +473,12 @@ int main(void)
     RUN_TEST(test_failed_calls_balance_stack);
     RUN_TEST(test_timer_table_holds_16_and_reuses_cancelled_slots);
     RUN_TEST(test_action_table_holds_32_and_cleanup_frees_slots);
+    RUN_TEST(test_one_shot_fires_once_and_frees_its_slot);
+    RUN_TEST(test_repeat_fires_per_period_and_cancel_stops_it);
+    RUN_TEST(test_cancel_from_inside_callback);
+    RUN_TEST(test_one_shot_callback_reuses_its_own_slot);
+    RUN_TEST(test_two_timers_due_in_one_tick_both_fire);
+    RUN_TEST(test_due_comparison_survives_clock_wrap);
+    RUN_TEST(test_timer_every_zero_behaves_as_one_shot);
     return UNITY_END();
 }
