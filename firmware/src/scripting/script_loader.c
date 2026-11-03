@@ -144,6 +144,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
     berry_set_current_script(s->script_id);
 
     /* Execute the script (defines its functions). */
+    int stack_base = be_top(vm);
     if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
         const char *msg = be_tostring(vm, -1);
         const char *etype = be_tostring(vm, -2);
@@ -156,7 +157,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
             snprintf(s->error, sizeof(s->error), "%.*s",
                      (int)(sizeof(s->error) - 1), strip_script_dir(msg));
         }
-        be_pop(vm, 1);
+        berry_stack_restore(vm, stack_base);
         s->errored = true;
         ESP_LOGE(TAG, "%s", s->error);
         berry_set_current_script(0);
@@ -164,7 +165,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
         free(code);
         return -1;
     }
-    be_pop(vm, 1);
+    berry_stack_restore(vm, stack_base);
     free(code);
 
     /* Capture setup/teardown into refs and clear the globals. This isolates

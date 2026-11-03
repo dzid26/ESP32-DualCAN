@@ -102,7 +102,8 @@ static int refs_alloc(bvm *vm, int fn_index)
     if (be_isnil(vm, -1)) {
         be_pop(vm, 1);
         be_newlist(vm);
-        be_setglobal(vm, ".refs");
+        be_setglobal(vm, ".refs");   /* leaves the list on the stack */
+        be_pop(vm, 1);
         be_getglobal(vm, ".refs");
     }
     be_pushvalue(vm, fn_index);
@@ -148,7 +149,8 @@ int berry_capture_global(bvm *vm, const char *global_name)
     int ref = refs_alloc(vm, -1);
     be_pop(vm, 1);
     be_pushnil(vm);
-    be_setglobal(vm, global_name);
+    be_setglobal(vm, global_name);   /* leaves the value on the stack */
+    be_pop(vm, 1);
     return ref;
 }
 
@@ -157,9 +159,19 @@ void berry_release_ref(bvm *vm, int ref)
     refs_free(vm, ref);
 }
 
+/* Restore the VM value stack to `base`, captured with be_top() before a call
+ * into Berry. Use at call boundaries; be_pop() for values you pushed. */
+void berry_stack_restore(bvm *vm, int base)
+{
+    int extra = be_top(vm) - base;
+    be_assert(extra >= 0);
+    if (extra > 0) be_pop(vm, extra);
+}
+
 int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size)
 {
     if (ref < 0) return -1;
+    int base = be_top(vm);
     if (!refs_push(vm, ref)) return -1;
     if (be_pcall(vm, 0) != 0) {
         const char *msg = be_tostring(vm, -1);
@@ -168,10 +180,10 @@ int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_
             snprintf(err_out, err_size, "%s", msg ? msg : "unknown error");
         if (type_out && type_size > 0)
             snprintf(type_out, type_size, "%s", type ? type : "error");
-        be_pop(vm, 2);
+        berry_stack_restore(vm, base);
         return -2;
     }
-    be_pop(vm, 2);
+    berry_stack_restore(vm, base);
     return 0;
 }
 
@@ -287,6 +299,7 @@ void berry_timer_tick(uint32_t now_ms)
             t->next_fire_ms = now_ms + t->period_ms;
         }
 
+        int base = be_top(s_vm);
         if (refs_push(s_vm, ref)) {
             int prev_ctx = script_ctx_enter(owner);
             int rc = be_pcall(s_vm, 0);
@@ -301,7 +314,7 @@ void berry_timer_tick(uint32_t now_ms)
                     s_timer_error_handler(owner, err_type, err_msg);
                 }
             }
-            be_pop(s_vm, 2);
+            berry_stack_restore(s_vm, base);
         }
 
         if (one_shot && ref >= 0) refs_free(s_vm, ref);
@@ -400,6 +413,7 @@ int berry_action_invoke(const char *name)
     /* The callback may re-register this action by name, replacing idx. */
     int ref   = s_actions[idx].ref;
     int owner = s_actions[idx].script_id;
+    int base  = be_top(s_vm);
     if (!refs_push(s_vm, ref)) return -1;
     int prev_ctx = script_ctx_enter(owner);
     int rc = be_pcall(s_vm, 0);
@@ -419,10 +433,10 @@ int berry_action_invoke(const char *name)
         } else {
             ESP_LOGE("scripts", "action '%s': %s", name, emsg);
         }
-        be_pop(s_vm, 2);
+        berry_stack_restore(s_vm, base);
         return -2;
     }
-    be_pop(s_vm, 2);
+    berry_stack_restore(s_vm, base);
     return 0;
 }
 

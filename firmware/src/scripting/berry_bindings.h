@@ -32,6 +32,10 @@ int  berry_current_script(void);
 /* Revoke every timer / action registered with this script_id. */
 void berry_cleanup_script(int script_id);
 
+/* Restore the VM value stack to a be_top() watermark captured before a call
+ * into Berry. */
+void berry_stack_restore(bvm *vm, int base);
+
 /* ---- Function ref helpers (used by script_loader) ---- */
 
 /* If a global of the given name is a function, store it in the refs list,
