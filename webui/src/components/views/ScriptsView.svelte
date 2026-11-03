@@ -5,6 +5,7 @@
   import type { ScriptInfo } from '../../transport/protocol';
   import { allExamples as examples } from '../../examples';
   import { preprocessScript, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
+  import type { PreprocessResult } from '../../lib/preprocessor';
   import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
@@ -170,6 +171,12 @@
     return Object.values(dbcStore.fullMessages).flat();
   }
 
+  function applyPreprocessResult(result: PreprocessResult): void {
+    preprocessedCode = result.code;
+    preprocessWarnings = result.warnings;
+    preprocessErrors = result.errors;
+  }
+
   async function save(): Promise<void> {
     const fn = normalizeScriptFilename(editorFilename.trim());
     if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
@@ -188,6 +195,7 @@
 
       // Then preprocess
       const result = preprocessScript(code, getFullMessages());
+      applyPreprocessResult(result);
       if (result.warnings.length > 0) {
         app.pushLog(`scripts: preprocessing warnings — ${result.warnings.join('; ')}`, 'warn', 'scripts');
       }
@@ -339,9 +347,7 @@
       const messages = getFullMessages();
       if (messages.length > 0) {
         const result = preprocessScript(code, messages);
-        preprocessedCode = result.code;
-        preprocessWarnings = result.warnings;
-        preprocessErrors = result.errors;
+        applyPreprocessResult(result);
       } else {
         preprocessedCode = '(no DBC loaded - pick your car)';
         preprocessWarnings = [];
