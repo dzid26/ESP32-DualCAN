@@ -131,6 +131,19 @@ test('falls back to a copy when hardlinking is unavailable', (t) => {
   assert.equal(fs.readFileSync(path.join(target, '00', 'aaa.o'), 'utf8'), 'one');
 });
 
+test('--copy copies even when hardlinks are available', (t) => {
+  const root = tempDir(t);
+  const source = makeCache(path.join(root, 'main'));
+  put(source, '00/aaa.o', 'one');
+  const target = path.join(root, 'worktree', 'firmware', '.cache');
+
+  const stats = seedCache({ source, target, copyOnly: true });
+
+  assert.equal(stats.linked, 0);
+  assert.equal(stats.copied, 1);
+  assert.equal(fs.statSync(path.join(target, '00', 'aaa.o')).nlink, 1);
+});
+
 test('a missing source cache is a no-op, not an error', (t) => {
   const root = tempDir(t);
   const target = path.join(root, 'worktree', 'firmware', '.cache');
@@ -212,6 +225,21 @@ test('dry-run does not create the worktree cache junction', (t) => {
   assert.equal(stats.wouldJunction, true);
   assert.equal(stats.junctioned, false);
   assert.equal(fs.existsSync(path.join(worktree, 'firmware', '.cache')), false);
+});
+
+test('a missing source cache leaves a new worktree untouched', (t) => {
+  const root = tempDir(t);
+  const main = path.join(root, 'main');
+  const worktree = path.join(root, 'wt');
+  fs.mkdirSync(path.join(worktree, 'firmware'), { recursive: true });
+  const admin = path.join(main, '.git', 'worktrees', 'wt');
+  fs.mkdirSync(admin, { recursive: true });
+
+  const stats = prepareWorktreeCache({ worktree, source: path.join(main, 'missing'), git: fakeGit(main, admin) });
+
+  assert.equal(stats.sourceMissing, true);
+  assert.equal(fs.existsSync(path.join(worktree, 'firmware', '.cache')), false);
+  assert.equal(fs.existsSync(path.join(admin, 'pio-cache')), false);
 });
 
 test('keeps an existing real cache in place and seeds into it', (t) => {
