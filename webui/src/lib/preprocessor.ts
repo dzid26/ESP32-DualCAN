@@ -7,9 +7,18 @@
  * Conversion rules:
  *   can_msg_get(bus, "msg")         → can_msg_get(bus, 0xID)
  *   can_msg_new("msg")              → can_msg_new(0xID, dlc)
- *   msg_sig_get(draft, "sig")    → msg_sig_get(draft, sb, len, be, signed, scale, offset)
+ *   msg_sig_get(draft, "sig")       → msg_sig_get(draft, sb, len, be, signed, scale, offset)
  *   msg_sig_set(draft, "sig", val)  → msg_sig_set(draft, sb, len, be, signed, scale, offset, val)
  * Missing signals/messages → raise("key_error", "...")
+ *
+ * Call matching is parenthesis-balanced, comment-aware and recursive, so
+ * DBC-aware calls compose: a msg_sig_get nested inside a msg_sig_set value
+ * (e.g. incrementing a counter field) is rewritten as a whole instead of being
+ * truncated by the outer match. Berry strings and comments (`#` and `#- … -#`)
+ * are skipped, and calls whose shape cannot be resolved are reported in
+ * errors[] with a runtime raise rather than passed through silently. Signal
+ * names that can only be resolved by picking the first of several matches are
+ * reported in warnings[] (non-fatal).
  */
 
 import type { Message, Signal } from '../dbc/parser';
@@ -18,6 +27,13 @@ import type { Message, Signal } from '../dbc/parser';
 // The firmware reports scripting_api_version in system.info; the web UI warns
 // before uploading a script when versions don't match.
 export const SCRIPTING_API_VERSION = 1;
+
+/** Result of preprocessing one script. */
+export interface PreprocessResult {
+  code: string;
+  errors: string[];
+  warnings: string[];
+}
 
 /* Build signal-decode/encode arg list from a Signal. */
 function sigMeta(s: Signal): string {
@@ -31,40 +47,132 @@ function sigMeta(s: Signal): string {
   ].join(', ');
 }
 
-/* ---- Replace-at helper (end-to-start offset-safe) ---- */
-
-function replaceAt(str: string, start: number, end: number, replacement: string): string {
-  return str.substring(0, start) + replacement + str.substring(end);
+/* Return the last index of a Berry comment starting at `i` (which points at `#`). */
+function skipComment(text: string, i: number): number {
+  if (text[i + 1] === '-') {
+    const end = text.indexOf('-#', i + 2);
+    return end < 0 ? text.length - 1 : end + 1;
+  }
+  const nl = text.indexOf('\n', i);
+  return nl < 0 ? text.length - 1 : nl - 1;
 }
 
-/* Check if a position in source falls on a Berry-commented line (starts with #). */
-function isCommented(source: string, pos: number): boolean {
-  const before = source.slice(0, pos);
-  const lastNewline = before.lastIndexOf('\n');
-  const line = lastNewline < 0 ? before : before.slice(lastNewline + 1);
-  return /^\s*#/.test(line);
+/* True when `pos` is executable code — not inside a string or comment. */
+function isInCode(source: string, pos: number): boolean {
+  let inString: string | null = null;
+  for (let i = 0; i <= pos; i++) {
+    const c = source[i];
+    if (inString) {
+      if (c === '\\') { i++; continue; }
+      if (c === inString) inString = null;
+      continue;
+    }
+    if (c === '"' || c === "'") { inString = c; continue; }
+    if (c === '#') {
+      const end = skipComment(source, i);
+      if (end >= pos) return false;
+      i = end;
+      continue;
+    }
+    if (i === pos) return true;
+  }
+  return false;
+}
+
+/* ---- Balanced call scanning ---- */
+
+/**
+ * Scan a call starting at its opening `(`, returning the matching `)` and the
+ * top-level argument slices. Nested (), [], {} and Berry strings/comments are
+ * skipped. Returns null when the parentheses are unbalanced.
+ */
+function scanArgs(text: string, open: number): { close: number; args: string[] } | null {
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let inString: string | null = null;
+  let start = open + 1;
+  const args: string[] = [];
+  for (let i = open; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (c === '\\') { i++; continue; }
+      if (c === inString) inString = null;
+      continue;
+    }
+    if (c === '"' || c === "'") { inString = c; continue; }
+    if (c === '#') { i = skipComment(text, i); continue; }
+    if (c === '(') parenDepth++;
+    else if (c === ')') {
+      parenDepth--;
+      if (parenDepth === 0) {
+        args.push(text.slice(start, i));
+        return { close: i, args };
+      }
+    } else if (c === '[' || c === '{') bracketDepth++;
+    else if (c === ']' || c === '}') bracketDepth--;
+    else if (c === ',' && parenDepth === 1 && bracketDepth === 0) {
+      args.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  return null;
+}
+
+type SingleString =
+  | { kind: 'literal'; value: string }
+  | { kind: 'code' }
+  | { kind: 'unterminated' };
+
+/* Classify an expression: exactly one plain string literal, other code, or an open quote. */
+function parseSingleString(expr: string): SingleString {
+  const t = expr.trim();
+  if (t.length === 0) return { kind: 'code' };
+  const quote = t[0];
+  if (quote !== '"' && quote !== "'") return { kind: 'code' };
+  let value = '';
+  let i = 1;
+  for (; i < t.length; i++) {
+    const c = t[i];
+    if (c === '\\') { value += t[++i] ?? ''; continue; }
+    if (c === quote) break;
+    value += c;
+  }
+  if (i >= t.length) return { kind: 'unterminated' };
+  if (t.slice(i + 1).trim() !== '') return { kind: 'code' };
+  return { kind: 'literal', value };
+}
+
+/* True when an expression starts with a string token but is not a single literal. */
+function startsWithString(expr: string): boolean {
+  const t = expr.trim();
+  return t.startsWith('"') || t.startsWith("'");
+}
+
+/* First plain string literal among a call's arguments, or null. */
+function messageNameFromArgs(args: string[]): string | null {
+  for (const arg of args) {
+    const literal = parseSingleString(arg);
+    if (literal.kind === 'literal') return literal.value;
+  }
+  return null;
 }
 
 /* ---- Track variable → message name mappings ---- */
-// Scans source for var X = can_msg_get(bus, "msg") / can_msg_new("msg")
-// assignments. Returns a map of variable name → set of message types it
-// was assigned from (may be >1, indicating a reused variable).
+// Scans source for var X = can_msg_get(...) / can_msg_new(...) assignments,
+// reusing the same call scanner as the rewriter. Returns a map of variable
+// name → set of message types it was assigned from (may be >1, indicating a
+// reused variable).
 export function trackVarToMsgs(source: string): Map<string, Set<string>> {
   const varToMsgs = new Map<string, Set<string>>();
-  const varGetRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_get\s*\(\s*\d+\s*,\s*"([^"]+)"\s*\)/g;
+  const assignmentRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*(can_msg_get|can_msg_new)\s*\(/g;
   let m: RegExpExecArray | null;
-  while ((m = varGetRe.exec(source)) !== null) {
-    if (isCommented(source, m.index)) continue;
+  while ((m = assignmentRe.exec(source)) !== null) {
+    if (!isInCode(source, m.index)) continue;
+    const call = scanArgs(source, m.index + m[0].length - 1);
+    if (!call) continue;
+    const msgName = messageNameFromArgs(call.args);
+    if (msgName === null) continue;
     const varName = m[1];
-    const msgName = m[2];
-    if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
-    varToMsgs.get(varName)!.add(msgName);
-  }
-  const varNewRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_new\s*\(\s*"([^"]+)"\s*(?:,\s*\d+\s*)?\)/g;
-  while ((m = varNewRe.exec(source)) !== null) {
-    if (isCommented(source, m.index)) continue;
-    const varName = m[1];
-    const msgName = m[2];
     if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
     varToMsgs.get(varName)!.add(msgName);
   }
@@ -88,197 +196,217 @@ export function buildVarToMsgMap(source: string): Map<string, string> {
 export function preprocessScript(
   sourceCode: string,
   messages: Message[]
-): { code: string; errors: string[] } {
+): PreprocessResult {
   const errors: string[] = [];
-  let code = sourceCode;
+  const warnings = new Set<string>();
 
-  const replacements: Array<{ start: number; end: number; replacement: string }> = [];
-  const missingMessages = new Set<string>();
-  const missingSignals = new Set<string>();
-
-  function findSigInMsg(msgName: string, sigName: string): { msg: Message; sig: Signal; idx: number } | null {
-    for (const msg of messages) {
-      if (msg.name === msgName) {
-        for (let i = 0; i < msg.signals.length; i++) {
-          if (msg.signals[i].name === sigName) {
-            return { msg, sig: msg.signals[i], idx: i };
-          }
-        }
-        return null;
-      }
-    }
-    return null;
+  function fail(message: string): string {
+    errors.push(message);
+    return `raise("key_error", "${message.replace(/"/g, '\\"')}")`;
   }
 
-  function findMsgId(msgName: string): number | null {
-    for (const msg of messages) {
-      if (msg.name === msgName) return msg.id;
-    }
-    return null;
+  function warn(message: string): void {
+    warnings.add(message);
   }
 
-  function findSignalByName(sigName: string): Signal | null {
-    for (const msg of messages) {
-      for (const sig of msg.signals) {
-        if (sig.name === sigName) return sig;
-      }
+  const msgByName = new Map<string, Message>();
+  const msgsBySignal = new Map<string, Array<{ msg: Message; sig: Signal }>>();
+  for (const msg of messages) {
+    if (!msgByName.has(msg.name)) msgByName.set(msg.name, msg);
+    for (const sig of msg.signals) {
+      const list = msgsBySignal.get(sig.name);
+      if (list) list.push({ msg, sig });
+      else msgsBySignal.set(sig.name, [{ msg, sig }]);
     }
-    return null;
   }
 
-  function findMsgContainingSignal(sigName: string): Message | null {
-    for (const msg of messages) {
-      for (const sig of msg.signals) {
-        if (sig.name === sigName) return msg;
-      }
-    }
-    return null;
+  function findSigInMsg(msgName: string, sigName: string): Signal | null {
+    return msgByName.get(msgName)?.signals.find(s => s.name === sigName) ?? null;
+  }
+
+  function findMsg(msgName: string): Message | null {
+    return msgByName.get(msgName) ?? null;
+  }
+
+  /* All message entries that contain a signal of this name. */
+  function signalMatches(sigName: string): Array<{ msg: Message; sig: Signal }> {
+    return msgsBySignal.get(sigName) ?? [];
   }
 
   const varToMsgs = trackVarToMsgs(sourceCode);
+
+  /* The message a draft expression comes from, when it can be determined. */
+  function draftMessageName(draftExpr: string): string | null {
+    const expr = draftExpr.trim();
+    if (/^\w+$/.test(expr)) {
+      const names = varToMsgs.get(expr);
+      return names && names.size === 1 ? [...names][0] : null;
+    }
+    const call = /^(can_msg_get|can_msg_new)\s*\(/.exec(expr);
+    if (!call) return null;
+    const scanned = scanArgs(expr, call[0].length - 1);
+    if (!scanned || scanned.close !== expr.length - 1) return null;
+    return messageNameFromArgs(scanned.args);
+  }
+
+  type ResolveResult =
+    | { ok: true; sig: Signal; warning: string | null }
+    | { ok: false; error: string };
 
   function resolveSignalInDraft(
     draftExpr: string,
     sigName: string,
     context: string
-  ): { sig: Signal | null; error: string | null } {
-    const isSimpleVar = /^\w+$/.test(draftExpr);
-    const msgNames = isSimpleVar ? varToMsgs.get(draftExpr) : undefined;
-    const uniqueMsgName = msgNames && msgNames.size === 1 ? msgNames.values().next().value : null;
+  ): ResolveResult {
+    const ownerName = draftMessageName(draftExpr);
 
-    if (uniqueMsgName) {
-      // We know exactly which message this variable belongs to
-      const found = findSigInMsg(uniqueMsgName, sigName);
-      if (found) return { sig: found.sig, error: null };
+    if (ownerName) {
+      const sig = findSigInMsg(ownerName, sigName);
+      if (sig) return { ok: true, sig, warning: null };
 
-      // Signal not found in expected message — check if it belongs elsewhere
-      const owner = findMsgContainingSignal(sigName);
-      if (owner && owner.name !== uniqueMsgName) {
+      // Signal not in the owning message — report where it does live.
+      const owners = [...new Set(signalMatches(sigName).map(m => m.msg.name))]
+        .filter(n => n !== ownerName);
+      if (owners.length === 1) {
         return {
-          sig: null,
-          error: `${context}: signal '${sigName}' belongs to '${owner.name}', not '${uniqueMsgName}'`
+          ok: false,
+          error: `${context}: signal '${sigName}' belongs to '${owners[0]}', not '${ownerName}'`,
+        };
+      }
+      if (owners.length > 1) {
+        return {
+          ok: false,
+          error: `${context}: signal '${sigName}' is not in message '${ownerName}', but is present in multiple messages (${owners.join(', ')})`,
         };
       }
       return {
-        sig: null,
-        error: `${context}: signal '${sigName}' not found in message '${uniqueMsgName}'`
+        ok: false,
+        error: `${context}: signal '${sigName}' not found in message '${ownerName}'`,
       };
     }
 
-    // Untracked or multi-assigned variable — fall back to global search
-    const sig = findSignalByName(sigName);
-    if (!sig) return { sig: null, error: `${context}: signal '${sigName}' not found` };
-    return { sig, error: null };
+    // Untracked or multi-assigned variable — fall back to global search.
+    const matches = signalMatches(sigName);
+    if (matches.length === 0) {
+      return { ok: false, error: `${context}: signal '${sigName}' not found` };
+    }
+    const owners = [...new Set(matches.map(m => m.msg.name))];
+    const warning = owners.length > 1
+      ? `${context}: signal '${sigName}' exists in multiple messages (${owners.join(', ')}); using '${matches[0].msg.name}' — assign the draft via can_msg_get/can_msg_new to disambiguate`
+      : null;
+    return { ok: true, sig: matches[0].sig, warning };
   }
 
-  /* ---- Pattern 1: can_msg_get(bus, "msg") ---- */
-  // Bus is always first and required. Rewrites to can_msg_get(bus, 0xID)
-  // which returns a draft map {id, data, dlc} via the C binding.
-  const canMsgGetPattern = /can_msg_get\s*\(\s*(\d+)\s*,\s*"([^"]+)"\s*\)/g;
-  let match: RegExpExecArray | null;
-  while ((match = canMsgGetPattern.exec(code)) !== null) {
-    if (isCommented(code, match.index)) continue;
-    const bus = match[1];
-    const msgName = match[2];
-    const fullMatch = match[0];
-    const matchStart = match.index;
-    const matchEnd = matchStart + fullMatch.length;
+  function rewriteSignalCall(
+    kind: 'msg_sig_get' | 'msg_sig_set',
+    args: string[],
+    value = ''
+  ): string | null {
+    const expected = kind === 'msg_sig_get' ? 2 : 3;
+    const inline = kind === 'msg_sig_get' ? 7 : 8;
+    if (args.length === inline) return null;
+    if (args.length !== expected) {
+      return fail(`${kind}: expected ${expected} arguments (or ${inline} for the inline form)`);
+    }
+    const signal = parseSingleString(args[1]);
+    if (signal.kind === 'unterminated') return fail(`${kind}: unterminated signal name`);
+    if (signal.kind === 'code') {
+      return fail(`${kind}: signal name must be a compile-time string literal`);
+    }
+    const draft = (args[0] ?? '').trim();
+    const resolved = resolveSignalInDraft(draft, signal.value, kind);
+    if (!resolved.ok) return fail(resolved.error);
+    if (resolved.warning) warn(resolved.warning);
+    const renderedDraft = rewrite(draft);
+    return kind === 'msg_sig_get'
+      ? `msg_sig_get(${renderedDraft}, ${sigMeta(resolved.sig)})`
+      : `msg_sig_set(${renderedDraft}, ${sigMeta(resolved.sig)}, ${rewrite(value)})`;
+  }
 
-    const msgId = findMsgId(msgName);
-    if (msgId === null) {
-      missingMessages.add(msgName);
-      errors.push(`can_msg_get: message '${msgName}' not found`);
-      const replacement = `raise("key_error", "can_msg_get: message '${msgName}' not found")`;
-      replacements.push({ start: matchStart, end: matchEnd, replacement });
-      continue;
+  /* ---- Rewrite DBC-aware calls, parenthesised and recursive ---- */
+  // Scans an expression/script and rewrites the outermost DBC-aware calls,
+  // recursing into their arguments so nested calls are inlined too. Because
+  // a call is consumed up to its balanced close paren, rewrites can never
+  // overlap.
+  function rewrite(text: string): string {
+    const re = /\b(can_msg_get|can_msg_new|msg_sig_get|msg_sig_set)\s*\(/g;
+    let out = '';
+    let consumed = 0;
+    let m: RegExpExecArray | null;
+
+    while ((m = re.exec(text)) !== null) {
+      const name = m[1];
+      const start = m.index;
+      const open = start + m[0].length - 1;
+      if (!isInCode(text, start)) continue;
+
+      const call = scanArgs(text, open);
+      if (!call) {
+        fail(`${name}: unbalanced parentheses`);
+        continue; // keep scanning: one bad call must not disable the rest
+      }
+
+      const { close, args } = call;
+      const draft = (args[0] ?? '').trim();
+      const value = (args[2] ?? '').trimStart();
+      let replacement: string | null = null;
+
+      if (name === 'can_msg_get') {
+        if (args.length !== 2) {
+          replacement = fail('can_msg_get: expected 2 arguments');
+        } else {
+          const msgName = parseSingleString(args[1]);
+          if (msgName.kind === 'literal') {
+            const msg = findMsg(msgName.value);
+            replacement = msg === null
+              ? fail(`can_msg_get: message '${msgName.value}' not found`)
+              : `can_msg_get(${rewrite(draft)}, 0x${msg.id.toString(16)})`;
+          } else if (msgName.kind === 'unterminated') {
+            replacement = fail('can_msg_get: unterminated message name');
+          } else if (startsWithString(args[1])) {
+            replacement = fail('can_msg_get: message name must be a compile-time string literal');
+          } else if (parseSingleString(args[0]).kind === 'literal') {
+            replacement = fail('can_msg_get: message name must be the second argument (bus first)');
+          }
+        }
+      } else if (name === 'can_msg_new') {
+        if (args.length > 2) {
+          replacement = fail('can_msg_new: expected 1 or 2 arguments');
+        } else {
+          let msgName: string | null = null;
+          let badLiteral = false;
+          for (const arg of args) {
+            const literal = parseSingleString(arg);
+            if (literal.kind === 'literal') msgName ??= literal.value;
+            else if (literal.kind === 'unterminated' || startsWithString(arg)) badLiteral = true;
+          }
+          if (badLiteral) {
+            replacement = fail('can_msg_new: message name must be a compile-time string literal');
+          } else if (msgName !== null) {
+            const msg = findMsg(msgName);
+            replacement = msg === null
+              ? fail(`can_msg_new: message '${msgName}' not found`)
+              : `can_msg_new(0x${msg.id.toString(16)}, ${msg.dlc})`;
+          }
+        }
+      } else if (name === 'msg_sig_get') {
+        replacement = rewriteSignalCall('msg_sig_get', args);
+      } else if (name === 'msg_sig_set') {
+        replacement = rewriteSignalCall('msg_sig_set', args, value);
+      }
+
+      if (replacement === null) continue; // leave unrecognised calls for inner rewrites
+      out += text.slice(consumed, start);
+      out += replacement;
+      consumed = close + 1;
+      re.lastIndex = close + 1;
     }
 
-    const replacement = `can_msg_get(${bus}, 0x${msgId.toString(16)})`;
-    replacements.push({ start: matchStart, end: matchEnd, replacement });
+    out += text.slice(consumed);
+    return out;
   }
 
-  /* ---- Pattern 1b: can_msg_new("msg" [, bus]) ---- */
-  // Resolves message name to ID + DLC; emits can_msg_new(0xID, dlc)
-  // which returns a draft map {id, data, dlc} with zeroed data.
-  const canMsgNewNamePattern = /can_msg_new\s*\(\s*"([^"]+)"\s*((?:,\s*\d+\s*)?)\)/g;
-  while ((match = canMsgNewNamePattern.exec(code)) !== null) {
-    if (isCommented(code, match.index)) continue;
-    const msgName = match[1];
-    const fullMatch = match[0];
-    const matchStart = match.index;
-    const matchEnd = matchStart + fullMatch.length;
+  const code = rewrite(sourceCode);
 
-    const msgId = findMsgId(msgName);
-    if (msgId === null) {
-      missingMessages.add(msgName);
-      errors.push(`can_msg_new: message '${msgName}' not found`);
-      const replacement = `raise("key_error", "can_msg_new: message '${msgName}' not found")`;
-      replacements.push({ start: matchStart, end: matchEnd, replacement });
-      continue;
-    }
-
-    const msg = messages.find(m => m.id === msgId)!;
-    const replacement = `can_msg_new(0x${msgId.toString(16)}, ${msg.dlc})`;
-    replacements.push({ start: matchStart, end: matchEnd, replacement });
-  }
-
-  /* ---- Pattern 2: msg_sig_get(draft, "sig") -> msg_sig_get(draft, sb, len, be, signed, scale, offset) ---- */
-  // Decodes a DBC signal from a message draft. The native C binding reads
-  // draft.data internally and handles scale, offset, signedness, byte order.
-  const canSigGetPattern = /msg_sig_get\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*\)/g;
-  while ((match = canSigGetPattern.exec(code)) !== null) {
-    if (isCommented(code, match.index)) continue;
-    const draftExpr = match[1].trim();
-    const sigName = match[2];
-    const fullMatch = match[0];
-    const matchStart = match.index;
-    const matchEnd = matchStart + fullMatch.length;
-
-    const resolved = resolveSignalInDraft(draftExpr, sigName, 'msg_sig_get');
-    if (!resolved.sig) {
-      missingSignals.add(sigName);
-      errors.push(resolved.error!);
-      const replacement = `raise("key_error", "${resolved.error!.replace(/"/g, '\\"')}")`;
-      replacements.push({ start: matchStart, end: matchEnd, replacement });
-      continue;
-    }
-
-    const replacement = `msg_sig_get(${draftExpr}, ${sigMeta(resolved.sig)})`;
-    replacements.push({ start: matchStart, end: matchEnd, replacement });
-  }
-
-  /* ---- Pattern 4: msg_sig_set(draft, "sig", value) -> msg_sig_set(draft, sb, len, be, signed, scale, offset, val) ---- */
-  // Encodes a physical value into a message draft. The native C binding
-  // writes draft.data in-place and handles scale, offset, signedness, byte order.
-  const canMsgSetPattern =
-    /msg_sig_set\s*\(\s*([^,]+)\s*,\s*"([^"]+)"\s*,\s*([^)]+)\)/g;
-  while ((match = canMsgSetPattern.exec(code)) !== null) {
-    if (isCommented(code, match.index)) continue;
-    const draftExpr = match[1].trim();
-    const sigName = match[2];
-    const valueExpr = match[3].trim();
-    const fullMatch = match[0];
-    const matchStart = match.index;
-    const matchEnd = matchStart + fullMatch.length;
-
-    const resolved = resolveSignalInDraft(draftExpr, sigName, 'msg_sig_set');
-    if (!resolved.sig) {
-      missingSignals.add(sigName);
-      errors.push(resolved.error!);
-      const replacement = `raise("key_error", "${resolved.error!.replace(/"/g, '\\"')}")`;
-      replacements.push({ start: matchStart, end: matchEnd, replacement });
-      continue;
-    }
-
-    const replacement = `msg_sig_set(${draftExpr}, ${sigMeta(resolved.sig)}, ${valueExpr})`;
-    replacements.push({ start: matchStart, end: matchEnd, replacement });
-  }
-
-  /* ---- Apply replacements end-to-start ---- */
-  replacements.sort((a, b) => b.start - a.start);
-  for (const r of replacements) {
-    code = replaceAt(code, r.start, r.end, r.replacement);
-  }
-
-  return { code, errors };
+  return { code, errors, warnings: [...warnings] };
 }

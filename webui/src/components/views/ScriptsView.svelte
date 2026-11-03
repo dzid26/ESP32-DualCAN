@@ -5,6 +5,7 @@
   import type { ScriptInfo } from '../../transport/protocol';
   import { allExamples as examples } from '../../examples';
   import { preprocessScript, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
+  import type { PreprocessResult } from '../../lib/preprocessor';
   import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
@@ -40,6 +41,8 @@
   let showPreprocessed = $state(false);
   let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
+  let preprocessWarnings = $state<string[]>([]);
+  let preprocessErrors = $state<string[]>([]);
   let deviceBepCode = $state<string | null>(null);
   let skipPreprocessedEffect = $state(false);
   let editorPaneEl = $state<HTMLDivElement | undefined>();
@@ -137,6 +140,8 @@
     savedCode = '';
     deviceBepCode = null;
     preprocessedCode = '';
+    preprocessWarnings = [];
+    preprocessErrors = [];
     selFn = filename;
     editorFilename = filename;
     app.setLastScriptFilename(filename);
@@ -166,6 +171,12 @@
     return Object.values(dbcStore.fullMessages).flat();
   }
 
+  function applyPreprocessResult(result: PreprocessResult): void {
+    preprocessedCode = result.code;
+    preprocessWarnings = result.warnings;
+    preprocessErrors = result.errors;
+  }
+
   async function save(): Promise<void> {
     const fn = normalizeScriptFilename(editorFilename.trim());
     if (!fn) { app.pushLog('scripts: filename required', 'error', 'scripts'); return; }
@@ -184,6 +195,10 @@
 
       // Then preprocess
       const result = preprocessScript(code, getFullMessages());
+      applyPreprocessResult(result);
+      if (result.warnings.length > 0) {
+        app.pushLog(`scripts: preprocessing warnings — ${result.warnings.join('; ')}`, 'warn', 'scripts');
+      }
       if (result.errors.length > 0) {
         const errMsg = result.errors.join('; ');
         app.pushLog(`scripts: preprocessing errors — ${errMsg}`, 'error', 'scripts');
@@ -325,14 +340,18 @@
     } else if (showPreprocessed && canShowInstalled) {
       // Installed tab: preprocessedCode already set by loadScript / error handler
       preprocessedCode = deviceBepCode ?? '(no preprocessed file on device)';
+      preprocessWarnings = [];
+      preprocessErrors = [];
     } else if (showPreprocessed) {
       // Preview tab: preprocess client-side
       const messages = getFullMessages();
       if (messages.length > 0) {
         const result = preprocessScript(code, messages);
-        preprocessedCode = result.code;
+        applyPreprocessResult(result);
       } else {
         preprocessedCode = '(no DBC loaded - pick your car)';
+        preprocessWarnings = [];
+        preprocessErrors = [];
       }
     }
   });
@@ -622,9 +641,25 @@
       </div>
 
       <div style="flex: 1; min-height: 0; min-width: 0; display: flex">
-        <div bind:this={editorPaneEl} class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
-          <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
-          <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>
+        <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;flex-direction:column">
+          {#if preprocessErrors.length > 0 || preprocessWarnings.length > 0}
+            <div
+              class="mono preprocess-banner"
+              class:preprocess-banner--error={preprocessErrors.length > 0}
+              class:preprocess-banner--warn={preprocessErrors.length === 0}
+              title={[...preprocessErrors, ...preprocessWarnings].join('\n')}
+            >
+              {#if preprocessErrors.length > 0}
+                ⚠ {preprocessErrors.length} preprocessing error{preprocessErrors.length > 1 ? 's' : ''}: {preprocessErrors.join('; ')}
+              {:else}
+                ⚠ {preprocessWarnings.length} preprocessing warning{preprocessWarnings.length > 1 ? 's' : ''}: {preprocessWarnings.join('; ')}
+              {/if}
+            </div>
+          {/if}
+          <div bind:this={editorPaneEl} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
+            <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
+            <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>
+          </div>
         </div>
         <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} bind:cursorLine={sourceCursorLine} />
@@ -798,5 +833,24 @@
     font-family: var(--dc-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.1em;
+  }
+  .preprocess-banner {
+    flex-shrink: 0;
+    padding: 3px 8px;
+    font-size: 10px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preprocess-banner--warn {
+    color: var(--dc-warn);
+    background: var(--dc-warn-tint);
+    border-bottom: 1px solid var(--dc-warn);
+  }
+  .preprocess-banner--error {
+    color: var(--dc-err-text);
+    background: var(--dc-err-bg);
+    border-bottom: 1px solid var(--dc-err-border);
   }
 </style>
