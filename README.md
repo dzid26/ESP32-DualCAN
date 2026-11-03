@@ -154,3 +154,6 @@ npm run dev   # open http://localhost:5173
 ```
 
 Requires [Node.js](https://nodejs.org/).
+
+In a git worktree, `npm test` needs no install and `check`/`dev`/`build` install
+deps on their first run — see [webui/README.md — Git worktrees](webui/README.md#git-worktrees).

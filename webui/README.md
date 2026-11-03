@@ -14,6 +14,20 @@ npm run dev        # http://localhost:5173
 
 Requires Node.js 22+ (CI pins 22).
 
+### Git worktrees
+
+`webui/node_modules` is gitignored and not shared between worktrees, but a fresh
+worktree needs no manual setup:
+
+- `npm test` needs no install — the mocked tier imports no packages.
+- `npm run check`, `npm run dev`, `npm run host` and `npm run build` install
+  dependencies on their first run (`npm ci`, ~16 s and 100 MB per worktree), then
+  do nothing on later runs.
+
+If an install is interrupted, `npm ci` in `webui/` fixes it. Do not point
+`node_modules` at another checkout with a junction: `npm ci` deletes packages one
+by one, so it walks through the link and deletes files in that checkout.
+
 ## Scripts
 
 | Script | What it does |
@@ -23,8 +37,8 @@ Requires Node.js 22+ (CI pins 22).
 | `npm run tunnel` | Exposes port 5173 publicly with [tunnelmole](https://github.com/robbie-cahill/tunnelmole-client). Not a dependency — install it first (`npm i -g tunnelmole`). |
 | `npm run build` | Production build into `webui/dist/`. |
 | `npm run preview` | Serves the built `dist/` locally. |
-| `npm run check` | `svelte-check` type check (`tsconfig.app.json`). |
-| `npm test` | Mocked BLE tier — `node --test tests/*.test.ts`, no browser, no hardware. |
+| `npm run check` | `svelte-check` type check (`tsconfig.app.json`). Installs deps first in a fresh worktree. |
+| `npm test` | Mocked BLE tier — `node --test tests/*.test.ts`, no browser, no hardware, no `node_modules`. |
 | `npm run test:ble:real` | Real-hardware Web Bluetooth tier (headful Playwright). |
 | `npm run test:ble:real:install` | Forced download of Playwright's Chromium (normally automatic, see below). |
 
