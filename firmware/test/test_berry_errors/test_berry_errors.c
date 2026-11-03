@@ -155,6 +155,51 @@ void test_one_shot_from_callback_error_reports_owner_and_frees_slot(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
+/* ---- P8 probe: BE_EXIT in a callback ------------------------------------ */
+/* os.exit()/sys.exit() are compiled out in this configuration (berry_conf.h
+ * sets BE_USE_OS_MODULE and BE_USE_SYS_MODULE to 0), but any native binding
+ * may call be_exit(), so berry_timer_tick()'s BE_EXIT read is still reachable.
+ * be_pcall() copies one value to the stack for BE_EXIT (be_exec.c
+ * copy_exception), while the tick reads -2/-1 like an exception pair.
+ *
+ * Confirmed defect: the handler receives the callback object as the "type"
+ * ("<function: 0x...>") because -2 is the slot below the single exit status.
+ * Bug session: ses_e5de7d818ffexLysa6KUGVbQ75 (main repo, agent build).
+ * Remove the TEST_IGNORE when that fix lands and rerun this file. */
+static int l_test_exit(bvm *vm)
+{
+    be_exit(vm, 3);
+    be_return_nil(vm);
+}
+
+void test_timer_callback_exit_reports_an_error_not_stack_garbage(void)
+{
+    /* B2 ses_e5de7d818ffexLysa6KUGVbQ75: BE_EXIT reads the slot below the status */
+    TEST_IGNORE_MESSAGE("B2 ses_e5de7d818ffexLysa6KUGVbQ75: handler got '<function: 0x...>'");
+
+    be_regfunc(vm, "test_exit", l_test_exit);
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 43,
+        "var exits = 0\n"
+        "def dodie()\n"
+        "  exits += 1\n"
+        "  test_exit()\n"
+        "end\n"
+        "def setup()\n"
+        "  timer_every(1000, dodie)\n"
+        "end\n"));
+
+    tick_at(1000);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "exits"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+
+    /* Whatever contract the fix picks, a handler call must not describe the
+     * callback object as the error type, and the owner stays the entry's. */
+    if (g_calls > 0) {
+        TEST_ASSERT_EQUAL_INT(43, g_owner);
+        TEST_ASSERT_NULL(strstr(g_type, "<function"));
+    }
+}
+
 /* The native platform links no test main of its own, so the suite provides
  * one, like the other tests-native suites. */
 int main(void)
@@ -162,5 +207,6 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_repeat_timer_error_reports_owner_and_removes_entry);
     RUN_TEST(test_one_shot_from_callback_error_reports_owner_and_frees_slot);
+    RUN_TEST(test_timer_callback_exit_reports_an_error_not_stack_garbage);
     return UNITY_END();
 }

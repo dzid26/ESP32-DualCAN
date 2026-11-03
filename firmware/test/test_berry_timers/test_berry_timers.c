@@ -463,6 +463,39 @@ void test_timer_every_zero_behaves_as_one_shot(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
+/* ---- P7 probe: .refs growth on register/cancel churn -------------------- */
+/* refs_alloc() appends and refs_free() only nils the hole, so every
+ * register/cancel cycle grows .refs by one slot. Confirmed defect, filed as a
+ * firmware bug; the body below is the repro and stays as-is.
+ * Bug session: ses_e5ded8266ffeF7JEMIeF4Y4HJ6 (main repo, agent build).
+ * Remove the TEST_IGNORE when that fix lands and rerun this file. */
+void test_refs_do_not_grow_on_register_cancel_churn(void)
+{
+    /* 20 churn cycles grew .refs from 2 to 22 entries: the list is append-only. */
+    TEST_IGNORE_MESSAGE("B1 ses_e5ded8266ffeF7JEMIeF4Y4HJ6: .refs never reuses freed slots");
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 38,
+        "def cb()\n"
+        "end\n"
+        "def churn(n)\n"
+        "  var i = 0\n"
+        "  while i < n\n"
+        "    var h = timer_after(1000, cb)\n"
+        "    timer_cancel(h)\n"
+        "    i += 1\n"
+        "  end\n"
+        "end\n"
+        "def setup()\n"
+        "  churn(1)\n"     /* warm up: creates .refs */
+        "end\n"));
+
+    int len_before = refs_len();
+    int live_before = refs_live();
+    TEST_ASSERT_EQUAL_INT(0, run_as_owner(38, "churn(20)\n"));
+    TEST_ASSERT_EQUAL_INT(live_before, refs_live());
+    TEST_ASSERT_EQUAL_INT(len_before, refs_len());
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
 /* The native platform links no test main of its own, so the suite provides
  * one, like the other tests-native suites. */
 int main(void)
@@ -480,5 +513,6 @@ int main(void)
     RUN_TEST(test_two_timers_due_in_one_tick_both_fire);
     RUN_TEST(test_due_comparison_survives_clock_wrap);
     RUN_TEST(test_timer_every_zero_behaves_as_one_shot);
+    RUN_TEST(test_refs_do_not_grow_on_register_cancel_churn);
     return UNITY_END();
 }
