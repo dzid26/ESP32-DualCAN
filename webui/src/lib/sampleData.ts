@@ -44,23 +44,6 @@ export type Script = {
 
 export const SAMPLE_SCRIPTS: Script[] = [
   {
-    id: 'win', name: 'Window drop on long handle pull', bus: 0, enabled: true, err: null,
-    code: `# @name Window drop on long handle pull
-# @bus 0
-
-def setup()
-  can.on("DriverDoorHandle", on_handle)
-end
-
-def on_handle(sig)
-  if sig.value == 1 && sig.age_ms > 2000
-    var msg = can.message("VCLEFT_windowSwitch")
-    msg.set("window_cmd", "down")
-    msg.send()
-  end
-end`
-  },
-  {
     id: 'tm', name: 'Track mode on full throttle', bus: 0, enabled: false, err: null,
     code: `# @bus 0
 def setup()

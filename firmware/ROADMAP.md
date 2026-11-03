@@ -67,7 +67,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design this plan implements.
    - Keep latest rx bytes per known message id.
    - `can.message(name)` returns a draft; `.set()` modifies bits for one signal; `.send()` emits with auto checksum/counter (name-suffix based, Tesla algorithm).
 3. **Berry bindings for decoded signals**:
-   - `can.signal(name [, bus])`, `can.on(name, fn [, bus])`.
+   - `can.signal(name [, bus])`.
    - `can.message(name [, bus]).set().get().send()`.
    - `can.tesla_checksum(...)` helper.
 4. **LittleFS script loader**:

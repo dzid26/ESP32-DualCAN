@@ -196,7 +196,7 @@ end
 
 The framework calls `setup()` when the script is enabled and `teardown()` when disabled. Handler unregistration is automatic based on what `setup()` registered (each registration is tagged with the current script id and revoked on disable).
 
-**Scripts are purely reactive.** There is no `loop()` and no implicit tick. Periodic behavior uses `timer.every(ms, fn)`. Event-driven behavior uses `can.on(signal, fn)`. On-demand behavior uses Actions (§7.8).
+**Scripts are purely reactive.** There is no `loop()` and no implicit tick. Periodic behavior uses `timer.every(ms, fn)`. On-demand behavior uses Actions (§7.8).
 
 Shared helpers go in `/scripts/lib/*.be`, imported with `import lib.helper`.
 
@@ -266,7 +266,7 @@ def setup()
 end
 ```
 
-Actions are revoked when their script is disabled (same lifecycle as `can.on`).
+Actions are revoked when their script is disabled.
 
 ### 7.9 Scripting API reference (initial surface)
 
@@ -276,9 +276,6 @@ can.signal(name [, bus])            # -> Signal
   .value                            # current decoded value
   .prev                             # previous value
   .age_ms                           # ms since last rx
-
-can.on(name, fn [, bus])            # fn(sig) called when value changes
-                                    # use sig.prev inside fn for edge detection
 
 # ---- Messages (encode + send) ----
 can.message(name [, bus])           # -> Message (a draft from latest rx mirror)
