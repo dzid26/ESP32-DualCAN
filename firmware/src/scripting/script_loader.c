@@ -140,10 +140,12 @@ int script_loader_enable(script_loader_t *loader, int idx)
     bvm *vm = loader->vm;
 
     /* Tag every binding registration during load + setup with this id. */
+    int prev_ctx = berry_current_script();
     s->script_id = s_next_script_id++;
     berry_set_current_script(s->script_id);
 
     /* Execute the script (defines its functions). */
+    int stack_base = be_top(vm);
     if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
         const char *msg = be_tostring(vm, -1);
         const char *etype = be_tostring(vm, -2);
@@ -156,15 +158,15 @@ int script_loader_enable(script_loader_t *loader, int idx)
             snprintf(s->error, sizeof(s->error), "%.*s",
                      (int)(sizeof(s->error) - 1), strip_script_dir(msg));
         }
-        be_pop(vm, 1);
+        berry_stack_restore(vm, stack_base);
         s->errored = true;
         ESP_LOGE(TAG, "%s", s->error);
-        berry_set_current_script(0);
+        berry_set_current_script(prev_ctx);
         berry_cleanup_script(s->script_id);
         free(code);
         return -1;
     }
-    be_pop(vm, 1);
+    berry_stack_restore(vm, stack_base);
     free(code);
 
     /* Capture setup/teardown into refs and clear the globals. This isolates
@@ -202,7 +204,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
                 snprintf(s->error, sizeof(s->error), "%s", buf);
             }
             s->errored = true;
-            berry_set_current_script(0);
+            berry_set_current_script(prev_ctx);
             berry_release_ref(vm, s->setup_ref);
             berry_release_ref(vm, s->teardown_ref);
             s->setup_ref = -1;
@@ -212,7 +214,7 @@ int script_loader_enable(script_loader_t *loader, int idx)
         }
     }
 
-    berry_set_current_script(0);
+    berry_set_current_script(prev_ctx);
     s->loaded = true;
     s->enabled = true;
     s->errored = false;
@@ -228,17 +230,19 @@ int script_loader_disable(script_loader_t *loader, int idx)
     bvm *vm = loader->vm;
 
     /* Call teardown via captured ref (any new registrations from teardown
-     * still get tagged with this script's id so cleanup catches them). */
+     * still get tagged with this script's id so cleanup catches them).
+     * disable() can run inside a tick, so restore the caller's context. */
+    int prev_ctx = berry_current_script();
     berry_set_current_script(s->script_id);
     if (s->teardown_ref >= 0) berry_call_ref(vm, s->teardown_ref, NULL, 0, NULL, 0);
 
-    /* Revoke every can.on / timer / action tagged to this script. */
+    /* Revoke every timer / action tagged to this script. */
     berry_cleanup_script(s->script_id);
     berry_release_ref(vm, s->setup_ref);
     berry_release_ref(vm, s->teardown_ref);
     s->setup_ref = -1;
     s->teardown_ref = -1;
-    berry_set_current_script(0);
+    berry_set_current_script(prev_ctx);
 
     s->loaded = false;
     s->enabled = false;

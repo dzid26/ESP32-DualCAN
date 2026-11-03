@@ -11,6 +11,13 @@
 
 var prev_flash = 0
 
+def horn_off()
+  var off = can_msg_new("UI_vehicleControl3")
+  msg_sig_set(off, "UI_shortHornRequest", 0)
+  print("  horn off")
+  can_msg_send(0, off)
+end
+
 def poll()
   var msg = can_msg_get(0, "UI_vehicleControl3")
   if msg == nil
@@ -25,14 +32,13 @@ def poll()
     print("light flash (" .. str(flash) .. ") → short horn beep")
     can_msg_send(0, override)
 
-    timer_after(200, def()
-      var off = can_msg_new("UI_vehicleControl3")
-      msg_sig_set(off, "UI_shortHornRequest", 0)
-      print("  horn off")
-      can_msg_send(0, off)
-    end)
+    timer_after(200, horn_off)
   end
   prev_flash = flash
+end
+
+def teardown()
+  horn_off()
 end
 
 def setup()

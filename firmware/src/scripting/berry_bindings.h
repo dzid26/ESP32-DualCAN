@@ -16,16 +16,26 @@ void berry_register_bindings(bvm *vm);
 /* ---- Per-script context ----
  * Bindings that register callbacks (timer.*, actions.register) tag each
  * entry with the "current script id". The script_loader sets this before
- * calling a script's setup() and clears it after. On disable, the loader
+ * calling a script's setup() and restores it after. On disable, the loader
  * calls berry_cleanup_script(id) to revoke every tagged registration.
  *
- * Use 0 for "no script context" (e.g. registrations from C). 0 is reserved
- * and is never cleaned up. */
+ * Stored callbacks re-install their owner's context while they run, so a
+ * timer/action registered from inside a callback inherits the same owner
+ * and is revoked with it.
+ *
+ * SCRIPT_ID_NONE means "no script context". It is shared by every ownerless
+ * registration and is never reclaimed, so registering with no owner logs a
+ * warning: such an entry would outlive its script. */
+#define SCRIPT_ID_NONE 0
 void berry_set_current_script(int script_id);
 int  berry_current_script(void);
 
 /* Revoke every timer / action registered with this script_id. */
 void berry_cleanup_script(int script_id);
+
+/* Restore the VM value stack to a be_top() watermark captured before a call
+ * into Berry. */
+void berry_stack_restore(bvm *vm, int base);
 
 /* ---- Function ref helpers (used by script_loader) ---- */
 
@@ -37,7 +47,8 @@ int  berry_capture_global(bvm *vm, const char *global_name);
 void berry_release_ref(bvm *vm, int ref);
 
 /* Call a captured ref with no args. Returns 0 on success, -1 if ref is invalid,
- * -2 if the call errored (logged). */
+ * -2 if the call errored (logged). Does not install a script context: a caller
+ * invoking a stored script callback must set the owner first. */
 int  berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size);
 
 /* Poll all timers; fire any whose next_fire_ms has passed. Call once per

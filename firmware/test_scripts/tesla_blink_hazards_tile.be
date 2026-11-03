@@ -38,6 +38,10 @@ def hazards_on()
   timer_after(3000, /-> hazards_off())
 end
 
+def teardown()
+  hazards_off()
+end
+
 def setup()
   action_register("blink hazards", /-> hazards_on())
   print("Tesla hazards tile loaded")

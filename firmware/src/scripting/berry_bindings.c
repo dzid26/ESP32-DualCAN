@@ -68,6 +68,20 @@ can_t *berry_get_bus(int bus)
 void berry_set_current_script(int script_id) { s_current_script_id = script_id; }
 int  berry_current_script(void)              { return s_current_script_id; }
 
+/* Install the owning script around a stored callback, so anything the
+ * callback registers inherits the same owner. */
+static int script_ctx_enter(int owner)
+{
+    int prev = s_current_script_id;
+    s_current_script_id = owner;
+    return prev;
+}
+
+static void script_ctx_leave(int prev)
+{
+    s_current_script_id = prev;
+}
+
 static can_t *get_bus(int bus)
 {
     if (bus < 0 || bus > 1 || !s_bus[bus]) return NULL;
@@ -88,7 +102,8 @@ static int refs_alloc(bvm *vm, int fn_index)
     if (be_isnil(vm, -1)) {
         be_pop(vm, 1);
         be_newlist(vm);
-        be_setglobal(vm, ".refs");
+        be_setglobal(vm, ".refs");   /* leaves the list on the stack */
+        be_pop(vm, 1);
         be_getglobal(vm, ".refs");
     }
     be_pushvalue(vm, fn_index);
@@ -134,7 +149,8 @@ int berry_capture_global(bvm *vm, const char *global_name)
     int ref = refs_alloc(vm, -1);
     be_pop(vm, 1);
     be_pushnil(vm);
-    be_setglobal(vm, global_name);
+    be_setglobal(vm, global_name);   /* leaves the value on the stack */
+    be_pop(vm, 1);
     return ref;
 }
 
@@ -143,9 +159,19 @@ void berry_release_ref(bvm *vm, int ref)
     refs_free(vm, ref);
 }
 
+/* Restore the VM value stack to `base`, captured with be_top() before a call
+ * into Berry. Use at call boundaries; be_pop() for values you pushed. */
+void berry_stack_restore(bvm *vm, int base)
+{
+    int extra = be_top(vm) - base;
+    be_assert(extra >= 0);
+    if (extra > 0) be_pop(vm, extra);
+}
+
 int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size)
 {
     if (ref < 0) return -1;
+    int base = be_top(vm);
     if (!refs_push(vm, ref)) return -1;
     if (be_pcall(vm, 0) != 0) {
         const char *msg = be_tostring(vm, -1);
@@ -154,10 +180,10 @@ int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_
             snprintf(err_out, err_size, "%s", msg ? msg : "unknown error");
         if (type_out && type_size > 0)
             snprintf(type_out, type_size, "%s", type ? type : "error");
-        be_pop(vm, 2);
+        berry_stack_restore(vm, base);
         return -2;
     }
-    be_pop(vm, 2);
+    berry_stack_restore(vm, base);
     return 0;
 }
 
@@ -177,10 +203,12 @@ typedef struct {
 /* Registry of all active timers. Index == handle returned to Berry. */
 static timer_entry_t s_timers[MAX_TIMERS];
 
-static int alloc_timer(int ref, uint32_t period_ms, uint32_t now_ms)
+static int alloc_timer(int ref, const char *binding, uint32_t period_ms, uint32_t now_ms)
 {
     for (int i = 0; i < MAX_TIMERS; i++) {
         if (!s_timers[i].in_use) {
+            if (s_current_script_id == SCRIPT_ID_NONE)
+                ESP_LOGW(TAG_BB, "%s: no script owner - not revoked on disable", binding);
             s_timers[i] = (timer_entry_t){
                 .in_use = true, .ref = ref,
                 .script_id = s_current_script_id,
@@ -204,7 +232,7 @@ static int l_timer_after(bvm *vm)
     uint32_t ms = (uint32_t)be_toint(vm, 1);
     int ref = refs_alloc(vm, 2);
     uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-    int h = alloc_timer(ref, ms, now);
+    int h = alloc_timer(ref, "timer.after", ms, now);
     if (h < 0) {
         refs_free(vm, ref);
         ESP_LOGE(TAG_BB, "timer.after: registry full");
@@ -226,7 +254,7 @@ static int l_timer_every(bvm *vm)
     uint32_t ms = (uint32_t)be_toint(vm, 1);
     int ref = refs_alloc(vm, 2);
     uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
-    int h = alloc_timer(ref, ms, now);
+    int h = alloc_timer(ref, "timer.every", ms, now);
     if (h < 0) {
         refs_free(vm, ref);
         ESP_LOGE(TAG_BB, "timer.every: registry full");
@@ -258,7 +286,10 @@ void berry_timer_tick(uint32_t now_ms)
         if (!t->in_use) continue;
         if ((int32_t)(now_ms - t->next_fire_ms) < 0) continue;
 
+        /* Snapshot owner/ref before the call: a one-shot frees its slot and
+         * the callback may reuse it. */
         int ref = t->ref;
+        int owner = t->script_id;
         bool one_shot = (t->period_ms == 0);
         if (one_shot) {
             t->in_use = false;
@@ -266,18 +297,22 @@ void berry_timer_tick(uint32_t now_ms)
             t->next_fire_ms = now_ms + t->period_ms;
         }
 
+        int base = be_top(s_vm);
         if (refs_push(s_vm, ref)) {
-            if (be_pcall(s_vm, 0) != 0) {
+            int prev_ctx = script_ctx_enter(owner);
+            int rc = be_pcall(s_vm, 0);
+            script_ctx_leave(prev_ctx);
+            if (rc != 0) {
                 const char *err_type = be_tostring(s_vm, -2);
                 const char *err_msg  = be_tostring(s_vm, -1);
                 if (!one_shot) t->in_use = false;
                 refs_free(s_vm, ref);
                 ref = -1;
                 if (s_timer_error_handler) {
-                    s_timer_error_handler(t->script_id, err_type, err_msg);
+                    s_timer_error_handler(owner, err_type, err_msg);
                 }
             }
-            be_pop(s_vm, 2);
+            berry_stack_restore(s_vm, base);
         }
 
         if (one_shot && ref >= 0) refs_free(s_vm, ref);
@@ -332,6 +367,8 @@ static int l_action_register(bvm *vm)
         ESP_LOGE(TAG_BB, "actions registry full");
         be_return_nil(vm);
     }
+    if (s_current_script_id == SCRIPT_ID_NONE)
+        ESP_LOGW(TAG_BB, "action_register: no script owner - not revoked on disable");
 
     int ref = refs_alloc(vm, 2);
     s_actions[slot].in_use = true;
@@ -371,13 +408,20 @@ int berry_action_invoke(const char *name)
     int idx = find_action(name);
     if (idx < 0) return -1;
 
-    if (!refs_push(s_vm, s_actions[idx].ref)) return -1;
-    if (be_pcall(s_vm, 0) != 0) {
+    /* The callback may re-register this action by name, replacing idx. */
+    int ref   = s_actions[idx].ref;
+    int owner = s_actions[idx].script_id;
+    int base  = be_top(s_vm);
+    if (!refs_push(s_vm, ref)) return -1;
+    int prev_ctx = script_ctx_enter(owner);
+    int rc = be_pcall(s_vm, 0);
+    script_ctx_leave(prev_ctx);
+    if (rc != 0) {
         const char *emsg = be_tostring(s_vm, -1);
         const char *etype = be_tostring(s_vm, -2);
         const char *func_name = NULL;
         int line = berry_error_line(&func_name);
-        const char *fname = s_script_name_cb ? s_script_name_cb(s_actions[idx].script_id) : NULL;
+        const char *fname = s_script_name_cb ? s_script_name_cb(owner) : NULL;
         if (fname) {
             char logbuf[256];
             berry_format_error(logbuf, sizeof(logbuf), fname, line, func_name, etype, emsg);
@@ -387,20 +431,21 @@ int berry_action_invoke(const char *name)
         } else {
             ESP_LOGE("scripts", "action '%s': %s", name, emsg);
         }
-        be_pop(s_vm, 2);
+        berry_stack_restore(s_vm, base);
         return -2;
     }
-    be_pop(s_vm, 2);
+    berry_stack_restore(s_vm, base);
     return 0;
 }
 
 /* ---- Per-script cleanup ----
  * Called when a script is disabled. Releases all timers and actions tagged
- * with script_id. Script 0 is reserved for system use and never cleaned up. */
+ * with script_id. 0 means "no owner" and is never reclaimed, so registrations
+ * must inherit an owner (see script_ctx_enter). */
 
 void berry_cleanup_script(int script_id)
 {
-    if (script_id == 0) return;
+    if (script_id == SCRIPT_ID_NONE) return;
 
     /* Cancel timers */
     for (int i = 0; i < MAX_TIMERS; i++) {
