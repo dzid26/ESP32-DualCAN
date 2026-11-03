@@ -72,16 +72,19 @@ function isInCode(source: string, pos: number): boolean {
   return false;
 }
 
-/* ---- Balanced-paren scanning ---- */
+/* ---- Balanced call scanning ---- */
 
 /**
- * Given the index of an opening `(` in `text`, return the index of the
- * matching `)`, or -1 if unbalanced. String literals and comments are skipped
- * so their parens don't affect nesting.
+ * Scan a call starting at its opening `(`, returning the matching `)` and the
+ * top-level argument slices. Nested (), [], {} and Berry strings/comments are
+ * skipped. Returns null when the parentheses are unbalanced.
  */
-function findMatchingParen(text: string, open: number): number {
-  let depth = 0;
+function scanArgs(text: string, open: number): { close: number; args: string[] } | null {
+  let parenDepth = 0;
+  let bracketDepth = 0;
   let inString: string | null = null;
+  let start = open + 1;
+  const args: string[] = [];
   for (let i = open; i < text.length; i++) {
     const c = text[i];
     if (inString) {
@@ -91,40 +94,21 @@ function findMatchingParen(text: string, open: number): number {
     }
     if (c === '"' || c === "'") { inString = c; continue; }
     if (c === '#') { i = skipComment(text, i); continue; }
-    if (c === '(') depth++;
+    if (c === '(') parenDepth++;
     else if (c === ')') {
-      depth--;
-      if (depth === 0) return i;
+      parenDepth--;
+      if (parenDepth === 0) {
+        args.push(text.slice(start, i));
+        return { close: i, args };
+      }
+    } else if (c === '[' || c === '{') bracketDepth++;
+    else if (c === ']' || c === '}') bracketDepth--;
+    else if (c === ',' && parenDepth === 1 && bracketDepth === 0) {
+      args.push(text.slice(start, i));
+      start = i + 1;
     }
   }
-  return -1;
-}
-
-/**
- * Split a call's argument text on top-level commas, respecting nested
- * (), [], {}, string literals and comments. Returns the raw (untrimmed)
- * argument slices so callers can recurse on them.
- */
-function splitTopLevelArgs(text: string): string[] {
-  const args: string[] = [];
-  let depth = 0;
-  let inString: string | null = null;
-  let start = 0;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inString) {
-      if (c === '\\') { i++; continue; }
-      if (c === inString) inString = null;
-      continue;
-    }
-    if (c === '"' || c === "'") { inString = c; continue; }
-    if (c === '#') { i = skipComment(text, i); continue; }
-    if (c === '(' || c === '[' || c === '{') depth++;
-    else if (c === ')' || c === ']' || c === '}') depth--;
-    else if (c === ',' && depth === 0) { args.push(text.slice(start, i)); start = i + 1; }
-  }
-  args.push(text.slice(start));
-  return args;
+  return null;
 }
 
 /* Return the contents of a plain string-literal expression, or null. */
@@ -288,13 +272,13 @@ export function preprocessScript(
       const open = start + m[0].length - 1;
       if (!isInCode(text, start)) continue;
 
-      const close = findMatchingParen(text, open);
-      if (close < 0) {
+      const call = scanArgs(text, open);
+      if (!call) {
         errors.push(`${name}: unbalanced parentheses`);
         continue; // keep scanning: one bad call must not disable the rest
       }
 
-      const args = splitTopLevelArgs(text.slice(open + 1, close));
+      const { close, args } = call;
       const draft = (args[0] ?? '').trim();
       const value = (args[2] ?? '').trimStart();
       let replacement: string | null = null;
