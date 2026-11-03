@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-// Seed firmware/.cache in a new worktree with hardlinks to the canonical
-// checkout's immutable SCons cache objects.
+// Seed a new worktree's firmware/.cache from the canonical checkout without
+// sharing mutable build state.
 //
-// Why not share `build_cache_dir`: PlatformIO also puts the mutable SCons
-// `.sconsign` database in that directory. Sharing it makes concurrent builds
+// Why not point every checkout at one build_cache_dir: PlatformIO also puts the
+// mutable SCons `.sconsign` database there. Sharing it makes concurrent builds
 // collide and lets checkouts clobber each other's incremental state.
 //
-// Hardlinking only the two-hex object directories keeps the object data
-// deduplicated while every checkout keeps its own `config` and `.sconsign*`.
-// SCons cache objects are immutable: a build only adds new files, it never
-// rewrites an existing cache entry.
+// Instead, each worktree gets its own cache directory inside its Git admin dir
+// (`<common>/.git/worktrees/<name>/pio-cache`), and `firmware/.cache` is a
+// junction/symlink to it. Object files are hardlinked from the canonical
+// checkout; config, CACHEDIR.TAG, and `.sconsign*` stay local to the worktree.
+//
+// The admin dir is deleted with the worktree, so the cache is cleaned up too.
+// `git worktree remove` follows the cache junction, but it can only reach this
+// per-worktree cache, never the canonical checkout's cache.
 //
 // OpenCode runs this as the project's worktree startup script and sets:
 //   OPENCODE_WORKTREE_BASE  canonical checkout
@@ -42,13 +46,17 @@ function isInside(parent, child) {
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
+function gitValue(args, cwd) {
+  return execFileSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  }).trim();
+}
+
 function mainWorktree() {
   try {
-    const out = execFileSync('git', ['worktree', 'list', '--porcelain'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
+    const out = gitValue(['worktree', 'list', '--porcelain'], ROOT);
     const line = out.split(/\r?\n/).find((entry) => entry.startsWith('worktree '));
     return line ? path.resolve(line.slice('worktree '.length).trim()) : null;
   } catch {
@@ -65,12 +73,29 @@ function defaultTarget() {
   return path.join(process.env.OPENCODE_WORKTREE_PATH || ROOT, ...CACHE_PARTS);
 }
 
-function exists(p) {
+function lstat(p) {
   try {
-    fs.lstatSync(p);
-    return true;
-  } catch {
-    return false;
+    return fs.lstatSync(p);
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+}
+
+function exists(p) {
+  return lstat(p) !== null;
+}
+
+function removeLink(p) {
+  try {
+    fs.unlinkSync(p);
+  } catch (err) {
+    // Windows junctions are directories for rmdir but cannot be unlinked.
+    if (err.code === 'EPERM' || err.code === 'EISDIR' || err.code === 'EACCES') {
+      fs.rmdirSync(p);
+      return;
+    }
+    throw err;
   }
 }
 
@@ -86,6 +111,22 @@ function humanBytes(bytes) {
   return `${value.toFixed(1)} ${units[unit]}`;
 }
 
+function emptyStats(source, target, overrides = {}) {
+  return {
+    source,
+    target,
+    dryRun: false,
+    linked: 0,
+    copied: 0,
+    skipped: 0,
+    wouldSeed: 0,
+    bytes: 0,
+    failures: [],
+    sourceMissing: false,
+    ...overrides,
+  };
+}
+
 /**
  * Hardlink every regular object file from `source` into `target`.
  * Existing target files are never overwritten; root metadata such as `config`,
@@ -96,6 +137,7 @@ export function seedCache({
   target,
   dryRun = false,
   strict = false,
+  copyOnly = false,
   link = fs.linkSync,
   copy = fs.copyFileSync,
 }) {
@@ -148,19 +190,21 @@ export function seedCache({
       }
 
       fs.mkdirSync(targetDir, { recursive: true });
-      try {
-        link(from, to);
-        stats.linked++;
-        continue;
-      } catch (err) {
-        if (err.code === 'EEXIST') {
-          stats.skipped++;
-          stats.bytes -= entry.size;
+      if (!copyOnly) {
+        try {
+          link(from, to);
+          stats.linked++;
           continue;
-        }
-        if (!COPY_FALLBACK.has(err.code)) {
-          stats.failures.push({ file: to, code: err.code, message: err.message });
-          continue;
+        } catch (err) {
+          if (err.code === 'EEXIST') {
+            stats.skipped++;
+            stats.bytes -= entry.size;
+            continue;
+          }
+          if (!COPY_FALLBACK.has(err.code)) {
+            stats.failures.push({ file: to, code: err.code, message: err.message });
+            continue;
+          }
         }
       }
 
@@ -185,13 +229,115 @@ export function seedCache({
   return stats;
 }
 
+function defaultJunction(target, linkPath) {
+  fs.symlinkSync(path.resolve(target), linkPath, process.platform === 'win32' ? 'junction' : 'dir');
+}
+
+/**
+ * Give a linked worktree its own cache in the Git admin directory and point
+ * `firmware/.cache` at it. The admin dir is removed with the worktree, so the
+ * cache cannot outlive it, and the canonical checkout's cache is read-only.
+ */
+export function prepareWorktreeCache({
+  worktree = process.env.OPENCODE_WORKTREE_PATH || ROOT,
+  source = defaultSource(),
+  dryRun = false,
+  strict = false,
+  copyOnly = false,
+  link = fs.linkSync,
+  copy = fs.copyFileSync,
+  junction = defaultJunction,
+  git = gitValue,
+} = {}) {
+  worktree = path.resolve(worktree);
+  if (!source) {
+    return emptyStats(null, null, { sourceMissing: true });
+  }
+  source = path.resolve(source);
+
+  const gitDir = path.resolve(worktree, git(['rev-parse', '--git-dir'], worktree));
+  const commonDir = path.resolve(worktree, git(['rev-parse', '--git-common-dir'], worktree));
+  if (samePath(gitDir, commonDir)) {
+    return emptyStats(source, source, { mainCheckout: true, junctioned: false, wouldJunction: false });
+  }
+
+  if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) {
+    return emptyStats(source, path.join(gitDir, 'pio-cache'), {
+      sourceMissing: true,
+      mainCheckout: false,
+      junctioned: false,
+      wouldJunction: false,
+    });
+  }
+
+  const cachePath = path.join(worktree, ...CACHE_PARTS);
+  const cacheEntry = lstat(cachePath);
+  let target;
+  let junctioned = false;
+  let wouldJunction = false;
+
+  if (cacheEntry?.isSymbolicLink()) {
+    target = path.resolve(fs.readlinkSync(cachePath));
+    if (samePath(target, source) || isInside(source, target)) {
+      // An old whole-cache link into the canonical checkout is unsafe.
+      target = path.join(gitDir, 'pio-cache');
+      if (dryRun) {
+        wouldJunction = true;
+      } else {
+        removeLink(cachePath);
+        fs.mkdirSync(target, { recursive: true });
+        junction(target, cachePath);
+        junctioned = true;
+      }
+    }
+  } else if (cacheEntry?.isDirectory()) {
+    if (fs.readdirSync(cachePath).length === 0) {
+      target = path.join(gitDir, 'pio-cache');
+      if (dryRun) {
+        wouldJunction = true;
+      } else {
+        fs.rmdirSync(cachePath);
+        fs.mkdirSync(target, { recursive: true });
+        junction(target, cachePath);
+        junctioned = true;
+      }
+    } else {
+      // A cache from an earlier run stays where it is; seed it in place.
+      target = cachePath;
+    }
+  } else if (cacheEntry) {
+    throw new Error(`${cachePath} exists and is not a directory`);
+  } else {
+    target = path.join(gitDir, 'pio-cache');
+    if (dryRun) {
+      wouldJunction = true;
+    } else {
+      fs.mkdirSync(target, { recursive: true });
+      fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+      junction(target, cachePath);
+      junctioned = true;
+    }
+  }
+
+  const stats = seedCache({ source, target, dryRun, strict, copyOnly, link, copy });
+  return { ...stats, mainCheckout: false, junctioned, wouldJunction, gitDir };
+}
+
 function parseArgs(argv) {
-  const options = { dryRun: false, strict: false, help: false, source: null, target: null };
+  const options = {
+    dryRun: false,
+    strict: false,
+    copy: false,
+    help: false,
+    source: null,
+    target: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') options.help = true;
     else if (arg === '--dry-run') options.dryRun = true;
     else if (arg === '--strict') options.strict = true;
+    else if (arg === '--copy') options.copy = true;
     else if (arg === '--source') options.source = argv[++i];
     else if (arg.startsWith('--source=')) options.source = arg.slice('--source='.length);
     else if (arg === '--target') options.target = argv[++i];
@@ -205,15 +351,50 @@ function usage() {
   return [
     'Usage: node tools/seed-pio-cache.mjs [options]',
     '',
-    'Hardlink immutable PlatformIO SCons cache objects from the canonical',
-    'checkout into this worktree. Mutable metadata stays per checkout.',
+    'Give this worktree its own PlatformIO cache and hardlink the canonical',
+    'checkout\'s immutable objects into it. config and .sconsign* stay local.',
     '',
     '  --source <dir>  cache to read (default: OPENCODE_WORKTREE_BASE/firmware/.cache)',
-    '  --target <dir>  cache to seed (default: OPENCODE_WORKTREE_PATH/firmware/.cache)',
+    '  --target <dir>  seed this cache directly instead of setting up a worktree cache',
+    '  --copy          copy objects instead of hardlinking',
     '  --dry-run       print the plan, change nothing',
     '  --strict        exit nonzero if any object cannot be seeded',
     '  --help          show this text',
   ].join('\n');
+}
+
+function report(stats) {
+  if (stats.mainCheckout) {
+    console.log('seed-pio-cache: main checkout keeps its own cache; nothing to seed');
+    return 0;
+  }
+  if (stats.sourceMissing) {
+    if (!stats.source) console.log('seed-pio-cache: no canonical checkout found; nothing to seed');
+    else console.log(`seed-pio-cache: no source cache at ${stats.source}; nothing to seed`);
+    return 0;
+  }
+
+  if (stats.wouldJunction) {
+    console.log(`seed-pio-cache: would junction ${stats.target} into the worktree cache`);
+  } else if (stats.junctioned) {
+    console.log(`seed-pio-cache: junctioned ${stats.target} into the worktree cache`);
+  }
+
+  const amount = humanBytes(stats.bytes);
+  if (stats.dryRun) {
+    console.log(`seed-pio-cache: would seed ${stats.wouldSeed} object(s) (${amount}) from ${stats.source}`);
+  } else {
+    console.log(
+      `seed-pio-cache: seeded ${stats.linked + stats.copied} new object(s) ` +
+        `(${stats.linked} linked, ${stats.copied} copied, ${stats.skipped} already present; ${amount}) ` +
+        `from ${stats.source}`,
+    );
+  }
+
+  for (const failure of stats.failures) {
+    console.warn(`seed-pio-cache: could not seed ${failure.file}: ${failure.code} ${failure.message}`);
+  }
+  return stats.failures.length > 0 ? 1 : 0;
 }
 
 export function run(argv = process.argv.slice(2)) {
@@ -223,35 +404,18 @@ export function run(argv = process.argv.slice(2)) {
     return 0;
   }
 
-  const source = options.source || defaultSource();
-  const target = options.target || defaultTarget();
-  if (!source) {
-    console.log('seed-pio-cache: no canonical checkout found; nothing to seed');
-    return 0;
+  if (options.source || options.target) {
+    const source = options.source || defaultSource();
+    const target = options.target || defaultTarget();
+    if (!source) {
+      console.log('seed-pio-cache: no canonical checkout found; nothing to seed');
+      return 0;
+    }
+    return report(seedCache({ source, target, dryRun: options.dryRun, strict: options.strict, copyOnly: options.copy }));
   }
 
-  const stats = seedCache({ source, target, dryRun: options.dryRun, strict: options.strict });
-
-  if (stats.sourceMissing) {
-    console.log(`seed-pio-cache: no source cache at ${stats.source}; nothing to seed`);
-    return 0;
-  }
-
-  const amount = humanBytes(stats.bytes);
-  if (stats.dryRun) {
-    console.log(`seed-pio-cache: would seed ${stats.wouldSeed} object(s) (${amount}) from ${stats.source}`);
-  } else {
-    console.log(
-      `seed-pio-cache: seeded ${stats.linked + stats.copied} new object(s) ` +
-        `(${stats.linked} linked, ${stats.copied} copied, ${stats.skipped} already present; ${amount} deduplicated) ` +
-        `from ${stats.source}`,
-    );
-  }
-
-  for (const failure of stats.failures) {
-    console.warn(`seed-pio-cache: could not seed ${failure.file}: ${failure.code} ${failure.message}`);
-  }
-  return stats.failures.length > 0 ? 1 : 0;
+  const stats = prepareWorktreeCache({ source: defaultSource(), dryRun: options.dryRun, strict: options.strict, copyOnly: options.copy });
+  return report(stats);
 }
 
 if (process.argv[1] && samePath(process.argv[1], fileURLToPath(import.meta.url))) {

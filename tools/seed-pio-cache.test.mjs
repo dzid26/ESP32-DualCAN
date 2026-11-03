@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { run, samePath, seedCache } from './seed-pio-cache.mjs';
+import { prepareWorktreeCache, run, samePath, seedCache } from './seed-pio-cache.mjs';
 
 function tempDir(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seed-pio-cache-'));
@@ -22,6 +22,14 @@ function put(cache, relative, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
   return file;
+}
+
+function linkDir(target, linkPath) {
+  fs.symlinkSync(path.resolve(target), linkPath, process.platform === 'win32' ? 'junction' : 'dir');
+}
+
+function fakeGit(main, admin) {
+  return (args) => (args[1] === '--git-dir' ? admin : path.join(main, '.git'));
 }
 
 test('links only two-hex object files and leaves metadata to the target checkout', (t) => {
@@ -152,6 +160,97 @@ test('reports failures, and --strict turns them into an error', (t) => {
 
   const strictTarget = path.join(root, 'worktree2', 'firmware', '.cache');
   assert.throws(() => seedCache({ source, target: strictTarget, link, strict: true }), /could not be seeded/);
+});
+
+test('gives a linked worktree its own cache in the git admin dir', (t) => {
+  const root = tempDir(t);
+  const main = path.join(root, 'main');
+  const worktree = path.join(root, 'wt');
+  fs.mkdirSync(path.join(worktree, 'firmware'), { recursive: true });
+  const source = makeCache(main);
+  put(source, '00/aaa.o', 'one');
+  const admin = path.join(main, '.git', 'worktrees', 'wt');
+  fs.mkdirSync(admin, { recursive: true });
+
+  const stats = prepareWorktreeCache({ worktree, source, git: fakeGit(main, admin) });
+
+  assert.equal(stats.mainCheckout, false);
+  assert.equal(stats.junctioned, true);
+  assert.equal(stats.linked + stats.copied, 1);
+  assert.ok(fs.lstatSync(path.join(worktree, 'firmware', '.cache')).isSymbolicLink());
+  assert.equal(fs.readFileSync(path.join(worktree, 'firmware', '.cache', '00', 'aaa.o'), 'utf8'), 'one');
+  assert.equal(fs.readFileSync(path.join(admin, 'pio-cache', '00', 'aaa.o'), 'utf8'), 'one');
+  assert.equal(fs.existsSync(path.join(admin, 'pio-cache', 'config')), false);
+});
+
+test('does not give the main checkout a junction or seed it', (t) => {
+  const root = tempDir(t);
+  const main = path.join(root, 'main');
+  const source = makeCache(main);
+  put(source, '00/aaa.o', 'one');
+  const git = () => path.join(main, '.git');
+
+  const stats = prepareWorktreeCache({ worktree: main, source, git });
+
+  assert.equal(stats.mainCheckout, true);
+  assert.equal(stats.junctioned, false);
+  assert.equal(fs.lstatSync(source).isSymbolicLink(), false);
+});
+
+test('dry-run does not create the worktree cache junction', (t) => {
+  const root = tempDir(t);
+  const main = path.join(root, 'main');
+  const worktree = path.join(root, 'wt');
+  fs.mkdirSync(path.join(worktree, 'firmware'), { recursive: true });
+  const source = makeCache(main);
+  put(source, '00/aaa.o', 'one');
+  const admin = path.join(main, '.git', 'worktrees', 'wt');
+  fs.mkdirSync(admin, { recursive: true });
+
+  const stats = prepareWorktreeCache({ worktree, source, git: fakeGit(main, admin), dryRun: true });
+
+  assert.equal(stats.wouldJunction, true);
+  assert.equal(stats.junctioned, false);
+  assert.equal(fs.existsSync(path.join(worktree, 'firmware', '.cache')), false);
+});
+
+test('keeps an existing real cache in place and seeds into it', (t) => {
+  const root = tempDir(t);
+  const main = path.join(root, 'main');
+  const worktree = path.join(root, 'wt');
+  const source = makeCache(main);
+  put(source, '00/aaa.o', 'one');
+  const local = makeCache(worktree);
+  put(local, '00/local.o', 'local');
+  const admin = path.join(main, '.git', 'worktrees', 'wt');
+  fs.mkdirSync(admin, { recursive: true });
+
+  const stats = prepareWorktreeCache({ worktree, source, git: fakeGit(main, admin) });
+
+  assert.equal(stats.junctioned, false);
+  assert.equal(fs.lstatSync(local).isSymbolicLink(), false);
+  assert.equal(fs.readFileSync(path.join(local, '00', 'local.o'), 'utf8'), 'local');
+  assert.equal(fs.readFileSync(path.join(local, '00', 'aaa.o'), 'utf8'), 'one');
+});
+
+test('replaces an old whole-cache link into the canonical checkout', (t) => {
+  const root = tempDir(t);
+  const main = path.join(root, 'main');
+  const worktree = path.join(root, 'wt');
+  fs.mkdirSync(path.join(worktree, 'firmware'), { recursive: true });
+  const source = makeCache(main);
+  put(source, '00/aaa.o', 'one');
+  const admin = path.join(main, '.git', 'worktrees', 'wt');
+  fs.mkdirSync(admin, { recursive: true });
+  linkDir(source, path.join(worktree, 'firmware', '.cache'));
+
+  const stats = prepareWorktreeCache({ worktree, source, git: fakeGit(main, admin) });
+
+  assert.equal(stats.junctioned, true);
+  const target = fs.readlinkSync(path.join(worktree, 'firmware', '.cache'));
+  assert.notEqual(path.resolve(target), path.resolve(source));
+  assert.equal(fs.readFileSync(path.join(worktree, 'firmware', '.cache', '00', 'aaa.o'), 'utf8'), 'one');
+  assert.equal(fs.existsSync(path.join(source, 'config')), false);
 });
 
 test('samePath is case-insensitive only where the filesystem is', () => {
