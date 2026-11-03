@@ -437,6 +437,44 @@ test('still rewrites a nested call inside an unrecognised call', () => {
   assert(result.code.includes('can_msg_new(0x3e9, 8)'), `got: ${result.code}`);
 });
 
+test('resolves an inline draft against its own message', () => {
+  const code = 'msg_sig_get(can_msg_get(0, "VCLEFT_doorStatus"), "AMBIG_dup")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 0);
+  assert.equal(result.code, 'msg_sig_get(can_msg_get(0, 0x102), 4, 1, false, false, 1, 0)');
+});
+
+test('errors when an inline draft lacks the signal', () => {
+  const code = 'msg_sig_get(can_msg_get(0, "VCRIGHT_doorStatus"), "DAS_hazardLightRequest")';
+  const result = preprocessScript(code, mockMessages);
+  const err = result.errors.find(e => e.includes('DAS_hazardLightRequest'));
+  assert(err, `expected an error, got: ${JSON.stringify(result.errors)}`);
+  assert(err.includes("belongs to 'DAS_bodyControls', not 'VCRIGHT_doorStatus'"), `got: ${err}`);
+});
+
+test('tracks a draft created with a non-literal bus', () => {
+  const code = [
+    'var d = can_msg_get(bus, "VCLEFT_doorStatus")',
+    'msg_sig_get(d, "AMBIG_dup")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 0);
+  assert(result.code.includes('msg_sig_get(d, 4, 1, false, false, 1, 0)'), `got: ${result.code}`);
+});
+
+test('tracks a bus-first can_msg_new draft', () => {
+  const code = [
+    'var d = can_msg_new(0, "VCLEFT_doorStatus")',
+    'msg_sig_get(d, "AMBIG_dup")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 0);
+  assert(result.code.includes('msg_sig_get(d, 4, 1, false, false, 1, 0)'), `got: ${result.code}`);
+});
+
 /* ---- Warning dedupe ---- */
 
 test('deduplicates identical ambiguity warnings', () => {

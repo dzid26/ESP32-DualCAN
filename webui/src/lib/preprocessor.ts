@@ -133,7 +133,7 @@ function stringLiteralValue(expr: string): string | null {
 // was assigned from (may be >1, indicating a reused variable).
 export function trackVarToMsgs(source: string): Map<string, Set<string>> {
   const varToMsgs = new Map<string, Set<string>>();
-  const varGetRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_get\s*\(\s*\d+\s*,\s*"([^"]+)"\s*\)/g;
+  const varGetRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_get\s*\(\s*[^,()\n]+,\s*"([^"]+)"\s*\)/g;
   let m: RegExpExecArray | null;
   while ((m = varGetRe.exec(source)) !== null) {
     if (!isInCode(source, m.index)) continue;
@@ -142,7 +142,7 @@ export function trackVarToMsgs(source: string): Map<string, Set<string>> {
     if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
     varToMsgs.get(varName)!.add(msgName);
   }
-  const varNewRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_new\s*\(\s*"([^"]+)"\s*(?:,\s*\d+\s*)?\)/g;
+  const varNewRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_new\s*\(\s*(?:[^,()\n]+,\s*)?"([^"]+)"\s*(?:,\s*[^)]*)?\)/g;
   while ((m = varNewRe.exec(source)) !== null) {
     if (!isInCode(source, m.index)) continue;
     const varName = m[1];
@@ -200,40 +200,55 @@ export function preprocessScript(
 
   const varToMsgs = trackVarToMsgs(sourceCode);
 
+  /* The message a draft expression comes from, when it can be determined. */
+  function draftMessageName(draftExpr: string): string | null {
+    const expr = draftExpr.trim();
+    if (/^\w+$/.test(expr)) {
+      const names = varToMsgs.get(expr);
+      return names && names.size === 1 ? [...names][0] : null;
+    }
+    const call = /^(can_msg_get|can_msg_new)\s*\(/.exec(expr);
+    if (!call) return null;
+    const scanned = scanArgs(expr, call[0].length - 1);
+    if (!scanned || scanned.close !== expr.length - 1) return null;
+    for (const arg of scanned.args) {
+      const name = stringLiteralValue(arg);
+      if (name !== null) return name;
+    }
+    return null;
+  }
+
   function resolveSignalInDraft(
     draftExpr: string,
     sigName: string,
     context: string
   ): { sig: Signal | null; error: string | null; warning: string | null } {
-    const isSimpleVar = /^\w+$/.test(draftExpr);
-    const msgNames = isSimpleVar ? varToMsgs.get(draftExpr) : undefined;
-    const uniqueMsgName = msgNames && msgNames.size === 1 ? msgNames.values().next().value : null;
+    const ownerName = draftMessageName(draftExpr);
 
-    if (uniqueMsgName) {
-      // We know exactly which message this variable belongs to.
-      const sig = findSigInMsg(uniqueMsgName, sigName);
+    if (ownerName) {
+      const sig = findSigInMsg(ownerName, sigName);
       if (sig) return { sig, error: null, warning: null };
 
-      // Signal not in the tracked message — figure out where it does live.
+      // Signal not in the owning message — report where it does live.
       const owners = [...new Set(signalMatches(sigName).map(m => m.msg.name))]
-        .filter(n => n !== uniqueMsgName);
+        .filter(n => n !== ownerName);
       if (owners.length === 1) {
         return {
           sig: null,
-          error: `${context}: signal '${sigName}' belongs to '${owners[0]}', not '${uniqueMsgName}'`,
+          error: `${context}: signal '${sigName}' belongs to '${owners[0]}', not '${ownerName}'`,
           warning: null,
         };
       }
       if (owners.length > 1) {
         return {
           sig: null,
-          error: `${context}: signal '${sigName}' is not in message '${uniqueMsgName}', but is present in multiple messages (${owners.join(', ')})`,
+          error: `${context}: signal '${sigName}' is not in message '${ownerName}', but is present in multiple messages (${owners.join(', ')})`,
           warning: null,
         };
       }
       return {
         sig: null,
-        error: `${context}: signal '${sigName}' not found in message '${uniqueMsgName}'`,
+        error: `${context}: signal '${sigName}' not found in message '${ownerName}'`,
         warning: null,
       };
     }
