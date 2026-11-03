@@ -6,6 +6,7 @@
     "module": "esnext",
     "types": ["svelte", "vite/client", "web-bluetooth"],
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "allowJs": true,
     "checkJs": true,
     "moduleDetection": "force"
