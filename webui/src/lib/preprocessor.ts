@@ -140,26 +140,31 @@ function parseStringLiteral(expr: string): StringLiteral {
   return { kind: 'literal', value };
 }
 
+/* First plain string literal among a call's arguments, or null. */
+function messageNameFromArgs(args: string[]): string | null {
+  for (const arg of args) {
+    const literal = parseStringLiteral(arg);
+    if (literal.kind === 'literal') return literal.value;
+  }
+  return null;
+}
+
 /* ---- Track variable → message name mappings ---- */
-// Scans source for var X = can_msg_get(bus, "msg") / can_msg_new("msg")
-// assignments. Returns a map of variable name → set of message types it
-// was assigned from (may be >1, indicating a reused variable).
+// Scans source for var X = can_msg_get(...) / can_msg_new(...) assignments,
+// reusing the same call scanner as the rewriter. Returns a map of variable
+// name → set of message types it was assigned from (may be >1, indicating a
+// reused variable).
 export function trackVarToMsgs(source: string): Map<string, Set<string>> {
   const varToMsgs = new Map<string, Set<string>>();
-  const varGetRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_get\s*\(\s*[^,()\n]+,\s*"([^"]+)"\s*\)/g;
+  const assignmentRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*(can_msg_get|can_msg_new)\s*\(/g;
   let m: RegExpExecArray | null;
-  while ((m = varGetRe.exec(source)) !== null) {
+  while ((m = assignmentRe.exec(source)) !== null) {
     if (!isInCode(source, m.index)) continue;
+    const call = scanArgs(source, m.index + m[0].length - 1);
+    if (!call) continue;
+    const msgName = messageNameFromArgs(call.args);
+    if (msgName === null) continue;
     const varName = m[1];
-    const msgName = m[2];
-    if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
-    varToMsgs.get(varName)!.add(msgName);
-  }
-  const varNewRe = /(?:^|\s)(?:var\s+)?(\w+)\s*=\s*can_msg_new\s*\(\s*(?:[^,()\n]+,\s*)?"([^"]+)"\s*(?:,\s*[^)]*)?\)/g;
-  while ((m = varNewRe.exec(source)) !== null) {
-    if (!isInCode(source, m.index)) continue;
-    const varName = m[1];
-    const msgName = m[2];
     if (!varToMsgs.has(varName)) varToMsgs.set(varName, new Set());
     varToMsgs.get(varName)!.add(msgName);
   }
@@ -224,11 +229,7 @@ export function preprocessScript(
     if (!call) return null;
     const scanned = scanArgs(expr, call[0].length - 1);
     if (!scanned || scanned.close !== expr.length - 1) return null;
-    for (const arg of scanned.args) {
-      const literal = parseStringLiteral(arg);
-      if (literal.kind === 'literal') return literal.value;
-    }
-    return null;
+    return messageNameFromArgs(scanned.args);
   }
 
   type ResolveResult =

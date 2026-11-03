@@ -493,6 +493,28 @@ test('tracks a bus-first can_msg_new draft', () => {
   assert(result.code.includes('msg_sig_get(d, 4, 1, false, false, 1, 0)'), `got: ${result.code}`);
 });
 
+test('tracks a draft whose bus is a call', () => {
+  const code = [
+    'var d = can_msg_get(getBus(), "VCLEFT_doorStatus")',
+    'msg_sig_get(d, "AMBIG_dup")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 0);
+  assert(result.code.includes('msg_sig_get(d, 4, 1, false, false, 1, 0)'), `got: ${result.code}`);
+});
+
+test('tracks a can_msg_new draft whose bus is a call', () => {
+  const code = [
+    'var d = can_msg_new(getBus(), "VCLEFT_doorStatus")',
+    'msg_sig_get(d, "AMBIG_dup")',
+  ].join('\n');
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.warnings.length, 0);
+  assert(result.code.includes('msg_sig_get(d, 4, 1, false, false, 1, 0)'), `got: ${result.code}`);
+});
+
 /* ---- Warning dedupe ---- */
 
 test('deduplicates identical ambiguity warnings', () => {
