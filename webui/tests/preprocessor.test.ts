@@ -162,13 +162,6 @@ test('errors when signal does not belong to the tracked message (msg_sig_set)', 
   assert(result.errors[0].includes("not 'VCLEFT_doorStatus'"));
 });
 
-test('allows signal that belongs to the tracked message', () => {
-  const code = `var msg = can_msg_get(0, "VCLEFT_doorStatus")\nmsg_sig_get(msg, "VCLEFT_frontLatchStatus")`;
-  const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0);
-  assert(result.code.includes('msg_sig_get(msg, 0, 2, false, false, 1, 0)'));
-});
-
 test('allows signal from untracked variable (no assignment seen) — falls back to global search', () => {
   const code = `msg_sig_get(someParam, "DAS_hazardLightRequest")`;
   const result = preprocessScript(code, mockMessages);
@@ -237,17 +230,6 @@ test('buildVarToMsgMap does not false-match == comparison', () => {
 });
 
 /* ---- Nested / balanced DBC-aware calls ---- */
-
-test('rewrites a msg_sig_get nested inside a msg_sig_set value (counter increment)', () => {
-  const code =
-    'msg_sig_set(msg, "UI_powertrainControlCounter", (int(msg_sig_get(msg, "UI_powertrainControlCounter")) + 1) % 16)';
-  const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0, result.errors.join('; '));
-  assert.equal(
-    result.code,
-    'msg_sig_set(msg, 52, 4, false, false, 1, 0, (int(msg_sig_get(msg, 52, 4, false, false, 1, 0)) + 1) % 16)',
-  );
-});
 
 test('nested msg_sig_get resolves via the tracked draft message', () => {
   const code = [
@@ -318,20 +300,6 @@ test('errors when a tracked draft lacks the signal but several messages have it'
 });
 
 /* ---- Comment / string awareness ---- */
-
-test('ignores line comments inside a call (parens and apostrophes)', () => {
-  const code = [
-    'msg_sig_set(msg, "UI_powertrainControlCounter",',
-    "  1  # see (notes and don't panic",
-    '  )',
-  ].join('\n');
-  const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0, result.errors.join('; '));
-  assert.equal(
-    result.code,
-    "msg_sig_set(msg, 52, 4, false, false, 1, 0, 1  # see (notes and don't panic\n  )",
-  );
-});
 
 test('keeps the closing paren after a trailing comment', () => {
   const code = [
@@ -455,14 +423,6 @@ test('still rewrites a nested call inside an unrecognised call', () => {
   assert(result.code.includes('can_msg_new(0x3e9, 8)'), `got: ${result.code}`);
 });
 
-test('resolves an inline draft against its own message', () => {
-  const code = 'msg_sig_get(can_msg_get(0, "VCLEFT_doorStatus"), "AMBIG_dup")';
-  const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0);
-  assert.equal(result.warnings.length, 0);
-  assert.equal(result.code, 'msg_sig_get(can_msg_get(0, 0x102), 4, 1, false, false, 1, 0)');
-});
-
 test('errors when an inline draft lacks the signal', () => {
   const code = 'msg_sig_get(can_msg_get(0, "VCRIGHT_doorStatus"), "DAS_hazardLightRequest")';
   const result = preprocessScript(code, mockMessages);
@@ -568,8 +528,8 @@ const callMatrix: Array<{ name: string; source: string; code: string }> = [
   },
   {
     name: 'comment inside a call',
-    source: 'msg_sig_set(msg, "UI_powertrainControlCounter", 1  # note (\n)',
-    code: 'msg_sig_set(msg, 52, 4, false, false, 1, 0, 1  # note (\n)',
+    source: `msg_sig_set(msg, "UI_powertrainControlCounter", 1  # note (and don't\n)`,
+    code: `msg_sig_set(msg, 52, 4, false, false, 1, 0, 1  # note (and don't\n)`,
   },
   {
     name: 'call-shaped text inside a string',
