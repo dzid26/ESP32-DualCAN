@@ -41,6 +41,7 @@
   let showGuide = $state(false);
   let preprocessedCode = $state<string>('');
   let preprocessWarnings = $state<string[]>([]);
+  let preprocessErrors = $state<string[]>([]);
   let deviceBepCode = $state<string | null>(null);
   let skipPreprocessedEffect = $state(false);
   let editorPaneEl = $state<HTMLDivElement | undefined>();
@@ -139,6 +140,7 @@
     deviceBepCode = null;
     preprocessedCode = '';
     preprocessWarnings = [];
+    preprocessErrors = [];
     selFn = filename;
     editorFilename = filename;
     app.setLastScriptFilename(filename);
@@ -331,6 +333,7 @@
       // Installed tab: preprocessedCode already set by loadScript / error handler
       preprocessedCode = deviceBepCode ?? '(no preprocessed file on device)';
       preprocessWarnings = [];
+      preprocessErrors = [];
     } else if (showPreprocessed) {
       // Preview tab: preprocess client-side
       const messages = getFullMessages();
@@ -338,9 +341,11 @@
         const result = preprocessScript(code, messages);
         preprocessedCode = result.code;
         preprocessWarnings = result.warnings;
+        preprocessErrors = result.errors;
       } else {
         preprocessedCode = '(no DBC loaded - pick your car)';
         preprocessWarnings = [];
+        preprocessErrors = [];
       }
     }
   });
@@ -630,18 +635,24 @@
       </div>
 
       <div style="flex: 1; min-height: 0; min-width: 0; display: flex">
-        <div bind:this={editorPaneEl} class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
-          {#if preprocessWarnings.length > 0}
+        <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;flex-direction:column">
+          {#if preprocessErrors.length > 0 || preprocessWarnings.length > 0}
             <div
               class="mono"
-              title={preprocessWarnings.join('\n')}
-              style="position:absolute;top:0;left:0;right:0;z-index:5;padding:3px 8px;font-size:10px;line-height:1.4;color:var(--dc-warn);background:color-mix(in srgb, var(--dc-warn) 12%, transparent);border-bottom:1px solid color-mix(in srgb, var(--dc-warn) 35%, transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+              title={[...preprocessErrors, ...preprocessWarnings].join('\n')}
+              style="flex-shrink:0;padding:3px 8px;font-size:10px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{preprocessErrors.length ? 'var(--dc-err-text)' : 'var(--dc-warn)'};background:{preprocessErrors.length ? 'var(--dc-err-bg)' : 'var(--dc-warn-tint)'};border-bottom:1px solid {preprocessErrors.length ? 'var(--dc-err-border)' : 'var(--dc-warn)'}"
             >
-              ⚠ {preprocessWarnings.length} preprocessing warning{preprocessWarnings.length > 1 ? 's' : ''}: {preprocessWarnings.join('; ')}
+              {#if preprocessErrors.length > 0}
+                ⚠ {preprocessErrors.length} preprocessing error{preprocessErrors.length > 1 ? 's' : ''}: {preprocessErrors.join('; ')}
+              {:else}
+                ⚠ {preprocessWarnings.length} preprocessing warning{preprocessWarnings.length > 1 ? 's' : ''}: {preprocessWarnings.join('; ')}
+              {/if}
             </div>
           {/if}
-          <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
-          <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>
+          <div bind:this={editorPaneEl} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
+            <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
+            <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>
+          </div>
         </div>
         <div class:ce-hide={showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex">
           <CodeMirrorEditor bind:value={code} height="100%" onSave={save} bind:scrollTop={editorScrollTop} bind:gotoLine autoFocus={!showPreprocessed} bind:cursorLine={sourceCursorLine} />

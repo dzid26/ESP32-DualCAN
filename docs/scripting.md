@@ -70,10 +70,10 @@ at compile time — writing them without a DBC loaded will produce errors):
 |---|---|---|
 | `msg_sig_set(draft, "sig", val)` | `msg_sig_set(draft, sb, len, be, signed, scale, offset, val)` — full encode with scale/offset |
 | `msg_sig_get(draft, "sig")` | `msg_sig_get(draft, sb, len, be, signed, scale, offset)` — full decode with scale/offset |
-| `can_msg_send(bus, draft)` | `can_send_raw(bus, draft["id"], draft["data"])` — ID resolved from draft |
 
-These calls are matched with balanced parentheses and rewritten recursively, so
-they can nest. The common case is incrementing a counter field in place:
+These calls are matched with balanced parentheses, and Berry strings and
+comments (`#` and `#- … -#`) are skipped, so they can nest. The common case is
+incrementing a counter field in place:
 
 ```berry
 var msg = can_msg_get(0, "UI_powertrainControl")
@@ -84,8 +84,9 @@ msg_sig_set(msg, "UI_powertrainControlCounter",
 The inner read is inlined to full metadata and the outer write keeps the whole
 expression intact. Saving is blocked (`errors[]`) when a message or signal name
 is unknown, when a tracked draft's message doesn't contain the signal, or when a
-call cannot be parsed (for example unbalanced parentheses) — the preprocessor
-never writes a half-rewritten `.bep`.
+call is malformed (wrong argument count, non-literal signal name, unbalanced
+parentheses). In that case the `.bep` is not uploaded; the preview may still
+show partially rewritten output.
 
 When a signal name appears in more than one message and the draft's owning
 message cannot be determined (an untracked or multi-assigned variable), the
