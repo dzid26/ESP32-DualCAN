@@ -403,16 +403,16 @@ test('handles escaped quotes in a signal literal', () => {
   assert(result.errors.some(e => e.includes('OG"SIG')), `got: ${JSON.stringify(result.errors)}`);
 });
 
-test('errors on a malformed signal literal', () => {
+test('errors on a computed signal name', () => {
   const code = 'msg_sig_get(msg, "UI_" .. "counter")';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('malformed signal name')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.includes('compile-time string literal')), `got: ${JSON.stringify(result.errors)}`);
 });
 
-test('errors on a malformed message literal', () => {
+test('errors on a computed message name', () => {
   const code = 'can_msg_get(0, "DAS" .. "_bodyControls")';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('malformed message name')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.includes('compile-time string literal')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('leaves numeric-id can_msg_get unchanged', () => {

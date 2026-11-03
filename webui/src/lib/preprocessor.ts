@@ -118,32 +118,40 @@ function scanArgs(text: string, open: number): { close: number; args: string[] }
   return null;
 }
 
-type StringLiteral =
+type SingleString =
   | { kind: 'literal'; value: string }
   | { kind: 'code' }
-  | { kind: 'malformed' };
+  | { kind: 'unterminated' };
 
-/* Classify an argument expression as a plain string literal, other code, or a broken literal. */
-function parseStringLiteral(expr: string): StringLiteral {
+/* Classify an expression: exactly one plain string literal, other code, or an open quote. */
+function parseSingleString(expr: string): SingleString {
   const t = expr.trim();
   if (t.length === 0) return { kind: 'code' };
   const quote = t[0];
   if (quote !== '"' && quote !== "'") return { kind: 'code' };
-  if (t.length < 2 || t[t.length - 1] !== quote) return { kind: 'malformed' };
   let value = '';
-  for (let i = 1; i < t.length - 1; i++) {
+  let i = 1;
+  for (; i < t.length; i++) {
     const c = t[i];
     if (c === '\\') { value += t[++i] ?? ''; continue; }
-    if (c === quote) return { kind: 'malformed' };
+    if (c === quote) break;
     value += c;
   }
+  if (i >= t.length) return { kind: 'unterminated' };
+  if (t.slice(i + 1).trim() !== '') return { kind: 'code' };
   return { kind: 'literal', value };
+}
+
+/* True when an expression starts with a string token but is not a single literal. */
+function startsWithString(expr: string): boolean {
+  const t = expr.trim();
+  return t.startsWith('"') || t.startsWith("'");
 }
 
 /* First plain string literal among a call's arguments, or null. */
 function messageNameFromArgs(args: string[]): string | null {
   for (const arg of args) {
-    const literal = parseStringLiteral(arg);
+    const literal = parseSingleString(arg);
     if (literal.kind === 'literal') return literal.value;
   }
   return null;
@@ -317,15 +325,17 @@ export function preprocessScript(
         if (args.length !== 2) {
           replacement = raiseFor('can_msg_get: expected 2 arguments');
         } else {
-          const msgName = parseStringLiteral(args[1]);
+          const msgName = parseSingleString(args[1]);
           if (msgName.kind === 'literal') {
             const msg = findMsg(msgName.value);
             replacement = msg === null
               ? raiseFor(`can_msg_get: message '${msgName.value}' not found`)
               : `can_msg_get(${rewrite(draft)}, 0x${msg.id.toString(16)})`;
-          } else if (msgName.kind === 'malformed') {
-            replacement = raiseFor('can_msg_get: malformed message name');
-          } else if (parseStringLiteral(args[0]).kind === 'literal') {
+          } else if (msgName.kind === 'unterminated') {
+            replacement = raiseFor('can_msg_get: unterminated message name');
+          } else if (startsWithString(args[1])) {
+            replacement = raiseFor('can_msg_get: message name must be a compile-time string literal');
+          } else if (parseSingleString(args[0]).kind === 'literal') {
             replacement = raiseFor('can_msg_get: message name must be the second argument (bus first)');
           }
         }
@@ -334,14 +344,14 @@ export function preprocessScript(
           replacement = raiseFor('can_msg_new: expected 1 or 2 arguments');
         } else {
           let msgName: string | null = null;
-          let malformed = false;
+          let badLiteral = false;
           for (const arg of args) {
-            const literal = parseStringLiteral(arg);
+            const literal = parseSingleString(arg);
             if (literal.kind === 'literal') msgName ??= literal.value;
-            else if (literal.kind === 'malformed') malformed = true;
+            else if (literal.kind === 'unterminated' || startsWithString(arg)) badLiteral = true;
           }
-          if (malformed) {
-            replacement = raiseFor('can_msg_new: malformed message name');
+          if (badLiteral) {
+            replacement = raiseFor('can_msg_new: message name must be a compile-time string literal');
           } else if (msgName !== null) {
             const msg = findMsg(msgName);
             replacement = msg === null
@@ -355,11 +365,11 @@ export function preprocessScript(
         } else if (args.length !== 2) {
           replacement = raiseFor('msg_sig_get: expected 2 arguments (or 7 for the inline form)');
         } else {
-          const sigName = parseStringLiteral(args[1]);
-          if (sigName.kind === 'malformed') {
-            replacement = raiseFor('msg_sig_get: malformed signal name');
+          const sigName = parseSingleString(args[1]);
+          if (sigName.kind === 'unterminated') {
+            replacement = raiseFor('msg_sig_get: unterminated signal name');
           } else if (sigName.kind === 'code') {
-            replacement = raiseFor('msg_sig_get: signal name must be a string literal');
+            replacement = raiseFor('msg_sig_get: signal name must be a compile-time string literal');
           } else {
             const resolved = resolveSignalInDraft(draft, sigName.value, 'msg_sig_get');
             if (!resolved.ok) {
@@ -376,11 +386,11 @@ export function preprocessScript(
         } else if (args.length !== 3) {
           replacement = raiseFor('msg_sig_set: expected 3 arguments (or 8 for the inline form)');
         } else {
-          const sigName = parseStringLiteral(args[1]);
-          if (sigName.kind === 'malformed') {
-            replacement = raiseFor('msg_sig_set: malformed signal name');
+          const sigName = parseSingleString(args[1]);
+          if (sigName.kind === 'unterminated') {
+            replacement = raiseFor('msg_sig_set: unterminated signal name');
           } else if (sigName.kind === 'code') {
-            replacement = raiseFor('msg_sig_set: signal name must be a string literal');
+            replacement = raiseFor('msg_sig_set: signal name must be a compile-time string literal');
           } else {
             const resolved = resolveSignalInDraft(draft, sigName.value, 'msg_sig_set');
             if (!resolved.ok) {
