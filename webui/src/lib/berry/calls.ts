@@ -65,21 +65,21 @@ function closerFor(token: Token): string {
 /** Match every bracket pair and report the ones that do not pair. */
 function matchBrackets(tokens: readonly Token[], errors: Diagnostic[]): Map<number, number> {
   const match = new Map<number, number>();
-  const stack: number[] = [];
+  const stack: Array<{ index: number; token: OpenToken }> = [];
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (isOpen(token)) {
-      stack.push(i);
+      stack.push({ index: i, token });
       continue;
     }
     if (!isClose(token)) continue;
 
     const top = stack.at(-1);
-    if (top !== undefined && closerFor(tokens[top]) === token.text) {
+    if (top !== undefined && closerFor(top.token) === token.text) {
       stack.pop();
-      match.set(top, i);
-      match.set(i, top);
+      match.set(top.index, i);
+      match.set(i, top.index);
     } else {
       errors.push({
         code: 'parse/unmatched-close',
@@ -89,10 +89,7 @@ function matchBrackets(tokens: readonly Token[], errors: Diagnostic[]): Map<numb
     }
   }
 
-  for (const top of stack) {
-    const token = tokens[top];
-    // The stack only holds openers; the guard narrows the token union.
-    if (token.kind !== 'punct') continue;
+  for (const { token } of stack) {
     errors.push({
       code: 'parse/unclosed',
       message: `unclosed '${token.text}'`,
@@ -137,14 +134,15 @@ function splitArgs(
   let start = lparen + 1;
   let i = start;
 
-  const push = (first: number, fromOffset: number, toOffset: number): void => {
+  const push = (first: number, delimiterIndex: number, toOffset: number): void => {
     const last = i - 1;
     const inner = innerRange(first, last, tokens, match);
+    const delimiter = tokens[delimiterIndex];
     const span: Span = {
-      start: fromOffset,
+      start: delimiter.span.end,
       end: toOffset,
-      line: tokens[Math.max(first, lparen)].span.line,
-      column: tokens[Math.max(first, lparen)].span.column,
+      line: delimiter.span.line,
+      column: delimiter.span.column + (delimiter.span.end - delimiter.span.start),
     };
     args.push({ first: inner.first, last: inner.last, span });
   };
@@ -159,13 +157,13 @@ function splitArgs(
       }
     }
     if (token.kind === 'punct' && token.text === ',') {
-      push(start, i === start ? tokens[i].span.start : tokens[start - 1].span.end, token.span.start);
+      push(start, start - 1, token.span.start);
       start = i + 1;
     }
     i++;
   }
 
-  push(start, tokens[start - 1].span.end, tokens[rparen].span.start);
+  push(start, start - 1, tokens[rparen].span.start);
   return args;
 }
 

@@ -436,8 +436,8 @@ function rewriteCanMsgNew(call: CallNode, ctx: RuleContext): Outcome {
 }
 
 type ResolvedSignal =
-  | { sig: Signal; error: null }
-  | { sig: null; error: string };
+  | { ok: true; sig: Signal }
+  | { ok: false; error: string };
 
 function resolveSignal(
   owner: string | null,
@@ -448,7 +448,7 @@ function resolveSignal(
 ): ResolvedSignal {
   if (owner !== null) {
     const signal = ctx.index.byName.get(owner)?.signals.find(s => s.name === signalName) ?? null;
-    if (signal !== null) return { sig: signal, error: null };
+    if (signal !== null) return { ok: true, sig: signal };
 
     const owners = [...new Set(
       (ctx.index.bySignal.get(signalName) ?? []).map(m => m.msg.name),
@@ -456,25 +456,25 @@ function resolveSignal(
 
     if (owners.length === 1) {
       return {
-        sig: null,
+        ok: false,
         error: `${context}: signal '${signalName}' belongs to '${owners[0]}', not '${owner}'`,
       };
     }
     if (owners.length > 1) {
       return {
-        sig: null,
+        ok: false,
         error: `${context}: signal '${signalName}' is not in message '${owner}', but is present in multiple messages (${owners.join(', ')})`,
       };
     }
     return {
-      sig: null,
+      ok: false,
       error: `${context}: signal '${signalName}' not found in message '${owner}'`,
     };
   }
 
   const matches = ctx.index.bySignal.get(signalName) ?? [];
   if (matches.length === 0) {
-    return { sig: null, error: `${context}: signal '${signalName}' not found` };
+    return { ok: false, error: `${context}: signal '${signalName}' not found` };
   }
 
   const owners = [...new Set(matches.map(m => m.msg.name))];
@@ -486,7 +486,7 @@ function resolveSignal(
     );
   }
 
-  return { sig: matches[0].sig, error: null };
+  return { ok: true, sig: matches[0].sig };
 }
 
 function resolveDraftOwner(arg: ArgRange, ctx: RuleContext): string | null {
@@ -542,7 +542,7 @@ function rewriteSignalCall(
 
   const owner = resolveDraftOwner(call.args[0], ctx);
   const resolved = resolveSignal(owner, signal.value, kind, signal.span, ctx);
-  if (resolved.error !== null) {
+  if (!resolved.ok) {
     return fail('dbc/signal', resolved.error, signal.span);
   }
 
