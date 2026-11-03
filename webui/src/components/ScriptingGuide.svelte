@@ -26,7 +26,8 @@
   marked.setOptions({ renderer });
 
   $effect(() => {
-    fetch('/docs/scripting.md')
+    // BASE_URL, not '/', because GitHub Pages serves this app under a path.
+    fetch(`${import.meta.env.BASE_URL}docs/scripting.md`)
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.text();
