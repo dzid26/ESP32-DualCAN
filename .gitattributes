@@ -1,2 +1,3 @@
 * text=auto
 *.be text
+*.sh text eol=lf
