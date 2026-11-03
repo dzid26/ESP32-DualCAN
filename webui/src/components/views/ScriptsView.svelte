@@ -644,9 +644,10 @@
         <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;flex-direction:column">
           {#if preprocessErrors.length > 0 || preprocessWarnings.length > 0}
             <div
-              class="mono"
+              class="mono preprocess-banner"
+              class:preprocess-banner--error={preprocessErrors.length > 0}
+              class:preprocess-banner--warn={preprocessErrors.length === 0}
               title={[...preprocessErrors, ...preprocessWarnings].join('\n')}
-              style="flex-shrink:0;padding:3px 8px;font-size:10px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{preprocessErrors.length ? 'var(--dc-err-text)' : 'var(--dc-warn)'};background:{preprocessErrors.length ? 'var(--dc-err-bg)' : 'var(--dc-warn-tint)'};border-bottom:1px solid {preprocessErrors.length ? 'var(--dc-err-border)' : 'var(--dc-warn)'}"
             >
               {#if preprocessErrors.length > 0}
                 ⚠ {preprocessErrors.length} preprocessing error{preprocessErrors.length > 1 ? 's' : ''}: {preprocessErrors.join('; ')}
@@ -832,5 +833,24 @@
     font-family: var(--dc-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.1em;
+  }
+  .preprocess-banner {
+    flex-shrink: 0;
+    padding: 3px 8px;
+    font-size: 10px;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preprocess-banner--warn {
+    color: var(--dc-warn);
+    background: var(--dc-warn-tint);
+    border-bottom: 1px solid var(--dc-warn);
+  }
+  .preprocess-banner--error {
+    color: var(--dc-err-text);
+    background: var(--dc-err-bg);
+    border-bottom: 1px solid var(--dc-err-border);
   }
 </style>
