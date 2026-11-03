@@ -190,36 +190,28 @@ export function preprocessScript(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  function findSigInMsg(msgName: string, sigName: string): { msg: Message; sig: Signal; idx: number } | null {
-    for (const msg of messages) {
-      if (msg.name === msgName) {
-        for (let i = 0; i < msg.signals.length; i++) {
-          if (msg.signals[i].name === sigName) {
-            return { msg, sig: msg.signals[i], idx: i };
-          }
-        }
-        return null;
-      }
+  const msgByName = new Map<string, Message>();
+  const msgsBySignal = new Map<string, Array<{ msg: Message; sig: Signal }>>();
+  for (const msg of messages) {
+    if (!msgByName.has(msg.name)) msgByName.set(msg.name, msg);
+    for (const sig of msg.signals) {
+      const list = msgsBySignal.get(sig.name);
+      if (list) list.push({ msg, sig });
+      else msgsBySignal.set(sig.name, [{ msg, sig }]);
     }
-    return null;
+  }
+
+  function findSigInMsg(msgName: string, sigName: string): Signal | null {
+    return msgByName.get(msgName)?.signals.find(s => s.name === sigName) ?? null;
   }
 
   function findMsg(msgName: string): Message | null {
-    for (const msg of messages) {
-      if (msg.name === msgName) return msg;
-    }
-    return null;
+    return msgByName.get(msgName) ?? null;
   }
 
   /* All message entries that contain a signal of this name. */
   function signalMatches(sigName: string): Array<{ msg: Message; sig: Signal }> {
-    const out: Array<{ msg: Message; sig: Signal }> = [];
-    for (const msg of messages) {
-      for (const sig of msg.signals) {
-        if (sig.name === sigName) out.push({ msg, sig });
-      }
-    }
-    return out;
+    return msgsBySignal.get(sigName) ?? [];
   }
 
   const varToMsgs = trackVarToMsgs(sourceCode);
@@ -235,8 +227,8 @@ export function preprocessScript(
 
     if (uniqueMsgName) {
       // We know exactly which message this variable belongs to.
-      const found = findSigInMsg(uniqueMsgName, sigName);
-      if (found) return { sig: found.sig, error: null, warning: null };
+      const sig = findSigInMsg(uniqueMsgName, sigName);
+      if (sig) return { sig, error: null, warning: null };
 
       // Signal not in the tracked message — figure out where it does live.
       const owners = [...new Set(signalMatches(sigName).map(m => m.msg.name))]
