@@ -6,7 +6,6 @@
   import { allExamples as examples } from '../../examples';
   import { preprocessScript, formatDiagnostic, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
   import type { PreprocessResult } from '../../lib/preprocessor';
-  import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
@@ -169,10 +168,6 @@
   /** Stable array so the preprocessor's message-index cache can hit. */
   const allMessages = $derived(Object.values(dbcStore.fullMessages).flat());
 
-  function getFullMessages(): Message[] {
-    return allMessages;
-  }
-
   function applyPreprocessResult(result: PreprocessResult): void {
     preprocessedCode = result.code;
     preprocessWarnings = result.warnings.map(formatDiagnostic);
@@ -196,17 +191,17 @@
       busy = false;
 
       // Then preprocess
-      const result = preprocessScript(code, getFullMessages());
+      const result = preprocessScript(code, allMessages);
       applyPreprocessResult(result);
-      if (result.warnings.length > 0) {
+      if (preprocessWarnings.length > 0) {
         app.pushLog(
-          `scripts: preprocessing warnings — ${result.warnings.map(formatDiagnostic).join('; ')}`,
+          `scripts: preprocessing warnings — ${preprocessWarnings.join('; ')}`,
           'warn',
           'scripts',
         );
       }
-      if (result.errors.length > 0) {
-        const errMsg = result.errors.map(formatDiagnostic).join('; ');
+      if (preprocessErrors.length > 0) {
+        const errMsg = preprocessErrors.join('; ');
         app.pushLog(`scripts: preprocessing errors — ${errMsg}`, 'error', 'scripts');
         throw new Error(`Preprocessing failed: ${errMsg}`);
       }
@@ -350,9 +345,8 @@
       preprocessErrors = [];
     } else if (showPreprocessed) {
       // Preview tab: preprocess client-side
-      const messages = getFullMessages();
-      if (messages.length > 0) {
-        const result = preprocessScript(code, messages);
+      if (allMessages.length > 0) {
+        const result = preprocessScript(code, allMessages);
         applyPreprocessResult(result);
       } else {
         preprocessedCode = '(no DBC loaded - pick your car)';
@@ -651,6 +645,8 @@
           class="mono preprocess-banner"
           class:preprocess-banner--error={preprocessErrors.length > 0}
           class:preprocess-banner--warn={preprocessErrors.length === 0}
+          role={preprocessErrors.length > 0 ? 'alert' : 'status'}
+          aria-live={preprocessErrors.length > 0 ? 'assertive' : 'polite'}
           title={[...preprocessErrors, ...preprocessWarnings].join('\n')}
         >
           {#if preprocessErrors.length > 0}
