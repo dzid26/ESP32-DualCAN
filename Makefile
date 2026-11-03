@@ -17,7 +17,7 @@ check-ui:
 
 test-fw:
 	@echo "==> firmware native tests"
-	cd firmware && pio test -e tests-native
+	cd firmware && pio test -e tests-native -e tests-native-berry
 
 test-ui:
 	@echo "==> webui tests (protocol round-trip)"
