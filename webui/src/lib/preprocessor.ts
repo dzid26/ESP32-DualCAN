@@ -198,7 +198,16 @@ export function preprocessScript(
   messages: Message[]
 ): PreprocessResult {
   const errors: string[] = [];
-  const warnings: string[] = [];
+  const warnings = new Set<string>();
+
+  function fail(message: string): string {
+    errors.push(message);
+    return `raise("key_error", "${message.replace(/"/g, '\\"')}")`;
+  }
+
+  function warn(message: string): void {
+    warnings.add(message);
+  }
 
   const msgByName = new Map<string, Message>();
   const msgsBySignal = new Map<string, Array<{ msg: Message; sig: Signal }>>();
@@ -288,9 +297,30 @@ export function preprocessScript(
     return { ok: true, sig: matches[0].sig, warning };
   }
 
-  function raiseFor(message: string): string {
-    errors.push(message);
-    return `raise("key_error", "${message.replace(/"/g, '\\"')}")`;
+  function rewriteSignalCall(
+    kind: 'msg_sig_get' | 'msg_sig_set',
+    args: string[],
+    value = ''
+  ): string | null {
+    const expected = kind === 'msg_sig_get' ? 2 : 3;
+    const inline = kind === 'msg_sig_get' ? 7 : 8;
+    if (args.length === inline) return null;
+    if (args.length !== expected) {
+      return fail(`${kind}: expected ${expected} arguments (or ${inline} for the inline form)`);
+    }
+    const signal = parseSingleString(args[1]);
+    if (signal.kind === 'unterminated') return fail(`${kind}: unterminated signal name`);
+    if (signal.kind === 'code') {
+      return fail(`${kind}: signal name must be a compile-time string literal`);
+    }
+    const draft = (args[0] ?? '').trim();
+    const resolved = resolveSignalInDraft(draft, signal.value, kind);
+    if (!resolved.ok) return fail(resolved.error);
+    if (resolved.warning) warn(resolved.warning);
+    const renderedDraft = rewrite(draft);
+    return kind === 'msg_sig_get'
+      ? `msg_sig_get(${renderedDraft}, ${sigMeta(resolved.sig)})`
+      : `msg_sig_set(${renderedDraft}, ${sigMeta(resolved.sig)}, ${rewrite(value)})`;
   }
 
   /* ---- Rewrite DBC-aware calls, parenthesised and recursive ---- */
@@ -312,7 +342,7 @@ export function preprocessScript(
 
       const call = scanArgs(text, open);
       if (!call) {
-        errors.push(`${name}: unbalanced parentheses`);
+        fail(`${name}: unbalanced parentheses`);
         continue; // keep scanning: one bad call must not disable the rest
       }
 
@@ -323,25 +353,25 @@ export function preprocessScript(
 
       if (name === 'can_msg_get') {
         if (args.length !== 2) {
-          replacement = raiseFor('can_msg_get: expected 2 arguments');
+          replacement = fail('can_msg_get: expected 2 arguments');
         } else {
           const msgName = parseSingleString(args[1]);
           if (msgName.kind === 'literal') {
             const msg = findMsg(msgName.value);
             replacement = msg === null
-              ? raiseFor(`can_msg_get: message '${msgName.value}' not found`)
+              ? fail(`can_msg_get: message '${msgName.value}' not found`)
               : `can_msg_get(${rewrite(draft)}, 0x${msg.id.toString(16)})`;
           } else if (msgName.kind === 'unterminated') {
-            replacement = raiseFor('can_msg_get: unterminated message name');
+            replacement = fail('can_msg_get: unterminated message name');
           } else if (startsWithString(args[1])) {
-            replacement = raiseFor('can_msg_get: message name must be a compile-time string literal');
+            replacement = fail('can_msg_get: message name must be a compile-time string literal');
           } else if (parseSingleString(args[0]).kind === 'literal') {
-            replacement = raiseFor('can_msg_get: message name must be the second argument (bus first)');
+            replacement = fail('can_msg_get: message name must be the second argument (bus first)');
           }
         }
       } else if (name === 'can_msg_new') {
         if (args.length > 2) {
-          replacement = raiseFor('can_msg_new: expected 1 or 2 arguments');
+          replacement = fail('can_msg_new: expected 1 or 2 arguments');
         } else {
           let msgName: string | null = null;
           let badLiteral = false;
@@ -351,56 +381,18 @@ export function preprocessScript(
             else if (literal.kind === 'unterminated' || startsWithString(arg)) badLiteral = true;
           }
           if (badLiteral) {
-            replacement = raiseFor('can_msg_new: message name must be a compile-time string literal');
+            replacement = fail('can_msg_new: message name must be a compile-time string literal');
           } else if (msgName !== null) {
             const msg = findMsg(msgName);
             replacement = msg === null
-              ? raiseFor(`can_msg_new: message '${msgName}' not found`)
+              ? fail(`can_msg_new: message '${msgName}' not found`)
               : `can_msg_new(0x${msg.id.toString(16)}, ${msg.dlc})`;
           }
         }
       } else if (name === 'msg_sig_get') {
-        if (args.length === 7) {
-          // Already inlined by a previous preprocess pass.
-        } else if (args.length !== 2) {
-          replacement = raiseFor('msg_sig_get: expected 2 arguments (or 7 for the inline form)');
-        } else {
-          const sigName = parseSingleString(args[1]);
-          if (sigName.kind === 'unterminated') {
-            replacement = raiseFor('msg_sig_get: unterminated signal name');
-          } else if (sigName.kind === 'code') {
-            replacement = raiseFor('msg_sig_get: signal name must be a compile-time string literal');
-          } else {
-            const resolved = resolveSignalInDraft(draft, sigName.value, 'msg_sig_get');
-            if (!resolved.ok) {
-              replacement = raiseFor(resolved.error);
-            } else {
-              if (resolved.warning) warnings.push(resolved.warning);
-              replacement = `msg_sig_get(${rewrite(draft)}, ${sigMeta(resolved.sig)})`;
-            }
-          }
-        }
+        replacement = rewriteSignalCall('msg_sig_get', args);
       } else if (name === 'msg_sig_set') {
-        if (args.length === 8) {
-          // Already inlined by a previous preprocess pass.
-        } else if (args.length !== 3) {
-          replacement = raiseFor('msg_sig_set: expected 3 arguments (or 8 for the inline form)');
-        } else {
-          const sigName = parseSingleString(args[1]);
-          if (sigName.kind === 'unterminated') {
-            replacement = raiseFor('msg_sig_set: unterminated signal name');
-          } else if (sigName.kind === 'code') {
-            replacement = raiseFor('msg_sig_set: signal name must be a compile-time string literal');
-          } else {
-            const resolved = resolveSignalInDraft(draft, sigName.value, 'msg_sig_set');
-            if (!resolved.ok) {
-              replacement = raiseFor(resolved.error);
-            } else {
-              if (resolved.warning) warnings.push(resolved.warning);
-              replacement = `msg_sig_set(${rewrite(draft)}, ${sigMeta(resolved.sig)}, ${rewrite(value)})`;
-            }
-          }
-        }
+        replacement = rewriteSignalCall('msg_sig_set', args, value);
       }
 
       if (replacement === null) continue; // leave unrecognised calls for inner rewrites
@@ -416,5 +408,5 @@ export function preprocessScript(
 
   const code = rewrite(sourceCode);
 
-  return { code, errors, warnings: [...new Set(warnings)] };
+  return { code, errors, warnings: [...warnings] };
 }
