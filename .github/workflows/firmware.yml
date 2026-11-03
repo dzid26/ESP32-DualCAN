@@ -21,7 +21,6 @@ jobs:
           path: |
             ~/.cache/pip
             ~/.platformio
-            firmware/.cache
           key: pio-native-${{ hashFiles('firmware/platformio.ini') }}-core6.2.0
 
       - uses: actions/setup-python@v5
@@ -49,7 +48,6 @@ jobs:
           path: |
             ~/.cache/pip
             ~/.platformio
-            firmware/.cache
             firmware/.pio
           key: pio-esp32c6-${{ hashFiles('firmware/platformio.ini', 'firmware/sdkconfig.defaults') }}-core6.2.0
 
