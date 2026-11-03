@@ -15,8 +15,8 @@ var d = can_msg_get(0, 0x3e9)
 var e = can_msg_new(0, "UI_vehicleControl3")
 var f = can_msg_new(0,"DAS_bodyControls")
 
-# Already numeric (passes through)
-var g = can_msg_new(0x294)
+# Already numeric (id, dlc; passes through)
+var g = can_msg_new(0x294, 8)
 
 # ---- 3. msg_sig_get ----
 # Extracts a signal from a pre-read draft (inlined to draft["data"].getbits)
