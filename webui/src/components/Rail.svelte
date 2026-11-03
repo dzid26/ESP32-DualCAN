@@ -1,12 +1,33 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
   import { NAV_ITEMS } from '../lib/nav';
-  import { modKey, isMobile } from '../lib/platform';
+  import { modKey, isIOS } from '../lib/platform';
   import Icon from './Icon.svelte';
+  import { toast } from '../lib/toast.svelte';
 
   let { onToggleLog }: { onToggleLog: () => void } = $props();
 
-  const canInstall = $derived(!isMobile && !!app.installPrompt && !app.isInstalled);
+  // The logo is the only place a phone can be told why a tap did nothing. A
+  // browser offers the install prompt only once it has decided the site is
+  // installable, and it stops offering it after the app is installed, so the
+  // remaining cases are "already installed" and "this browser wants another
+  // route".
+  function onBrandClick(): void {
+    if (app.installPrompt) {
+      void app.installApp();
+      return;
+    }
+    if (app.isInstalled) {
+      toast.show({ message: 'Dorky is installed. Open it from your home screen.' });
+      return;
+    }
+    toast.show({
+      message: isIOS
+        ? 'Tap Share, then Add to Home Screen to install.'
+        : 'Already installed? Open it from your home screen. Otherwise use Install in the browser menu.',
+      duration: 10000,
+    });
+  }
 
   $effect(() => {
     if (app.logOpen) app.logAttention = false;
@@ -27,26 +48,16 @@
       <div class="rail__brand-name mono">CMDR</div>
     </div>
   {/snippet}
-  {#if canInstall}
-    <button
-      class="rail__brand"
-      type="button"
-      style="cursor: pointer"
-      aria-label="Install app"
-      title="Install app"
-      onclick={() => app.installApp()}
-    >
-      {@render brandInner()}
-    </button>
-  {:else}
-    <div
-      class="rail__brand"
-      aria-label="Dorky Commander"
-      title="Dorky Commander · CAN reverse-engineering tool"
-    >
-      {@render brandInner()}
-    </div>
-  {/if}
+  <button
+    class="rail__brand"
+    type="button"
+    style="cursor: pointer"
+    aria-label={app.isInstalled ? 'Dorky Commander' : 'Install app'}
+    title={app.isInstalled ? 'Dorky Commander' : 'Install app'}
+    onclick={onBrandClick}
+  >
+    {@render brandInner()}
+  </button>
 
   <div class="rail__list">
     {#each NAV_ITEMS as item}
