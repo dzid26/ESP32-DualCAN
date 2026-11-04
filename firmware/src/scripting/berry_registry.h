@@ -24,13 +24,17 @@ int  berry_current_script(void);
 /* Revoke every timer / action registered with this script_id. */
 void berry_cleanup_script(int script_id);
 
-/* ---- Function ref helpers (used by script_loader) ---- */
+/* ---- Function ref helpers (used by script_loader) ----
+ * A ref is an index into a hidden VM list and indexes are recycled, so a ref
+ * is valid only until its owner releases it. Releasing or calling a stale ref
+ * can reach whichever registration has since taken that index. */
 
 /* If a global of the given name is a function, store it in the refs list,
  * clear the global, and return its ref id. Returns -1 if not a function. */
 int  berry_capture_global(bvm *vm, const char *global_name);
 
-/* Release a previously captured ref (no-op if ref < 0). */
+/* Release a previously captured ref (no-op if ref < 0 or the refs list is
+ * gone). Never release the same ref twice. */
 void berry_release_ref(bvm *vm, int ref);
 
 /* Call a captured ref with no args. Returns 0 on success, -1 if ref is invalid,

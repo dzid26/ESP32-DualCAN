@@ -125,9 +125,10 @@ static int run_as_owner(int owner, const char *src)
     return rc;
 }
 
-/* Length of .refs, or -1 when the list has never been created. refs_alloc()
- * appends and refs_free() nils the hole, so the length only grows: live
- * entries are the retention budget, the length is list memory. */
+/* Length of .refs, or -1 when the list has never been created. Allocation
+ * reuses the lowest nil slot before appending, so the length is the high-water
+ * mark of simultaneous refs (list memory), while refs_live() is the retention
+ * budget. */
 static int refs_len(void)
 {
     be_getglobal(vm, ".refs");
