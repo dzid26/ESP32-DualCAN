@@ -40,7 +40,14 @@ jobs:
         run: pip install platformio
 
       - name: Run native tests
-        run: pio test -d firmware -e tests-native
+        run: |
+          set -o pipefail
+          pio test -d firmware -e tests-native -e tests-native-berry 2>&1 \
+            | tee "$RUNNER_TEMP/host-tests.log"
+
+      - name: Summarize native tests
+        if: always()
+        run: bash .github/scripts/summarize-test-log.sh "$RUNNER_TEMP/host-tests.log"
 
   build:
     name: Firmware build
