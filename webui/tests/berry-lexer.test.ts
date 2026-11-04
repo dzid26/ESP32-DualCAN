@@ -43,7 +43,7 @@ test('marks a call parenthesis only when nothing precedes it', () => {
   assert.equal(firstParen('foo# note\n(').callable, false);
   assert.equal(firstParen('foo#- note -#(').callable, false);
   assert.equal(firstParen('#- note -#foo(').callable, true);
-  assert.equal(firstParen('(').callable, false, 'source start behaves like leading whitespace');
+  assert.equal(firstParen('(').callable, true, 'source start has no preceding whitespace');
   assert.equal(firstParen('foo((').callable, true);
 });
 
@@ -191,6 +191,16 @@ test('classifies malformed numbers without throwing', () => {
   assert.equal(tokenize('123abc').errors[0].code, 'lex/malformed-number');
   assert.equal(tokenize('1e').errors[0].code, 'lex/malformed-number');
   assert.deepEqual(tokenize('0x3e9 1.5 .5 1e-3').errors, []);
+});
+
+test('reads Berry real forms and recovers after a malformed suffix', () => {
+  assert.deepEqual(tokenize('1. .5 1e3 1..2').errors, []);
+  assert.deepEqual(texts('1. .5 1e3 1..2'), ['1.', '.5', '1e3', '1', '..', '2']);
+
+  const malformed = tokenize('1.foo');
+  assert.equal(malformed.errors[0].code, 'lex/malformed-number');
+  assert.equal(malformed.tokens[0].text, '1.');
+  assert(malformed.tokens.some(t => t.kind === 'id' && t.text === 'foo'));
 });
 
 test('reports a stray character and continues', () => {

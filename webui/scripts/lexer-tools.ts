@@ -133,7 +133,9 @@ export interface LexerSourceLock {
 export function hashBerryLexer(): LexerSourceLock {
   const files: Record<string, string> = {};
   for (const file of ['src/be_lexer.c', 'src/be_lexer.h', 'src/be_parser.c']) {
-    files[file] = `sha256:${createHash('sha256').update(readFileSync(join(BERRY, file))).digest('hex')}`;
+    // Normalize line endings so the lock is the same on Windows and Linux.
+    const text = readFileSync(join(BERRY, file), 'utf8').replace(/\r\n?/g, '\n');
+    files[file] = `sha256:${createHash('sha256').update(text).digest('hex')}`;
   }
   return { files };
 }
