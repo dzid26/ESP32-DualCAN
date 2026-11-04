@@ -2,6 +2,7 @@ name: WebUI CI
 
 on:
   push:
+    branches: [main]
     paths:
       - 'webui/**'
       - 'firmware/test_scripts/**'

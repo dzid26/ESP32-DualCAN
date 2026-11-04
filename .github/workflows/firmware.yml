@@ -2,6 +2,7 @@ name: Firmware CI
 
 on:
   push:
+    branches: [main]
     paths:
       - 'firmware/**'
       - '.github/scripts/**'
