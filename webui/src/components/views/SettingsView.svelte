@@ -502,21 +502,6 @@
             style="font-size: 11px; color: var(--dc-accent); text-decoration: none">Token usage ↗</a>
         </div>
       </div>
-
-      <div class="field">
-        <span>Confirm vehicle writes</span>
-        <div class="row-flex" style="gap: 6px">
-          <Checkbox.Root class="cbx" checked={true} disabled={true}>{@render cbxMark()}</Checkbox.Root>
-          <span style="font-size: 12px; color: var(--dc-text-fade)">Always on — agent never auto-fires events that touch the bus</span>
-        </div>
-      </div>
-      <div class="field">
-        <span>Block while moving</span>
-        <div class="row-flex" style="gap: 6px">
-          <Checkbox.Root class="cbx" checked={true}>{@render cbxMark()}</Checkbox.Root>
-          <span style="font-size: 12px">Refuse vehicle writes when speed signal &gt; 5 mph</span>
-        </div>
-      </div>
     </div>
   </div>
 
