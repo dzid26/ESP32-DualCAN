@@ -11,6 +11,7 @@ on:
     paths:
       - 'firmware/**'
       - '.github/scripts/**'
+      - '.github/workflows/firmware.yml'
 
 jobs:
   host-tests:

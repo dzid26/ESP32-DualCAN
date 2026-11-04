@@ -27,6 +27,7 @@ on:
       - 'firmware/src/scripting/berry_bindings.c'
       - 'firmware/tools/parse_check.c'
       - 'firmware/tools/parse_check_examples.sh'
+      - '.github/workflows/webui.yml'
 
 permissions:
   contents: read
