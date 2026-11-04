@@ -158,13 +158,9 @@ void test_one_shot_from_callback_error_reports_owner_and_frees_slot(void)
 /* os.exit()/sys.exit() are compiled out (berry_conf.h sets BE_USE_OS_MODULE
  * and BE_USE_SYS_MODULE to 0), but any native binding may call be_exit(), so
  * the tick's BE_EXIT read is reachable. be_pcall() copies one value for
- * BE_EXIT (be_exec.c copy_exception) while the tick reads -2/-1 as an
- * exception pair.
- *
- * Confirmed: the handler gets the callback object as the type
- * ("<function: 0x...>") because -2 is the slot below the single exit status.
- * Bug session ses_e5de7d818ffexLysa6KUGVbQ75 owns the fix; drop the ignore
- * when it lands. */
+ * BE_EXIT (be_exec.c copy_exception) while berry_timer_tick() reads -2/-1 as
+ * an exception pair, so the handler gets the callback object as the type.
+ * Fix in #38; drop the ignore once it is merged. */
 static int l_test_exit(bvm *vm)
 {
     be_exit(vm, 3);
@@ -173,7 +169,7 @@ static int l_test_exit(bvm *vm)
 
 void test_timer_callback_exit_reports_an_error_not_stack_garbage(void)
 {
-    TEST_IGNORE_MESSAGE("ses_e5de7d818ffexLysa6KUGVbQ75: handler got '<function: 0x...>'");
+    TEST_IGNORE_MESSAGE("BE_EXIT reports the slot below the status as the error type");
 
     be_regfunc(vm, "test_exit", l_test_exit);
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 43,
