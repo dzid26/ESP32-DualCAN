@@ -54,13 +54,28 @@ Notes:
 npm test              # equivalent to: node --test tests/*.test.ts
 ```
 
-Plain Node — no browser and no radio. It covers the protocol round-trip, DBC
+Plain Node - no browser and no radio. It covers the protocol round-trip, DBC
 preprocessing, capture, examples, and the BLE transport/store optimistic and
 reconnect logic against a mocked `BleClient` (device discovery, GATT connect,
 disconnect classification, backoff with the delay injected so nothing waits on
 the real timer). Test-only shims live in `tests/helpers/`: `test-globals.ts`
 fakes `localStorage` and Svelte 5 runes, and `register-ts-resolver.ts` resolves
 Vite-style extensionless imports for `node --test`.
+
+Two tests build native tools against the vendored Berry sources with `gcc`:
+
+- `tests/parse-check.test.ts` compiles every real script and every generated
+  `.bep` with `firmware/tools/parse_check.c`.
+- `tests/lexer-conformance.test.ts` compares the TypeScript token stream with
+  `firmware/tools/lex_dump.c` over the real corpus and lexical edge cases.
+
+Both skip locally when `gcc` is missing and fail in CI. The lexer keyword,
+punctuation, and escape tables are generated from the C lexer. After a Berry
+bump, regenerate them and the source lock:
+
+```bash
+node webui/scripts/gen-lexer-tables.ts
+```
 
 ### Real-hardware BLE tier (not part of `npm test`)
 

@@ -1,4 +1,5 @@
 import type { Diagnostic, Span } from './diagnostic.ts';
+import { KEYWORDS, PUNCTUATION, SIMPLE_ESCAPES } from './lexer-tables.ts';
 
 /**
  * Berry tokenizer.
@@ -8,6 +9,11 @@ import type { Diagnostic, Span } from './diagnostic.ts';
  * escape set, adjacent string literals, and the `OptCallLBK` / `OptSpaceLBK`
  * distinction for `(`. Comments and whitespace are skipped; their bytes live
  * in the gaps between token spans, so rendering can copy them verbatim.
+ *
+ * The keyword, punctuation, and simple-escape tables are generated from the
+ * vendored C lexer by webui/scripts/gen-lexer-tables.ts. The token stream is
+ * checked against the C lexer by webui/tests/lexer-conformance.test.ts. A Berry
+ * bump fails the source-lock test until the tables are regenerated.
  */
 export type Token =
   | { kind: 'id'; text: string; span: Span }
@@ -21,25 +27,6 @@ export interface LexResult {
   tokens: Token[];
   errors: Diagnostic[];
 }
-
-const KEYWORDS = new Set([
-  'if', 'elif', 'else', 'while', 'for', 'def', 'end', 'class', 'break',
-  'continue', 'return', 'true', 'false', 'nil', 'var', 'do', 'import',
-  'as', 'try', 'except', 'raise', 'static',
-]);
-
-/* Longest first, so `..` wins over `.` and `:=` over `:`. */
-const PUNCTUATION = [
-  '<<=', '>>=', '..', '&&', '||', '==', '!=', '<=', '>=', '<<', '>>',
-  '+=', '-=', '*=', '/=', '%=', '&=', '|=', '^=', '->', ':=',
-  '+', '-', '*', '/', '%', '<', '>', '&', '|', '^', '~', '!', '(',
-  ')', '[', ']', '{', '}', '.', ',', ';', ':', '?', '=',
-].sort((a, b) => b.length - a.length);
-
-const SIMPLE_ESCAPES: Record<string, string> = {
-  a: '\x07', b: '\b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v',
-  '\\': '\\', "'": "'", '"': '"', '?': '?',
-};
 
 function isIdentStart(c: string): boolean {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_';
@@ -59,12 +46,6 @@ function isHex(c: string): boolean {
 
 function isOctal(c: string): boolean {
   return c >= '0' && c <= '7';
-}
-
-function hexValue(c: string): number {
-  if (c >= '0' && c <= '9') return c.charCodeAt(0) - 48;
-  if (c >= 'a' && c <= 'f') return c.charCodeAt(0) - 87;
-  return c.charCodeAt(0) - 55;
 }
 
 export function tokenize(source: string): LexResult {
@@ -149,6 +130,85 @@ export function tokenize(source: string): LexResult {
     return skipped;
   }
 
+  function stringToken(
+    start: number,
+    end: number,
+    atLine: number,
+    atColumn: number,
+    value: string,
+  ): Token {
+    return {
+      kind: 'string',
+      text: source.slice(start, end),
+      value,
+      span: span(start, end, atLine, atColumn),
+    };
+  }
+
+  function unfinishedString(start: number, atLine: number, atColumn: number, value: string): Token {
+    fail('lex/unfinished-string', 'unfinished string', start, i, atLine, atColumn);
+    return stringToken(start, i, atLine, atColumn, value);
+  }
+
+  /** Decode one escape at the backslash. Returns null when the string cannot continue. */
+  function decodeEscape(): string | null {
+    const escapeStart = i;
+    const escapeLine = line;
+    const escapeColumn = column(i);
+    i++;
+
+    if (i >= length) return null;
+    const e = source[i];
+    if (e === '\n' || e === '\r') return null;
+
+    const simple = SIMPLE_ESCAPES[e];
+    if (simple !== undefined) {
+      i++;
+      return simple;
+    }
+
+    if (e === 'x') {
+      const digits = source.slice(i + 1, i + 3);
+      if (digits.length === 2 && isHex(digits[0]) && isHex(digits[1])) {
+        i += 3;
+        return String.fromCharCode(parseInt(digits, 16));
+      }
+      fail('lex/invalid-hex', 'invalid hexadecimal escape (two hex digits required)',
+        escapeStart, Math.min(i + 2, length), escapeLine, escapeColumn);
+      i++;
+      return '';
+    }
+
+    if (e === 'u') {
+      const digits = source.slice(i + 1, i + 5);
+      if (digits.length === 4 && [...digits].every(isHex)) {
+        i += 5;
+        return String.fromCharCode(parseInt(digits, 16));
+      }
+      fail('lex/invalid-unicode', 'invalid unicode escape (four hex digits required)',
+        escapeStart, Math.min(i + 4, length), escapeLine, escapeColumn);
+      i++;
+      return '';
+    }
+
+    if (isOctal(e)) {
+      const digits = source.slice(i, i + 3);
+      if (digits.length === 3 && [...digits].every(isOctal)) {
+        i += 3;
+        return String.fromCharCode(parseInt(digits, 8) & 0xff);
+      }
+      fail('lex/invalid-octal', 'invalid octal escape (three octal digits required)',
+        escapeStart, Math.min(i + 2, length), escapeLine, escapeColumn);
+      i++;
+      return '';
+    }
+
+    fail('lex/unknown-escape', `unknown escape sequence '\\${e}'`,
+      escapeStart, i + 1, escapeLine, escapeColumn);
+    i++;
+    return '';
+  }
+
   /** Scan one or more adjacent string literals. Leaves `i` after the last one. */
   function scanString(): Token {
     const start = i;
@@ -171,104 +231,15 @@ export function tokenize(source: string): LexResult {
         }
 
         if (c === '\n' || c === '\r') {
-          fail('lex/unfinished-string', 'unfinished string', start, i, atLine, atColumn);
-          return {
-            kind: 'string',
-            text: source.slice(start, i),
-            value,
-            span: span(start, i, atLine, atColumn),
-          };
+          return unfinishedString(start, atLine, atColumn, value);
         }
 
         if (c === '\\') {
-          const escapeStart = i;
-          const escapeLine = line;
-          const escapeColumn = column(i);
-          i++;
-
-          if (i >= length) {
-            fail('lex/unfinished-string', 'unfinished string', start, length, atLine, atColumn);
-            return {
-              kind: 'string',
-              text: source.slice(start, length),
-              value,
-              span: span(start, length, atLine, atColumn),
-            };
+          const decoded = decodeEscape();
+          if (decoded === null) {
+            return unfinishedString(start, atLine, atColumn, value);
           }
-
-          const e = source[i];
-          if (e === '\n' || e === '\r') {
-            fail('lex/unfinished-string', 'unfinished string', start, i, atLine, atColumn);
-            return {
-              kind: 'string',
-              text: source.slice(start, i),
-              value,
-              span: span(start, i, atLine, atColumn),
-            };
-          }
-
-          const simple = SIMPLE_ESCAPES[e];
-          if (simple !== undefined) {
-            value += simple;
-            i++;
-            continue;
-          }
-
-          if (e === 'x') {
-            if (i + 2 < length && isHex(source[i + 1]) && isHex(source[i + 2])) {
-              value += String.fromCharCode(
-                (hexValue(source[i + 1]) << 4) | hexValue(source[i + 2]),
-              );
-              i += 3;
-            } else {
-              fail('lex/invalid-hex', 'invalid hexadecimal escape (two hex digits required)',
-                escapeStart, Math.min(i + 2, length), escapeLine, escapeColumn);
-              i++;
-            }
-            continue;
-          }
-
-          if (e === 'u') {
-            if (
-              i + 4 < length
-              && isHex(source[i + 1]) && isHex(source[i + 2])
-              && isHex(source[i + 3]) && isHex(source[i + 4])
-            ) {
-              const code = (hexValue(source[i + 1]) << 12)
-                | (hexValue(source[i + 2]) << 8)
-                | (hexValue(source[i + 3]) << 4)
-                | hexValue(source[i + 4]);
-              value += String.fromCharCode(code);
-              i += 5;
-            } else {
-              fail('lex/invalid-unicode', 'invalid unicode escape (four hex digits required)',
-                escapeStart, Math.min(i + 4, length), escapeLine, escapeColumn);
-              i++;
-            }
-            continue;
-          }
-
-          if (isOctal(e)) {
-            if (
-              i + 2 < length
-              && isOctal(source[i + 1]) && isOctal(source[i + 2])
-            ) {
-              const code = ((source.charCodeAt(i) - 48) << 6)
-                | ((source.charCodeAt(i + 1) - 48) << 3)
-                | (source.charCodeAt(i + 2) - 48);
-              value += String.fromCharCode(code & 0xff);
-              i += 3;
-            } else {
-              fail('lex/invalid-octal', 'invalid octal escape (three octal digits required)',
-                escapeStart, Math.min(i + 2, length), escapeLine, escapeColumn);
-              i++;
-            }
-            continue;
-          }
-
-          fail('lex/unknown-escape', `unknown escape sequence '\\${e}'`,
-            escapeStart, i + 1, escapeLine, escapeColumn);
-          i++;
+          value += decoded;
           continue;
         }
 
@@ -277,13 +248,7 @@ export function tokenize(source: string): LexResult {
       }
 
       if (!closed) {
-        fail('lex/unfinished-string', 'unfinished string', start, length, atLine, atColumn);
-        return {
-          kind: 'string',
-          text: source.slice(start, length),
-          value,
-          span: span(start, length, atLine, atColumn),
-        };
+        return unfinishedString(start, atLine, atColumn, value);
       }
 
       // Berry's scan_string consumes the delimiters after a literal and keeps
@@ -291,12 +256,7 @@ export function tokenize(source: string): LexResult {
       skipTrivia();
       if (i < length && (source[i] === '"' || source[i] === "'")) continue;
 
-      return {
-        kind: 'string',
-        text: source.slice(start, i),
-        value,
-        span: span(start, i, atLine, atColumn),
-      };
+      return stringToken(start, i, atLine, atColumn, value);
     }
   }
 
@@ -304,6 +264,7 @@ export function tokenize(source: string): LexResult {
     const start = i;
     const atLine = line;
     const atColumn = column(i);
+    const startsWithDigit = isDigit(source[i]);
 
     if (source[i] === '0' && (source[i + 1] === 'x' || source[i + 1] === 'X')) {
       i += 2;
@@ -314,7 +275,9 @@ export function tokenize(source: string): LexResult {
       }
     } else {
       while (i < length && isDigit(source[i])) i++;
-      if (i < length && source[i] === '.' && isDigit(source[i + 1])) {
+      // Berry's decimal_dots consumes one dot unless it starts `..`, even
+      // when no digit follows, so `1.` is a real and `1..2` is `1 .. 2`.
+      if (i < length && source[i] === '.' && source[i + 1] !== '.') {
         i++;
         while (i < length && isDigit(source[i])) i++;
       }
@@ -329,8 +292,15 @@ export function tokenize(source: string): LexResult {
       }
     }
 
-    if (i < length && isIdentStart(source[i])) {
-      while (i < length && isWord(source[i])) i++;
+    // Berry checks a trailing identifier or dot only for numbers that start
+    // with a digit. A leading-dot real (`.5`) skips the check. It reports a
+    // trailing identifier without consuming it, and consumes a second
+    // decimal dot before reporting.
+    if (startsWithDigit && i < length && isIdentStart(source[i])) {
+      fail('lex/malformed-number', 'malformed number', start, i, atLine, atColumn);
+    } else if (startsWithDigit && i < length && source[i] === '.' && source[i + 1] !== '.') {
+      i++;
+      while (i < length && isDigit(source[i])) i++;
       fail('lex/malformed-number', 'malformed number', start, i, atLine, atColumn);
     }
 
@@ -341,11 +311,8 @@ export function tokenize(source: string): LexResult {
     };
   }
 
-  let first = true;
   while (true) {
     const skipped = skipTrivia();
-    const hadGap = first || skipped;
-    first = false;
 
     if (i >= length) {
       tokens.push({ kind: 'eof', span: span(length, length, line, column(length)) });
@@ -384,7 +351,7 @@ export function tokenize(source: string): LexResult {
       tokens.push({
         kind: 'punct',
         text: op,
-        callable: op === '(' && !hadGap,
+        callable: op === '(' && !skipped,
         span: span(start, start + op.length, atLine, atColumn),
       });
       i += op.length;

@@ -1,64 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { preprocessScript, formatDiagnostic } from '../src/lib/preprocessor.ts';
 import { REPO, loadDbcMessages, realScriptFiles } from './helpers/corpus.ts';
-
-const FIRMWARE = join(REPO, 'firmware');
-const BERRY = join(FIRMWARE, 'components/berry');
-const CACHE = join(FIRMWARE, '.cache/preprocessor-oracle');
-const BIN = join(CACHE, process.platform === 'win32' ? 'parse_check.exe' : 'parse_check');
-
-function gccAvailable(): boolean {
-  const result = spawnSync('gcc', ['--version'], { encoding: 'utf8' });
-  return result.status === 0;
-}
-
-function parseCheckSources(): string[] {
-  return [
-    ...readdirSync(join(BERRY, 'src')).filter(f => f.endsWith('.c')).sort()
-      .map(f => join(BERRY, 'src', f)),
-    join(BERRY, 'port/be_port.c'),
-    join(BERRY, 'port/be_modtab.c'),
-    join(FIRMWARE, 'tools/parse_check.c'),
-  ];
-}
-
-function buildParseCheck(): void {
-  const sources = parseCheckSources();
-  const needsBuild = !existsSync(BIN)
-    || sources.some(source => statSync(source).mtimeMs > statSync(BIN).mtimeMs);
-
-  if (!needsBuild) return;
-
-  mkdirSync(CACHE, { recursive: true });
-  const result = spawnSync('gcc', [
-    '-std=c99', '-O1', '-w',
-    '-I', join(BERRY, 'src'),
-    '-I', join(BERRY, 'port'),
-    ...sources,
-    '-o', BIN,
-    '-lm',
-  ], { encoding: 'utf8' });
-
-  assert.equal(
-    result.status,
-    0,
-    `parse_check build failed:\n${result.stdout ?? ''}\n${result.stderr ?? ''}`,
-  );
-}
+import {
+  ORACLE_CACHE,
+  PARSE_BIN,
+  buildParseCheck,
+  gccAvailable,
+} from '../scripts/lexer-tools.ts';
 
 function runParseCheck(files: string[]): void {
-  const result = spawnSync(BIN, files, { encoding: 'utf8' });
+  const result = spawnSync(PARSE_BIN, files, { encoding: 'utf8' });
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
   assert.equal(result.status, 0, `parse_check failed:\n${output}`);
   assert(!/\bFAIL\b/.test(output), `parse_check reported a failure:\n${output}`);
@@ -74,10 +29,10 @@ test('generated scripts compile with the firmware parser', (t) => {
   const messages = loadDbcMessages();
   const inputs = realScriptFiles();
   const generated: string[] = [];
-  mkdirSync(CACHE, { recursive: true });
+  mkdirSync(ORACLE_CACHE, { recursive: true });
 
   function writeGenerated(name: string, result: ReturnType<typeof preprocessScript>): string {
-    const path = join(CACHE, name);
+    const path = join(ORACLE_CACHE, name);
     writeFileSync(path, result.code);
     generated.push(path);
     return path;
@@ -110,13 +65,13 @@ end
 var foo = {}
 foo.can_msg_get(0, 1)
 `;
-  const validPath = join(CACHE, 'synthetic-valid.be');
+  const validPath = join(ORACLE_CACHE, 'synthetic-valid.be');
   writeFileSync(validPath, valid);
   inputs.push(validPath);
   writeResult('synthetic-valid.bep', preprocessScript(valid, messages));
 
   const errorInput = 'var msg = {}\nvar bad = can_msg_get(0, "UNKNOWN_MESSAGE")\nvar y = 1 + msg_sig_get(msg, "GHOST_SIGNAL")\n';
-  const errorPath = join(CACHE, 'synthetic-error.be');
+  const errorPath = join(ORACLE_CACHE, 'synthetic-error.be');
   writeFileSync(errorPath, errorInput);
   inputs.push(errorPath);
   const errorResult = preprocessScript(errorInput, messages);
@@ -125,7 +80,7 @@ foo.can_msg_get(0, 1)
   writeGenerated('synthetic-error.bep', errorResult);
 
   const spacedInput = 'var bad = can_msg_get (0, "DAS_bodyControls")\n';
-  const spacedPath = join(CACHE, 'synthetic-spaced.be');
+  const spacedPath = join(ORACLE_CACHE, 'synthetic-spaced.be');
   writeFileSync(spacedPath, spacedInput);
   const spacedResult = preprocessScript(spacedInput, messages);
   assert.equal(spacedResult.errors.length, 1, JSON.stringify(spacedResult.errors));

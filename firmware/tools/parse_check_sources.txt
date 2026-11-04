@@ -1,0 +1,3 @@
+components/berry/src/*.c
+components/berry/port/be_port.c
+components/berry/port/be_modtab.c

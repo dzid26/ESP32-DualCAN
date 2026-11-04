@@ -8,11 +8,15 @@ on:
       - 'scripts/tesla/**'
       - 'dbc/**'
       - 'firmware/components/berry/src/be_lexer.c'
+      - 'firmware/components/berry/src/be_lexer.h'
       - 'firmware/components/berry/src/be_parser.c'
       - 'firmware/components/berry/src/be_baselib.c'
+      - 'firmware/components/berry/port/berry_conf.h'
       - 'firmware/src/scripting/berry_bindings.c'
       - 'firmware/tools/parse_check.c'
+      - 'firmware/tools/parse_check_sources.txt'
       - 'firmware/tools/parse_check_examples.sh'
+      - 'firmware/tools/lex_dump.c'
       - '.github/workflows/webui.yml'
   pull_request:
     paths:
@@ -21,11 +25,15 @@ on:
       - 'scripts/tesla/**'
       - 'dbc/**'
       - 'firmware/components/berry/src/be_lexer.c'
+      - 'firmware/components/berry/src/be_lexer.h'
       - 'firmware/components/berry/src/be_parser.c'
       - 'firmware/components/berry/src/be_baselib.c'
+      - 'firmware/components/berry/port/berry_conf.h'
       - 'firmware/src/scripting/berry_bindings.c'
       - 'firmware/tools/parse_check.c'
+      - 'firmware/tools/parse_check_sources.txt'
       - 'firmware/tools/parse_check_examples.sh'
+      - 'firmware/tools/lex_dump.c'
 
 permissions:
   contents: read
