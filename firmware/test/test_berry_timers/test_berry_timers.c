@@ -31,8 +31,23 @@ static bvm *vm;
  * the value stack at this watermark, or an error path is leaking values. */
 static int stack_base;
 
+/* Recorder installed with berry_set_timer_error_handler(). */
+static int g_error_calls;
+static int g_error_owner;
+
+static void record_timer_error(int script_id, const char *type, const char *msg)
+{
+    (void)type;
+    (void)msg;
+    g_error_calls++;
+    g_error_owner = script_id;
+}
+
 void setUp(void)
 {
+    g_error_calls = 0;
+    g_error_owner = -1;
+
     vm = be_vm_new();
     berry_register_registry(vm);
     stack_base = be_top(vm);
@@ -44,6 +59,7 @@ void tearDown(void)
     /* s_timers[]/s_actions[] are file-static and outlive the VM, so a test that
      * leaves entries behind would eat into the next test's budget. Hand every
      * slot back before the VM goes away. */
+    berry_set_timer_error_handler(NULL);
     berry_set_current_script(SCRIPT_ID_NONE);
     for (int id = 1; id <= 64; id++) berry_cleanup_script(id);
     be_vm_delete(vm);
@@ -354,6 +370,44 @@ void test_cancel_from_inside_callback(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
+/* A repeating timer whose callback cancels its own handle, re-arms and then
+ * raises: releasing the ref it no longer owns would orphan the new timer. */
+void test_repeat_self_cancel_rearm_then_raise_keeps_new_timer(void)
+{
+    berry_set_timer_error_handler(record_timer_error);
+
+    TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 39,
+        "var rh = -1\n"
+        "var nh = -1\n"
+        "var rearmed_hits = 0\n"
+        "def rearmed()\n"
+        "  rearmed_hits += 1\n"
+        "end\n"
+        "def tick()\n"
+        "  timer_cancel(rh)\n"
+        "  nh = timer_after(500, rearmed)\n"
+        "  raise 'boom'\n"
+        "end\n"
+        "def setup()\n"
+        "  rh = timer_every(100, tick)\n"
+        "end\n"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+
+    tick_at(100);                        /* cancel self, re-arm, raise */
+    TEST_ASSERT_EQUAL_INT(1, g_error_calls);
+    TEST_ASSERT_EQUAL_INT(39, g_error_owner);
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+
+    /* The new timer took the freed slot and the ref that came with it. */
+    TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "nh"));
+    TEST_ASSERT_EQUAL_INT(2, refs_live());   /* captured setup() + new timer */
+
+    tick_at(600);                        /* it must still fire on its due tick */
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "rearmed_hits"));
+    TEST_ASSERT_EQUAL_INT(1, refs_live());   /* only the captured setup() */
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
+}
+
 void test_one_shot_callback_reuses_its_own_slot(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 34,
@@ -494,6 +548,7 @@ int main(void)
     RUN_TEST(test_one_shot_fires_once_and_frees_its_slot);
     RUN_TEST(test_repeat_fires_per_period_and_cancel_stops_it);
     RUN_TEST(test_cancel_from_inside_callback);
+    RUN_TEST(test_repeat_self_cancel_rearm_then_raise_keeps_new_timer);
     RUN_TEST(test_one_shot_callback_reuses_its_own_slot);
     RUN_TEST(test_two_timers_due_in_one_tick_both_fire);
     RUN_TEST(test_due_comparison_survives_clock_wrap);
