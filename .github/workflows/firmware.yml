@@ -2,6 +2,7 @@ name: Firmware CI
 
 on:
   push:
+    branches: [main]
     paths:
       - 'firmware/**'
       - '.github/scripts/**'
@@ -10,6 +11,7 @@ on:
     paths:
       - 'firmware/**'
       - '.github/scripts/**'
+      - '.github/workflows/firmware.yml'
 
 jobs:
   host-tests:
