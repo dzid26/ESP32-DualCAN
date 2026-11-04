@@ -124,18 +124,52 @@ void berry_stack_restore(bvm *vm, int base)
     if (extra > 0) be_pop(vm, extra);
 }
 
+/* Decode what be_pcall() left on the VM stack after a failure.
+ *
+ * be_pcall() returns the thrown status, not a value count. copy_exception()
+ * (be_exec.c) copies two values for BE_EXCEPTION (type, message) but only one
+ * for BE_EXIT (the integer status). For BE_EXIT the slot below the status is
+ * whatever the callee left there - often the callback itself - so -2 must
+ * never be read as a type. Other statuses (e.g. BE_MALLOC_FAIL) copy nothing.
+ *
+ * Contract: an exit is reported as type "exit" and msg = the exit status as a
+ * decimal string, so callers get a defined pair instead of stack garbage.
+ * Must be called before berry_stack_restore(), while the status values are
+ * still on the stack. Any output buffer may be NULL. */
+void berry_decode_call_error(bvm *vm, int status,
+                             char *type_out, size_t type_size,
+                             char *msg_out, size_t msg_size)
+{
+    const char *type = "error";
+    const char *msg = "unknown error";
+    char fallback[32];
+
+    if (status == BE_EXCEPTION) {
+        const char *t = be_tostring(vm, -2);
+        const char *m = be_tostring(vm, -1);
+        if (t) type = t;
+        if (m) msg = m;
+    } else if (status == BE_EXIT) {
+        snprintf(fallback, sizeof(fallback), "%d", (int)be_toint(vm, -1));
+        type = "exit";
+        msg = fallback;
+    } else {
+        snprintf(fallback, sizeof(fallback), "be_pcall status %d", status);
+        msg = fallback;
+    }
+
+    if (type_out && type_size > 0) snprintf(type_out, type_size, "%s", type);
+    if (msg_out && msg_size > 0) snprintf(msg_out, msg_size, "%s", msg);
+}
+
 int berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size)
 {
     if (ref < 0) return -1;
     int base = be_top(vm);
     if (!refs_push(vm, ref)) return -1;
-    if (be_pcall(vm, 0) != 0) {
-        const char *msg = be_tostring(vm, -1);
-        const char *type = be_tostring(vm, -2);
-        if (err_out && err_size > 0)
-            snprintf(err_out, err_size, "%s", msg ? msg : "unknown error");
-        if (type_out && type_size > 0)
-            snprintf(type_out, type_size, "%s", type ? type : "error");
+    int status = be_pcall(vm, 0);
+    if (status != 0) {
+        berry_decode_call_error(vm, status, type_out, type_size, err_out, err_size);
         berry_stack_restore(vm, base);
         return -2;
     }
@@ -253,22 +287,18 @@ void berry_timer_tick(uint32_t now_ms)
             t->next_fire_ms = now_ms + t->period_ms;
         }
 
-        int base = be_top(s_vm);
-        if (refs_push(s_vm, ref)) {
-            int prev_ctx = script_ctx_enter(owner);
-            int rc = be_pcall(s_vm, 0);
-            script_ctx_leave(prev_ctx);
-            if (rc != 0) {
-                const char *err_type = be_tostring(s_vm, -2);
-                const char *err_msg  = be_tostring(s_vm, -1);
-                if (!one_shot) t->in_use = false;
-                refs_free(s_vm, ref);
-                ref = -1;
-                if (s_timer_error_handler) {
-                    s_timer_error_handler(owner, err_type, err_msg);
-                }
+        char err_type[32], err_msg[128];
+        int prev_ctx = script_ctx_enter(owner);
+        int rc = berry_call_ref(s_vm, ref, err_msg, sizeof(err_msg),
+                                err_type, sizeof(err_type));
+        script_ctx_leave(prev_ctx);
+        if (rc == -2) {
+            if (!one_shot) t->in_use = false;
+            refs_free(s_vm, ref);
+            ref = -1;
+            if (s_timer_error_handler) {
+                s_timer_error_handler(owner, err_type, err_msg);
             }
-            berry_stack_restore(s_vm, base);
         }
 
         if (one_shot && ref >= 0) refs_free(s_vm, ref);
@@ -367,31 +397,27 @@ int berry_action_invoke(const char *name)
     /* The callback may re-register this action by name, replacing idx. */
     int ref   = s_actions[idx].ref;
     int owner = s_actions[idx].script_id;
-    int base  = be_top(s_vm);
-    if (!refs_push(s_vm, ref)) return -1;
+    char err_type[32], err_msg[128];
     int prev_ctx = script_ctx_enter(owner);
-    int rc = be_pcall(s_vm, 0);
+    int rc = berry_call_ref(s_vm, ref, err_msg, sizeof(err_msg),
+                            err_type, sizeof(err_type));
     script_ctx_leave(prev_ctx);
-    if (rc != 0) {
-        const char *emsg = be_tostring(s_vm, -1);
-        const char *etype = be_tostring(s_vm, -2);
+    if (rc == -2) {
         const char *func_name = NULL;
         int line = berry_error_line(&func_name);
         const char *fname = s_script_name_cb ? s_script_name_cb(owner) : NULL;
         if (fname) {
             char logbuf[256];
-            berry_format_error(logbuf, sizeof(logbuf), fname, line, func_name, etype, emsg);
+            berry_format_error(logbuf, sizeof(logbuf), fname, line, func_name, err_type, err_msg);
             ESP_LOGE("scripts", "%s", logbuf);
         } else if (line > 0) {
-            ESP_LOGE("scripts", "action '%s' (line %d): %s", name, line, emsg);
+            ESP_LOGE("scripts", "action '%s' (line %d): %s", name, line, err_msg);
         } else {
-            ESP_LOGE("scripts", "action '%s': %s", name, emsg);
+            ESP_LOGE("scripts", "action '%s': %s", name, err_msg);
         }
-        berry_stack_restore(s_vm, base);
         return -2;
     }
-    berry_stack_restore(s_vm, base);
-    return 0;
+    return rc < 0 ? -1 : 0;
 }
 
 /* ---- Per-script cleanup ----

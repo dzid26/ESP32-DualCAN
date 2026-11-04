@@ -34,8 +34,11 @@ int  berry_capture_global(bvm *vm, const char *global_name);
 void berry_release_ref(bvm *vm, int ref);
 
 /* Call a captured ref with no args. Returns 0 on success, -1 if ref is invalid,
- * -2 if the call errored (logged). Does not install a script context: a caller
- * invoking a stored script callback must set the owner first. */
+ * -2 if the call failed; the failure is reported through err_out/type_out.
+ * Does not install a script context: a caller invoking a stored script callback
+ * must set the owner first.
+ * A BE_EXIT is a failure too: type_out gets "exit" and err_out the status as a
+ * decimal string. Neither output ever describes the callee as the error. */
 int  berry_call_ref(bvm *vm, int ref, char *err_out, size_t err_size, char *type_out, size_t type_size);
 
 /* Restore the VM value stack to a be_top() watermark captured before a call
@@ -56,13 +59,23 @@ int  berry_action_invoke(const char *name);
 
 /* ---- Error reporting ---- */
 
+/* Decode the failure be_pcall()/be_loadbuffer() reported as `status`, while
+ * its values are still on the stack (call before berry_stack_restore).
+ * BE_EXCEPTION reads the type/message pair; BE_EXIT reports type "exit" with
+ * the status as the decimal message; other statuses never read the value
+ * stack. Any output buffer may be NULL. */
+void berry_decode_call_error(bvm *vm, int status,
+                             char *type_out, size_t type_size,
+                             char *msg_out, size_t msg_size);
+
 int  berry_error_line(const char **name_out);
 int  berry_format_error(char *buf, size_t bufsize,
                         const char *filename, int line,
                         const char *funcname,
                         const char *type, const char *msg);
 
-/* Called when a Berry timer callback throws. */
+/* Called when a Berry timer callback throws. A BE_EXIT (a native binding
+ * calling be_exit()) arrives as type "exit" with msg = the exit status. */
 typedef void (*berry_timer_error_handler_t)(int script_id, const char *error_type, const char *msg);
 void berry_set_timer_error_handler(berry_timer_error_handler_t fn);
 
