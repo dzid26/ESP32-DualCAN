@@ -17,7 +17,18 @@ BUILD=$ROOT/.cache/parse_check
 mkdir -p "$BUILD"
 
 BIN=$BUILD/parse_check
-SRCS=( "$BERRY_SRC"/*.c "$BERRY_DEFAULT"/be_port.c "$BERRY_DEFAULT"/be_modtab.c "$ROOT/tools/parse_check.c" )
+SRCS=()
+while IFS= read -r source; do
+  if [ -z "$source" ]; then continue; fi
+  if [[ "$source" == *"*"* ]]; then
+    for file in "$ROOT"/$source; do
+      SRCS+=( "$file" )
+    done
+  else
+    SRCS+=( "$ROOT/$source" )
+  fi
+done < "$ROOT/tools/parse_check_sources.txt"
+SRCS+=( "$ROOT/tools/parse_check.c" )
 
 # Rebuild if the binary is missing or older than any source file.
 needs_build=0
@@ -25,8 +36,14 @@ if [ ! -x "$BIN" ]; then
   needs_build=1
 else
   for s in "${SRCS[@]}"; do
-    [ "$s" -nt "$BIN" ] && needs_build=1 && break
+    if [ "$s" -nt "$BIN" ]; then
+      needs_build=1
+      break
+    fi
   done
+  if [ "$ROOT/tools/parse_check_sources.txt" -nt "$BIN" ]; then
+    needs_build=1
+  fi
 fi
 
 if [ "$needs_build" = "1" ]; then
