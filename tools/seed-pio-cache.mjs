@@ -233,6 +233,25 @@ function defaultJunction(target, linkPath) {
   fs.symlinkSync(path.resolve(target), linkPath, process.platform === 'win32' ? 'junction' : 'dir');
 }
 
+function nearestExisting(p) {
+  let current = path.resolve(p);
+  while (!fs.existsSync(current)) {
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return current;
+}
+
+/** True when a hardlink between the two trees is possible. */
+export function defaultSameVolume(a, b) {
+  try {
+    return fs.statSync(nearestExisting(a)).dev === fs.statSync(nearestExisting(b)).dev;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Give a linked worktree its own cache in the Git admin directory and point
  * `firmware/.cache` at it. The admin dir is removed with the worktree, so the
@@ -248,6 +267,7 @@ export function prepareWorktreeCache({
   copy = fs.copyFileSync,
   junction = defaultJunction,
   git = gitValue,
+  sameVolume = defaultSameVolume,
 } = {}) {
   worktree = path.resolve(worktree);
   if (!source) {
@@ -261,8 +281,11 @@ export function prepareWorktreeCache({
     return emptyStats(source, source, { mainCheckout: true, junctioned: false, wouldJunction: false });
   }
 
+  const cachePath = path.join(worktree, ...CACHE_PARTS);
+  const direct = sameVolume(source, worktree);
+
   if (!fs.existsSync(source) || !fs.statSync(source).isDirectory()) {
-    return emptyStats(source, path.join(gitDir, 'pio-cache'), {
+    return emptyStats(source, direct ? cachePath : path.join(gitDir, 'pio-cache'), {
       sourceMissing: true,
       mainCheckout: false,
       junctioned: false,
@@ -270,7 +293,6 @@ export function prepareWorktreeCache({
     });
   }
 
-  const cachePath = path.join(worktree, ...CACHE_PARTS);
   const cacheEntry = lstat(cachePath);
   let target;
   let junctioned = false;
@@ -280,26 +302,41 @@ export function prepareWorktreeCache({
     target = path.resolve(fs.readlinkSync(cachePath));
     if (samePath(target, source) || isInside(source, target)) {
       // An old whole-cache link into the canonical checkout is unsafe.
-      target = path.join(gitDir, 'pio-cache');
-      if (dryRun) {
-        wouldJunction = true;
+      if (direct) {
+        if (dryRun) {
+          target = cachePath;
+        } else {
+          removeLink(cachePath);
+          fs.mkdirSync(cachePath, { recursive: true });
+          target = cachePath;
+        }
       } else {
-        removeLink(cachePath);
-        fs.mkdirSync(target, { recursive: true });
-        junction(target, cachePath);
-        junctioned = true;
+        target = path.join(gitDir, 'pio-cache');
+        if (dryRun) {
+          wouldJunction = true;
+        } else {
+          removeLink(cachePath);
+          fs.mkdirSync(target, { recursive: true });
+          junction(target, cachePath);
+          junctioned = true;
+        }
       }
     }
   } else if (cacheEntry?.isDirectory()) {
     if (fs.readdirSync(cachePath).length === 0) {
-      target = path.join(gitDir, 'pio-cache');
-      if (dryRun) {
-        wouldJunction = true;
+      if (direct) {
+        // Same volume: a real cache in the worktree is enough.
+        target = cachePath;
       } else {
-        fs.rmdirSync(cachePath);
-        fs.mkdirSync(target, { recursive: true });
-        junction(target, cachePath);
-        junctioned = true;
+        target = path.join(gitDir, 'pio-cache');
+        if (dryRun) {
+          wouldJunction = true;
+        } else {
+          fs.rmdirSync(cachePath);
+          fs.mkdirSync(target, { recursive: true });
+          junction(target, cachePath);
+          junctioned = true;
+        }
       }
     } else {
       // A cache from an earlier run stays where it is; seed it in place.
@@ -307,6 +344,9 @@ export function prepareWorktreeCache({
     }
   } else if (cacheEntry) {
     throw new Error(`${cachePath} exists and is not a directory`);
+  } else if (direct) {
+    target = cachePath;
+    if (!dryRun) fs.mkdirSync(cachePath, { recursive: true });
   } else {
     target = path.join(gitDir, 'pio-cache');
     if (dryRun) {
