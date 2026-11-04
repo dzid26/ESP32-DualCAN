@@ -4,9 +4,8 @@
   import { dbcStore } from '../../dbcStore.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
   import { allExamples as examples } from '../../examples';
-  import { preprocessScript, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
+  import { preprocessScript, formatDiagnostic, SCRIPTING_API_VERSION } from '../../lib/preprocessor';
   import type { PreprocessResult } from '../../lib/preprocessor';
-  import type { Message } from '../../dbc/parser';
   import SectionHead from '../SectionHead.svelte';
   import CodeMirrorEditor from '../../editor/CodeMirrorEditor.svelte';
   import Icon from '../Icon.svelte';
@@ -166,15 +165,13 @@
     return true;
   }
 
-  /** Collect full Message[] from all loaded buses for preprocessing. */
-  function getFullMessages(): Message[] {
-    return Object.values(dbcStore.fullMessages).flat();
-  }
+  /** Stable array so the preprocessor's message-index cache can hit. */
+  const allMessages = $derived(Object.values(dbcStore.fullMessages).flat());
 
   function applyPreprocessResult(result: PreprocessResult): void {
     preprocessedCode = result.code;
-    preprocessWarnings = result.warnings;
-    preprocessErrors = result.errors;
+    preprocessWarnings = result.warnings.map(formatDiagnostic);
+    preprocessErrors = result.errors.map(formatDiagnostic);
   }
 
   async function save(): Promise<void> {
@@ -194,13 +191,17 @@
       busy = false;
 
       // Then preprocess
-      const result = preprocessScript(code, getFullMessages());
+      const result = preprocessScript(code, allMessages);
       applyPreprocessResult(result);
-      if (result.warnings.length > 0) {
-        app.pushLog(`scripts: preprocessing warnings — ${result.warnings.join('; ')}`, 'warn', 'scripts');
+      if (preprocessWarnings.length > 0) {
+        app.pushLog(
+          `scripts: preprocessing warnings — ${preprocessWarnings.join('; ')}`,
+          'warn',
+          'scripts',
+        );
       }
-      if (result.errors.length > 0) {
-        const errMsg = result.errors.join('; ');
+      if (preprocessErrors.length > 0) {
+        const errMsg = preprocessErrors.join('; ');
         app.pushLog(`scripts: preprocessing errors — ${errMsg}`, 'error', 'scripts');
         throw new Error(`Preprocessing failed: ${errMsg}`);
       }
@@ -344,9 +345,8 @@
       preprocessErrors = [];
     } else if (showPreprocessed) {
       // Preview tab: preprocess client-side
-      const messages = getFullMessages();
-      if (messages.length > 0) {
-        const result = preprocessScript(code, messages);
+      if (allMessages.length > 0) {
+        const result = preprocessScript(code, allMessages);
         applyPreprocessResult(result);
       } else {
         preprocessedCode = '(no DBC loaded - pick your car)';
@@ -640,22 +640,25 @@
         {/if}
       </div>
 
+      {#if preprocessErrors.length > 0 || preprocessWarnings.length > 0}
+        <div
+          class="mono preprocess-banner"
+          class:preprocess-banner--error={preprocessErrors.length > 0}
+          class:preprocess-banner--warn={preprocessErrors.length === 0}
+          role={preprocessErrors.length > 0 ? 'alert' : 'status'}
+          aria-live={preprocessErrors.length > 0 ? 'assertive' : 'polite'}
+          title={[...preprocessErrors, ...preprocessWarnings].join('\n')}
+        >
+          {#if preprocessErrors.length > 0}
+            ⚠ {preprocessErrors.length} preprocessing error{preprocessErrors.length > 1 ? 's' : ''}{#if preprocessWarnings.length > 0}, {preprocessWarnings.length} warning{preprocessWarnings.length > 1 ? 's' : ''}{/if}: {preprocessErrors.join('; ')}
+          {:else}
+            ⚠ {preprocessWarnings.length} preprocessing warning{preprocessWarnings.length > 1 ? 's' : ''}: {preprocessWarnings.join('; ')}
+          {/if}
+        </div>
+      {/if}
+
       <div style="flex: 1; min-height: 0; min-width: 0; display: flex">
         <div class:ce-hide={!showPreprocessed} style="flex:1;min-height:0;min-width:0;display:flex;flex-direction:column">
-          {#if preprocessErrors.length > 0 || preprocessWarnings.length > 0}
-            <div
-              class="mono preprocess-banner"
-              class:preprocess-banner--error={preprocessErrors.length > 0}
-              class:preprocess-banner--warn={preprocessErrors.length === 0}
-              title={[...preprocessErrors, ...preprocessWarnings].join('\n')}
-            >
-              {#if preprocessErrors.length > 0}
-                ⚠ {preprocessErrors.length} preprocessing error{preprocessErrors.length > 1 ? 's' : ''}: {preprocessErrors.join('; ')}
-              {:else}
-                ⚠ {preprocessWarnings.length} preprocessing warning{preprocessWarnings.length > 1 ? 's' : ''}: {preprocessWarnings.join('; ')}
-              {/if}
-            </div>
-          {/if}
           <div bind:this={editorPaneEl} style="flex:1;min-height:0;min-width:0;display:flex;position:relative;overflow:hidden">
             <CodeMirrorEditor bind:value={preprocessedCode} height="100%" bind:scrollTop={editorScrollTop} readOnly={true} bind:gotoLine={preprocessedGotoLine} autoFocus={showPreprocessed} bind:cursorLine={preprocessedCursorLine} />
             <span class="watermark" style="transform:rotate(-{watermarkAngle}deg);font-size:{watermarkFontSize}px">{canShowInstalled ? 'Installed' : 'Preview'}</span>

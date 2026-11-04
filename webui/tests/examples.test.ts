@@ -1,25 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parseDbc, type Message } from '../src/dbc/parser.ts';
-import { preprocessScript } from '../src/lib/preprocessor.ts';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO = join(__dirname, '../..');
-
-/* ---- Parse all 3 Tesla DBC files into one message list ---- */
-
-function loadDbcMessages(): Message[] {
-  const dbcDir = join(REPO, 'dbc');
-  const all: Message[] = [];
-  for (const f of ['Model3_VEH.dbc', 'Model3_CH.dbc', 'Model3_PARTY.dbc']) {
-    const text = readFileSync(join(dbcDir, f), 'latin1');
-    all.push(...parseDbc(text));
-  }
-  return all;
-}
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import type { Message } from '../src/dbc/parser.ts';
+import { preprocessScript, formatDiagnostic } from '../src/lib/preprocessor.ts';
+import { REPO, loadDbcMessages, realScriptFiles } from './helpers/corpus.ts';
 
 const messages = loadDbcMessages();
 
@@ -102,10 +87,7 @@ test('DBC parsed VCRIGHT_doorStatus signal metadata', () => {
 
 const testScriptsDir = join(REPO, 'firmware/test_scripts');
 const teslaScriptsDir = join(REPO, 'scripts/tesla');
-const scriptFiles = [
-  ...readdirSync(testScriptsDir).filter(f => f.endsWith('.be')).map(f => join(testScriptsDir, f)),
-  ...readdirSync(teslaScriptsDir).filter(f => f.endsWith('.be')).map(f => join(teslaScriptsDir, f)),
-];
+const scriptFiles = realScriptFiles();
 
 for (const fp of scriptFiles) {
   const fn = fp.split(/[\\/]/).pop()!;
@@ -113,7 +95,11 @@ for (const fp of scriptFiles) {
     const code = readFileSync(fp, 'utf-8');
     const result = preprocessScript(code, messages);
     assert.ok(typeof result.code === 'string', `${fn}: code should be a string`);
-    assert.equal(result.errors.length, 0, `${fn}: should have 0 errors, got: ${result.errors.join('; ')}`);
+    assert.equal(
+      result.errors.length,
+      0,
+      `${fn}: should have 0 errors, got: ${result.errors.map(formatDiagnostic).join('; ')}`,
+    );
     // Guard against silently-mangled rewrites (e.g. a nested msg_sig_get left
     // unresolved by an outer msg_sig_set): a resolved call's signal argument is
     // numeric metadata, never the original quoted DBC name. Comment lines are

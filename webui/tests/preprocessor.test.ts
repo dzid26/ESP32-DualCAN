@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { preprocessScript, buildVarToMsgMap, trackVarToMsgs } from '../src/lib/preprocessor.ts';
+import { preprocessScript, buildVarToMsgMap, trackVarToMsgs, formatDiagnostic } from '../src/lib/preprocessor.ts';
 
 const mockMessages = [
   {
@@ -50,7 +50,7 @@ test('preprocesses can_msg_get with bus-first order', () => {
 test('errors on name-first can_msg_get', () => {
   const code = `can_msg_get("DAS_bodyControls", 0)`;
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('bus first')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('bus first')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('inlines msg_sig_get into msg_sig_get with inline metadata', () => {
@@ -64,21 +64,21 @@ test('reports error for unknown message in can_msg_get', () => {
   const code = `can_msg_get(0, "UNKNOWN_MSG")`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
-  assert(result.errors[0].includes('UNKNOWN_MSG'));
+  assert(result.errors[0].message.includes('UNKNOWN_MSG'));
 });
 
 test('reports error for unknown signal in msg_sig_get', () => {
   const code = `var x = msg_sig_get(msg, "UNKNOWN_SIG")`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
-  assert(result.errors[0].includes('UNKNOWN_SIG'));
+  assert(result.errors[0].message.includes('UNKNOWN_SIG'));
 });
 
 test('reports error for unknown signal in msg_sig_set', () => {
   const code = `msg_sig_set(msg, "GHOST_SIG", 1)`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
-  assert(result.errors[0].includes('GHOST_SIG'));
+  assert(result.errors[0].message.includes('GHOST_SIG'));
 });
 
 test('replaces msg_sig_set with msg_sig_set with inline metadata', () => {
@@ -113,7 +113,7 @@ test('reports error for unknown message in can_msg_new', () => {
   const code = `can_msg_new("UNKNOWN_MSG")`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
-  assert(result.errors[0].includes('UNKNOWN_MSG'));
+  assert(result.errors[0].message.includes('UNKNOWN_MSG'));
 });
 
 test('can_msg_send passes through to native binding', () => {
@@ -148,18 +148,18 @@ test('handles multiple replacements in one script', () => {
 test('errors when signal does not belong to the tracked message (msg_sig_get)', () => {
   const code = `var msg_r = can_msg_get(0, "VCRIGHT_doorStatus")\nmsg_sig_get(msg_r, "VCLEFT_frontLatchStatus")`;
   const result = preprocessScript(code, mockMessages);
-  const crossErr = result.errors.find(e => e.includes("belongs to"));
+  const crossErr = result.errors.find(e => e.message.includes("belongs to"));
   assert(crossErr, `expected a cross-message error, got: ${JSON.stringify(result.errors)}`);
-  assert(crossErr.includes("VCLEFT_doorStatus"));
-  assert(crossErr.includes("VCRIGHT_doorStatus"));
+  assert(crossErr.message.includes("VCLEFT_doorStatus"));
+  assert(crossErr.message.includes("VCRIGHT_doorStatus"));
 });
 
 test('errors when signal does not belong to the tracked message (msg_sig_set)', () => {
   const code = `var msg = can_msg_get(0, "VCLEFT_doorStatus")\nmsg_sig_set(msg, "DAS_hazardLightRequest", 1)`;
   const result = preprocessScript(code, mockMessages);
   assert(result.errors.length > 0);
-  assert(result.errors[0].includes("belongs to 'DAS_bodyControls'"));
-  assert(result.errors[0].includes("not 'VCLEFT_doorStatus'"));
+  assert(result.errors[0].message.includes("belongs to 'DAS_bodyControls'"));
+  assert(result.errors[0].message.includes("not 'VCLEFT_doorStatus'"));
 });
 
 test('allows signal from untracked variable (no assignment seen) — falls back to global search', () => {
@@ -237,7 +237,7 @@ test('nested msg_sig_get resolves via the tracked draft message', () => {
     'msg_sig_set(msg, "UI_powertrainControlCounter", (int(msg_sig_get(msg, "UI_powertrainControlCounter")) + 1) % 16)',
   ].join('\n');
   const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert.equal(result.errors.length, 0, result.errors.map(formatDiagnostic).join('; '));
   assert(
     result.code.includes('msg_sig_set(msg, 52, 4, false, false, 1, 0, (int(msg_sig_get(msg, 52, 4, false, false, 1, 0)) + 1) % 16)'),
     `got: ${result.code}`,
@@ -247,21 +247,21 @@ test('nested msg_sig_get resolves via the tracked draft message', () => {
 test('balanced value matching keeps commas inside a nested call', () => {
   const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", max(1, 2) % 16)';
   const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert.equal(result.errors.length, 0, result.errors.map(formatDiagnostic).join('; '));
   assert.equal(result.code, 'msg_sig_set(msg, 52, 4, false, false, 1, 0, max(1, 2) % 16)');
 });
 
 test('reports an unresolved nested msg_sig_get instead of emitting broken code', () => {
   const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", int(msg_sig_get(msg, "GHOST_SIG")) + 1)';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('GHOST_SIG')), `got: ${JSON.stringify(result.errors)}`);
-  assert(result.code.includes('raise("key_error"'), `got: ${result.code}`);
+  assert(result.errors.some(e => e.message.includes('GHOST_SIG')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.code.includes('assert(false, '), `got: ${result.code}`);
 });
 
 test('reports unbalanced parentheses rather than silently mangling the call', () => {
   const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", (1 + 2';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('unbalanced')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('unclosed')), `got: ${JSON.stringify(result.errors)}`);
   assert(!result.code.includes('52, 4'), 'must not half-rewrite an unparseable call');
 });
 
@@ -272,9 +272,9 @@ test('warns (does not fail) when an untracked name matches signals in multiple m
   const result = preprocessScript(code, mockMessages);
   assert.equal(result.errors.length, 0);
   assert.equal(result.warnings.length, 1, `got: ${JSON.stringify(result.warnings)}`);
-  assert(result.warnings[0].includes('AMBIG_dup'));
-  assert(result.warnings[0].includes('DAS_bodyControls'));
-  assert(result.warnings[0].includes('VCLEFT_doorStatus'));
+  assert(result.warnings[0].message.includes('AMBIG_dup'));
+  assert(result.warnings[0].message.includes('DAS_bodyControls'));
+  assert(result.warnings[0].message.includes('VCLEFT_doorStatus'));
   // still rewrites using the first match so the script remains usable
   assert(result.code.includes('msg_sig_get(someParam, 12, 1, false, false, 1, 0)'));
 });
@@ -292,11 +292,11 @@ test('does not warn for an unambiguously tracked draft', () => {
 test('errors when a tracked draft lacks the signal but several messages have it', () => {
   const code = 'var msg = can_msg_get(0, "VCRIGHT_doorStatus")\nmsg_sig_get(msg, "AMBIG_dup")';
   const result = preprocessScript(code, mockMessages);
-  const err = result.errors.find(e => e.includes('AMBIG_dup'));
+  const err = result.errors.find(e => e.message.includes('AMBIG_dup'));
   assert(err, `expected an error, got: ${JSON.stringify(result.errors)}`);
-  assert(err.includes('multiple messages'), `got: ${err}`);
-  assert(err.includes('DAS_bodyControls'));
-  assert(err.includes('VCLEFT_doorStatus'));
+  assert(err.message.includes('multiple messages'), `got: ${err}`);
+  assert(err.message.includes('DAS_bodyControls'));
+  assert(err.message.includes('VCLEFT_doorStatus'));
 });
 
 /* ---- Comment / string awareness ---- */
@@ -309,14 +309,14 @@ test('keeps the closing paren after a trailing comment', () => {
     '  )',
   ].join('\n');
   const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert.equal(result.errors.length, 0, result.errors.map(formatDiagnostic).join('; '));
   assert(result.code.endsWith('# note\n  )'), `got: ${JSON.stringify(result.code)}`);
 });
 
 test('ignores Berry block comments inside a call', () => {
   const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", 1 #- note ) -# + 1)';
   const result = preprocessScript(code, mockMessages);
-  assert.equal(result.errors.length, 0, result.errors.join('; '));
+  assert.equal(result.errors.length, 0, result.errors.map(formatDiagnostic).join('; '));
   assert.equal(result.code, 'msg_sig_set(msg, 52, 4, false, false, 1, 0, 1 #- note ) -# + 1)');
 });
 
@@ -340,7 +340,7 @@ test('continues rewriting after an unbalanced call', () => {
     'msg_sig_set(msg, "UI_powertrainControlCounter", 3)',
   ].join('\n');
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('unbalanced')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('unclosed')), `got: ${JSON.stringify(result.errors)}`);
   assert(result.code.includes('msg_sig_set(msg, 52, 4, false, false, 1, 0, 3)'), `got: ${result.code}`);
 });
 
@@ -349,38 +349,46 @@ test('continues rewriting after an unbalanced call', () => {
 test('errors on msg_sig_set with the wrong argument count', () => {
   const code = 'msg_sig_set(msg, "UI_powertrainControlCounter", 1, 2)';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('expected 3 arguments')), `got: ${JSON.stringify(result.errors)}`);
-  assert(result.code.includes('raise("key_error"'));
+  assert(result.errors.some(e => e.message.includes('expected 3 arguments')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.code.includes('assert(false, '));
 });
 
 test('errors on msg_sig_get with the wrong argument count', () => {
   const code = 'msg_sig_get(msg, "DAS_hazardLightRequest", 1)';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('expected 2 arguments')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('expected 2 arguments')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('errors when a signal name is not a string literal', () => {
   const code = 'msg_sig_get(msg, sigVar)';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('string literal')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('string literal')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('handles escaped quotes in a signal literal', () => {
   const code = 'msg_sig_get(msg, "OG\\"SIG")';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('OG"SIG')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('OG"SIG')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.code.includes('OG\\"SIG'), result.code);
+});
+
+test('leaves a numeric can_msg_new with a runtime dlc expression', () => {
+  const code = 'can_msg_new(0, computeDlc("x"))';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0, JSON.stringify(result.errors));
+  assert.equal(result.code, code);
 });
 
 test('errors on a computed signal name', () => {
   const code = 'msg_sig_get(msg, "UI_" .. "counter")';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('compile-time string literal')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('compile-time string literal')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('errors on a computed message name', () => {
   const code = 'can_msg_get(0, "DAS" .. "_bodyControls")';
   const result = preprocessScript(code, mockMessages);
-  assert(result.errors.some(e => e.includes('compile-time string literal')), `got: ${JSON.stringify(result.errors)}`);
+  assert(result.errors.some(e => e.message.includes('compile-time string literal')), `got: ${JSON.stringify(result.errors)}`);
 });
 
 test('leaves numeric-id can_msg_get unchanged', () => {
@@ -426,9 +434,9 @@ test('still rewrites a nested call inside an unrecognised call', () => {
 test('errors when an inline draft lacks the signal', () => {
   const code = 'msg_sig_get(can_msg_get(0, "VCRIGHT_doorStatus"), "DAS_hazardLightRequest")';
   const result = preprocessScript(code, mockMessages);
-  const err = result.errors.find(e => e.includes('DAS_hazardLightRequest'));
+  const err = result.errors.find(e => e.message.includes('DAS_hazardLightRequest'));
   assert(err, `expected an error, got: ${JSON.stringify(result.errors)}`);
-  assert(err.includes("belongs to 'DAS_bodyControls', not 'VCRIGHT_doorStatus'"), `got: ${err}`);
+  assert(err.message.includes("belongs to 'DAS_bodyControls', not 'VCRIGHT_doorStatus'"), `got: ${err}`);
 });
 
 test('tracks a draft created with a non-literal bus', () => {
@@ -546,3 +554,114 @@ for (const c of callMatrix) {
     assert.equal(result.code, c.code);
   });
 }
+
+/* ---- Lexer-faithful call shapes ---- */
+
+test('leaves a function definition named like an intrinsic alone', () => {
+  const code = 'def can_msg_get(x)\n  return x\nend';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.code, code);
+});
+
+test('leaves a member call alone', () => {
+  const code = 'foo.can_msg_get(0, "DAS_bodyControls")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.code, code);
+});
+
+test('diagnoses a spaced DBC call instead of changing its meaning', () => {
+  const code = 'can_msg_get (0, "DAS_bodyControls")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 1);
+  assert.equal(result.errors[0].span.line, 1);
+  assert.equal(result.errors[0].span.column, 1);
+  assert(result.errors[0].message.includes('parenthesis'));
+  assert.equal(
+    result.code,
+    'assert(false, "can_msg_get: call parenthesis must follow the name immediately")',
+  );
+});
+
+test('diagnoses one numeric can_msg_new argument', () => {
+  const code = 'can_msg_new(0x294)';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 1);
+  assert(result.errors[0].message.includes('(id, dlc)'));
+  assert(result.code.includes('assert(false, '), result.code);
+});
+
+test('diagnoses a computed name with a variable prefix', () => {
+  const code = 'can_msg_get(0, prefix .. "DAS_bodyControls")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 1);
+  assert(result.errors[0].message.includes('compile-time string literal'));
+});
+
+test('resolves a signal name with a hex escape', () => {
+  const code = 'var d = can_msg_get(0, "DAS_bodyControls")\nmsg_sig_get(d, "DAS_hazardLightReques\\x74")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0, JSON.stringify(result.errors));
+  assert(result.code.includes('msg_sig_get(d, 0, 8, false, false, 1, 0)'), result.code);
+});
+
+test('resolves a signal name split across adjacent literals', () => {
+  const code = 'var d = can_msg_get(0, "DAS_bodyControls")\nmsg_sig_get(d, "DAS_hazard" "LightRequest")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 0, JSON.stringify(result.errors));
+  assert(result.code.includes('msg_sig_get(d, 0, 8, false, false, 1, 0)'), result.code);
+});
+
+test('reports a raw newline in a string and keeps scanning', () => {
+  const code = 'msg_sig_get(msg, "DAS_body\nControls")\nprint("ok")';
+  const result = preprocessScript(code, mockMessages);
+  assert(result.errors.some(e => e.code === 'lex/unfinished-string'));
+  assert(result.errors.some(e => e.span.line === 1));
+  assert(result.code.includes('print("ok")'), result.code);
+});
+
+test('reports an unterminated block comment at its start', () => {
+  const code = 'var d = can_msg_get(0, "DAS_bodyControls")\n#- open';
+  const result = preprocessScript(code, mockMessages);
+  const error = result.errors.find(e => e.code === 'lex/unterminated-comment');
+  assert.ok(error);
+  assert.equal(error.span.line, 2);
+  assert.equal(error.span.column, 1);
+  assert(result.code.includes('can_msg_get(0, 0x3e9)'), result.code);
+});
+
+test('diagnoses two string literals in can_msg_new', () => {
+  const code = 'can_msg_new("DAS_bodyControls", "VCLEFT_doorStatus")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors.length, 1);
+  assert(result.errors[0].message.includes('ambiguous'));
+});
+
+test('diagnoses missing and empty arguments', () => {
+  for (const code of ['can_msg_new()', 'can_msg_new(,)', 'can_msg_get(0,)', 'msg_sig_get(msg,)']) {
+    const result = preprocessScript(code, mockMessages);
+    assert(result.errors.length > 0, code);
+  }
+});
+
+test('diagnostics carry the call location', () => {
+  const code = 'var a = 1\nvar b = 2\n  can_msg_get(0, "UNKNOWN_MSG")';
+  const result = preprocessScript(code, mockMessages);
+  assert.equal(result.errors[0].span.line, 3);
+  assert(formatDiagnostic(result.errors[0]).startsWith('3:'), formatDiagnostic(result.errors[0]));
+  assert(formatDiagnostic(result.errors[0]).includes('UNKNOWN_MSG'));
+});
+
+test('preprocessing is idempotent on error-free output', () => {
+  const code = [
+    'var d = can_msg_get(0, "VCLEFT_doorStatus")',
+    'msg_sig_set(d, "VCLEFT_frontLatchStatus", 2)',
+    'var v = msg_sig_get(d, "VCLEFT_frontLatchStatus")',
+  ].join('\n');
+  const first = preprocessScript(code, mockMessages);
+  assert.equal(first.errors.length, 0, JSON.stringify(first.errors));
+  const second = preprocessScript(first.code, mockMessages);
+  assert.equal(second.errors.length, 0, JSON.stringify(second.errors));
+  assert.equal(second.code, first.code);
+});
