@@ -153,9 +153,11 @@ int script_loader_enable(script_loader_t *loader, int idx)
 
     /* Execute the script (defines its functions). */
     int stack_base = be_top(vm);
-    if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
-        const char *msg = be_tostring(vm, -1);
-        const char *etype = be_tostring(vm, -2);
+    int status = be_loadbuffer(vm, path, code, strlen(code));
+    if (status == 0) status = be_pcall(vm, 0);
+    if (status != 0) {
+        char etype[32], msg[128];
+        berry_decode_call_error(vm, status, etype, sizeof(etype), msg, sizeof(msg));
         const char *func_name = NULL;
         int line = berry_error_line(&func_name);
         if (line > 0 && strncmp(msg, s->filename, strlen(s->filename)) != 0) {
