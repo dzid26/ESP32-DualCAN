@@ -106,10 +106,7 @@ void test_failed_calls_balance_stack(void)
     TEST_ASSERT_EQUAL_INT(base, be_top(vm));
 }
 
-/* ---- helpers ------------------------------------------------------------
- * Registrations are always made under an owner: an ownerless entry is never
- * reclaimed and would relocate into the next test's slot budget.
- */
+/* ---- helpers ------------------------------------------------------------ */
 
 static void tick_at(unsigned now_ms)
 {
@@ -117,8 +114,9 @@ static void tick_at(unsigned now_ms)
     berry_timer_tick(now_ms);
 }
 
-/* Run a chunk the way a script body runs, with an owner installed and no
- * setup() capture. Keeps .refs countable: only the bindings allocate. */
+/* Run a chunk with an owner installed, like a script body does. Every
+ * registration in this file goes through here: an ownerless entry is never
+ * reclaimed and would eat a slot in the next test. */
 static int run_as_owner(int owner, const char *src)
 {
     berry_set_current_script(owner);
@@ -161,16 +159,14 @@ static int refs_live(void)
     return live;
 }
 
-/* ---- P3: registry limits and slot reuse --------------------------------- */
+/* ---- registry limits and slot reuse ------------------------------------ */
 
 /* 16 timers fill the table, the 17th returns nil, and the ref the failed
  * registration allocated before the failure is released again. */
 static const char *TIMER_LIMIT_SCRIPT =
-    "var fired = 0\n"
     "var filled = 0\n"
     "var overflow_nil = 0\n"
     "def cb()\n"
-    "  fired += 1\n"
     "end\n"
     "def fill(n)\n"
     "  var i = 0\n"
@@ -185,6 +181,18 @@ static const char *TIMER_LIMIT_SCRIPT =
     "  return c\n"
     "end\n";
 
+/* Register one timer past the limit; 1 when the call returned nil. */
+static int timer_overflowed(int owner)
+{
+    TEST_ASSERT_EQUAL_INT(0, run_as_owner(owner,
+        "overflow_nil = 0\n"
+        "var h = timer_after(1000, cb)\n"
+        "if h == nil\n"
+        "  overflow_nil = 1\n"
+        "end\n"));
+    return berry_test_global_int(vm, "overflow_nil");
+}
+
 void test_timer_table_holds_16_and_reuses_cancelled_slots(void)
 {
     TEST_ASSERT_EQUAL_INT(0, run_as_owner(21, TIMER_LIMIT_SCRIPT));
@@ -192,14 +200,8 @@ void test_timer_table_holds_16_and_reuses_cancelled_slots(void)
     TEST_ASSERT_EQUAL_INT(16, berry_test_global_int(vm, "filled"));
     TEST_ASSERT_EQUAL_INT(16, refs_live());
 
-    /* Timer 17 is refused with nil, and the ref it allocated first must not
-     * stay live (live slots stay at 16 even though the list got a hole). */
-    TEST_ASSERT_EQUAL_INT(0, run_as_owner(21,
-        "var h = timer_after(1000, cb)\n"
-        "if h == nil\n"
-        "  overflow_nil = 1\n"
-        "end\n"));
-    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "overflow_nil"));
+    /* The failed registration leaves a hole in the list but no live ref. */
+    TEST_ASSERT_EQUAL_INT(1, timer_overflowed(21));
     TEST_ASSERT_EQUAL_INT(16, refs_live());
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
@@ -215,20 +217,13 @@ void test_timer_table_holds_16_and_reuses_cancelled_slots(void)
     TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "reused"));
     TEST_ASSERT_EQUAL_INT(16, refs_live());
 
-    /* cleanup frees the remaining slots for the next script. */
     berry_cleanup_script(21);
     TEST_ASSERT_EQUAL_INT(0, refs_live());
     TEST_ASSERT_EQUAL_INT(0, berry_actions_snapshot(NULL, 0));
 
     TEST_ASSERT_EQUAL_INT(0, run_as_owner(21, "refilled = fill(16)\n"));
     TEST_ASSERT_EQUAL_INT(16, berry_test_global_int(vm, "refilled"));
-    TEST_ASSERT_EQUAL_INT(0, run_as_owner(21,
-        "var second_overflow = 0\n"
-        "var h = timer_after(1000, cb)\n"
-        "if h == nil\n"
-        "  second_overflow = 1\n"
-        "end\n"));
-    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "second_overflow"));
+    TEST_ASSERT_EQUAL_INT(1, timer_overflowed(21));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
@@ -248,13 +243,12 @@ static void register_action_range(int owner, int first, int count)
 void test_action_table_holds_32_and_cleanup_frees_slots(void)
 {
     register_action_range(22, 0, 32);
-    TEST_ASSERT_EQUAL_INT(32, berry_actions_snapshot(NULL, 0));
-    TEST_ASSERT_EQUAL_INT(32, refs_live());
     int live_before = refs_live();
     int len_before = refs_len();
+    TEST_ASSERT_EQUAL_INT(32, berry_actions_snapshot(NULL, 0));
+    TEST_ASSERT_EQUAL_INT(32, live_before);
 
-    /* The 33rd registration is refused before it allocates a ref, so neither
-     * the table nor the ref list changes. */
+    /* The refusal happens before refs_alloc(), so nothing changes. */
     register_action_range(22, 32, 1);
     TEST_ASSERT_EQUAL_INT(32, berry_actions_snapshot(NULL, 0));
     TEST_ASSERT_EQUAL_INT(live_before, refs_live());
@@ -269,9 +263,8 @@ void test_action_table_holds_32_and_cleanup_frees_slots(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* ---- P4: scheduling semantics ------------------------------------------- */
+/* ---- scheduling --------------------------------------------------------- */
 
-/* One-shot fires once, then its slot is free again. */
 static const char *ONE_SHOT_SCRIPT =
     "var beats = 0\n"
     "var h = -1\n"
@@ -300,7 +293,6 @@ void test_one_shot_fires_once_and_frees_its_slot(void)
     TEST_ASSERT_EQUAL_INT(0, berry_test_global_int(vm, "h2"));
 }
 
-/* Repeat fires once per period, and cancel stops it. */
 static const char *REPEAT_SCRIPT =
     "var beats = 0\n"
     "var hr = -1\n"
@@ -334,7 +326,7 @@ void test_repeat_fires_per_period_and_cancel_stops_it(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* A callback may cancel itself; the sweep must not resurrect it. */
+/* A callback may cancel itself; a later tick must not resurrect it. */
 void test_cancel_from_inside_callback(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 33,
@@ -361,12 +353,10 @@ void test_cancel_from_inside_callback(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* A one-shot callback registering a new timer gets its own freed slot back. */
 void test_one_shot_callback_reuses_its_own_slot(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 34,
         "var n = 0\n"
-        "var outer_h = -1\n"
         "var inner_h = -99\n"
         "def inner()\n"
         "  n += 10\n"
@@ -376,7 +366,7 @@ void test_one_shot_callback_reuses_its_own_slot(void)
         "  inner_h = timer_after(1000, inner)\n"
         "end\n"
         "def setup()\n"
-        "  outer_h = timer_after(1000, outer)\n"
+        "  timer_after(1000, outer)\n"
         "end\n"));
 
     tick_at(1000);
@@ -388,7 +378,6 @@ void test_one_shot_callback_reuses_its_own_slot(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* Two timers due in the same tick both fire during that one call. */
 void test_two_timers_due_in_one_tick_both_fire(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 35,
@@ -436,10 +425,9 @@ void test_due_comparison_survives_clock_wrap(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* timer_every(0) is documented behaviour: period 0 means "one-shot" (see
- * timer_entry_t.period_ms and the one_shot snapshot in berry_timer_tick), so
- * the callback runs once and the slot is freed. It is a quirk worth a design
- * decision, not a crash or a leak, so the test pins the current semantics. */
+/* timer_every(0) pins the current semantics: period 0 is the one-shot marker
+ * (timer_entry_t.period_ms), so it fires once and frees its slot. Flagged as a
+ * design question for the owner, not asserted as a defect. */
 void test_timer_every_zero_behaves_as_one_shot(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 37,
@@ -463,16 +451,13 @@ void test_timer_every_zero_behaves_as_one_shot(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* ---- P7 probe: .refs growth on register/cancel churn -------------------- */
-/* refs_alloc() appends and refs_free() only nils the hole, so every
- * register/cancel cycle grows .refs by one slot. Confirmed defect, filed as a
- * firmware bug; the body below is the repro and stays as-is.
- * Bug session: ses_e5ded8266ffeF7JEMIeF4Y4HJ6 (main repo, agent build).
- * Remove the TEST_IGNORE when that fix lands and rerun this file. */
+/* ---- .refs growth on register/cancel churn ------------------------------ */
+/* refs_alloc() appends and refs_free() only nils the hole, so each cycle grows
+ * .refs by one slot: 20 cycles took it from 2 to 22 entries. Bug session
+ * ses_e5ded8266ffeF7JEMIeF4Y4HJ6 owns the fix; drop the ignore when it lands. */
 void test_refs_do_not_grow_on_register_cancel_churn(void)
 {
-    /* 20 churn cycles grew .refs from 2 to 22 entries: the list is append-only. */
-    TEST_IGNORE_MESSAGE("B1 ses_e5ded8266ffeF7JEMIeF4Y4HJ6: .refs never reuses freed slots");
+    TEST_IGNORE_MESSAGE("ses_e5ded8266ffeF7JEMIeF4Y4HJ6: .refs never reuses freed slots");
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 38,
         "def cb()\n"
         "end\n"

@@ -76,10 +76,10 @@ static int run_as_owner(int owner, const char *src)
     return rc;
 }
 
-/* ---- P2: throwing timer callbacks --------------------------------------- */
+/* ---- throwing timer callbacks ------------------------------------------ */
 
-/* A repeating timer that throws: the handler sees the owner, the entry is
- * dropped instead of retried, and the stack comes back to the watermark. */
+/* The handler sees the owner, the repeat entry is dropped instead of retried,
+ * and the stack comes back to the watermark. */
 void test_repeat_timer_error_reports_owner_and_removes_entry(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 41,
@@ -96,7 +96,7 @@ void test_repeat_timer_error_reports_owner_and_removes_entry(void)
 
     tick_at(1000);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
-    TEST_ASSERT_EQUAL_INT(41, g_owner);         /* not 0, not some other script */
+    TEST_ASSERT_EQUAL_INT(41, g_owner);
     TEST_ASSERT_EQUAL_INT(0, g_type_null);
     TEST_ASSERT_EQUAL_INT(0, g_msg_null);
     TEST_ASSERT_EQUAL_STRING("boom", g_type);
@@ -104,7 +104,6 @@ void test_repeat_timer_error_reports_owner_and_removes_entry(void)
     TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "hits"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
-    /* A failed repeat is not retried. */
     tick_at(2000);
     tick_at(3000);
     TEST_ASSERT_EQUAL_INT(1, g_calls);
@@ -116,8 +115,8 @@ void test_repeat_timer_error_reports_owner_and_removes_entry(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* The same contract for a one-shot that was armed from inside a callback:
- * it reports the owner, frees the reused slot, and is not retried. */
+/* Same contract for a one-shot armed from inside a callback: the slot it
+ * reused is freed again. */
 void test_one_shot_from_callback_error_reports_owner_and_frees_slot(void)
 {
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 42,
@@ -155,17 +154,17 @@ void test_one_shot_from_callback_error_reports_owner_and_frees_slot(void)
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
-/* ---- P8 probe: BE_EXIT in a callback ------------------------------------ */
-/* os.exit()/sys.exit() are compiled out in this configuration (berry_conf.h
- * sets BE_USE_OS_MODULE and BE_USE_SYS_MODULE to 0), but any native binding
- * may call be_exit(), so berry_timer_tick()'s BE_EXIT read is still reachable.
- * be_pcall() copies one value to the stack for BE_EXIT (be_exec.c
- * copy_exception), while the tick reads -2/-1 like an exception pair.
+/* ---- BE_EXIT in a callback --------------------------------------------- */
+/* os.exit()/sys.exit() are compiled out (berry_conf.h sets BE_USE_OS_MODULE
+ * and BE_USE_SYS_MODULE to 0), but any native binding may call be_exit(), so
+ * the tick's BE_EXIT read is reachable. be_pcall() copies one value for
+ * BE_EXIT (be_exec.c copy_exception) while the tick reads -2/-1 as an
+ * exception pair.
  *
- * Confirmed defect: the handler receives the callback object as the "type"
+ * Confirmed: the handler gets the callback object as the type
  * ("<function: 0x...>") because -2 is the slot below the single exit status.
- * Bug session: ses_e5de7d818ffexLysa6KUGVbQ75 (main repo, agent build).
- * Remove the TEST_IGNORE when that fix lands and rerun this file. */
+ * Bug session ses_e5de7d818ffexLysa6KUGVbQ75 owns the fix; drop the ignore
+ * when it lands. */
 static int l_test_exit(bvm *vm)
 {
     be_exit(vm, 3);
@@ -174,8 +173,7 @@ static int l_test_exit(bvm *vm)
 
 void test_timer_callback_exit_reports_an_error_not_stack_garbage(void)
 {
-    /* B2 ses_e5de7d818ffexLysa6KUGVbQ75: BE_EXIT reads the slot below the status */
-    TEST_IGNORE_MESSAGE("B2 ses_e5de7d818ffexLysa6KUGVbQ75: handler got '<function: 0x...>'");
+    TEST_IGNORE_MESSAGE("ses_e5de7d818ffexLysa6KUGVbQ75: handler got '<function: 0x...>'");
 
     be_regfunc(vm, "test_exit", l_test_exit);
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 43,
