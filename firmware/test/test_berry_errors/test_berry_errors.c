@@ -9,8 +9,6 @@
  */
 #include <unity.h>
 
-#include <string.h>
-
 #include "berry_test.h"
 
 static bvm *vm;
@@ -157,10 +155,11 @@ void test_one_shot_from_callback_error_reports_owner_and_frees_slot(void)
 /* ---- BE_EXIT in a callback --------------------------------------------- */
 /* os.exit()/sys.exit() are compiled out (berry_conf.h sets BE_USE_OS_MODULE
  * and BE_USE_SYS_MODULE to 0), but any native binding may call be_exit(), so
- * the tick's BE_EXIT read is reachable. be_pcall() copies one value for
- * BE_EXIT (be_exec.c copy_exception) while berry_timer_tick() reads -2/-1 as
- * an exception pair, so the handler gets the callback object as the type.
- * Fix in #38; drop the ignore once it is merged. */
+ * the tick's BE_EXIT path is reachable. be_pcall() copies one value for
+ * BE_EXIT (be_exec.c copy_exception) while BE_EXCEPTION copies a pair, so the
+ * decode must not read -2 as the error type: that slot holds whatever the
+ * callee left below the status. An exit is reported as type "exit" with the
+ * status as the message. */
 static int l_test_exit(bvm *vm)
 {
     be_exit(vm, 3);
@@ -169,8 +168,6 @@ static int l_test_exit(bvm *vm)
 
 void test_timer_callback_exit_reports_an_error_not_stack_garbage(void)
 {
-    TEST_IGNORE_MESSAGE("BE_EXIT reports the slot below the status as the error type");
-
     be_regfunc(vm, "test_exit", l_test_exit);
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 43,
         "var exits = 0\n"
@@ -186,12 +183,17 @@ void test_timer_callback_exit_reports_an_error_not_stack_garbage(void)
     TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "exits"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
-    /* Whatever contract the fix picks, a handler call must not describe the
-     * callback object as the error type, and the owner stays the entry's. */
-    if (g_calls > 0) {
-        TEST_ASSERT_EQUAL_INT(43, g_owner);
-        TEST_ASSERT_NULL(strstr(g_type, "<function"));
-    }
+    /* A single defined report: the entry's owner, type "exit", status text. */
+    TEST_ASSERT_EQUAL_INT(1, g_calls);
+    TEST_ASSERT_EQUAL_INT(43, g_owner);
+    TEST_ASSERT_EQUAL_STRING("exit", g_type);
+    TEST_ASSERT_EQUAL_STRING("3", g_msg);
+
+    /* The failed repeat is dropped, not retried. */
+    tick_at(2000);
+    TEST_ASSERT_EQUAL_INT(1, g_calls);
+    TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "exits"));
+    TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
 
 /* The native platform links no test main of its own, so the suite provides
