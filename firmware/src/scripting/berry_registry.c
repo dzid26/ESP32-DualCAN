@@ -21,6 +21,7 @@ static const char *TAG_BB = "berry";
 #define MAX_TIMERS    16    /* max concurrent timer.after/every */
 #define MAX_ACTIONS   32    /* max actions registered at once */
 #define ACTION_NAME_MAX 40  /* max length of action name */
+#define REFS_GLOBAL   ".refs" /* hidden VM list holding the live function refs */
 
 static bvm   *s_vm;
 static int    s_current_script_id;
@@ -48,43 +49,85 @@ static void script_ctx_leave(int prev)
  * Keeps a hidden global list ".refs" on the VM containing function references
  * that C code holds across script invocations (timers, actions). Each ref is
  * just the list index. When the function is no longer needed, the list slot
- * is set to nil (refs_free). This prevents GC from collecting the closures. */
+ * is set to nil (refs_free). This prevents GC from collecting the closures.
+ *
+ * A freed slot stays nil until refs_alloc() hands it out again: allocation
+ * reuses the lowest nil slot before appending, so the list tracks the peak
+ * number of live refs (bounded by MAX_TIMERS + MAX_ACTIONS + captured script
+ * entries) instead of the number of registrations ever made. Reuse overwrites
+ * the hole in place, so a live index never moves.
+ *
+ * Because indexes are recycled, a ref is valid only until its owner releases
+ * it: refs_free() is not idempotent, and releasing a stale ref nils whichever
+ * registration has since taken that index. Release each ref exactly once,
+ * inside its entry's lifetime. */
 
+/* Push REFS_GLOBAL, creating the list when it is missing or holds something
+ * other than a list. Leaves the list on the stack. */
+static void refs_ensure_list(bvm *vm)
+{
+    be_getglobal(vm, REFS_GLOBAL);
+    if (be_islist(vm, -1)) return;
+    be_pop(vm, 1);
+    be_newlist(vm);
+    be_setglobal(vm, REFS_GLOBAL);   /* leaves the list on the stack */
+}
+
+/* Index of the lowest nil slot in the list on top of the stack, or -1 when
+ * every slot is live. Runs on allocation only, never on the tick path. */
+static int refs_first_free(bvm *vm)
+{
+    int size = be_data_size(vm, -1);
+    for (int i = 0; i < size; i++) {
+        be_pushint(vm, i);
+        be_getindex(vm, -2);        /* list, key, value */
+        bool free_slot = be_isnil(vm, -1);
+        be_pop(vm, 2);
+        if (free_slot) return i;
+    }
+    return -1;
+}
+
+/* Store the function at fn_index (absolute, or negative = stack-relative) and
+ * return its ref. fn_index is resolved before anything is pushed, so the
+ * pushes below cannot invalidate it. */
 static int refs_alloc(bvm *vm, int fn_index)
 {
     if (fn_index < 0) fn_index = be_top(vm) + fn_index + 1;
 
-    be_getglobal(vm, ".refs");
-    if (be_isnil(vm, -1)) {
-        be_pop(vm, 1);
-        be_newlist(vm);
-        be_setglobal(vm, ".refs");   /* leaves the list on the stack */
-        be_pop(vm, 1);
-        be_getglobal(vm, ".refs");
+    refs_ensure_list(vm);
+    int ref = refs_first_free(vm);
+    if (ref >= 0) {
+        be_pushint(vm, ref);        /* list, key */
+        be_pushvalue(vm, fn_index); /* list, key, value */
+        be_setindex(vm, -3);
+        be_pop(vm, 3);              /* value, key, list */
+    } else {
+        ref = be_data_size(vm, -1);
+        be_pushvalue(vm, fn_index);
+        be_data_push(vm, -2);
+        be_pop(vm, 2);              /* value, list */
     }
-    be_pushvalue(vm, fn_index);
-    be_data_push(vm, -2);
-    be_pop(vm, 1);
-    int ref = be_data_size(vm, -1) - 1;
-    be_pop(vm, 1);
     return ref;
 }
 
+/* Release a ref by nilling its slot so GC can collect the closure. Not
+ * idempotent: the index can go to another registration right after this. */
 static void refs_free(bvm *vm, int ref)
 {
     if (ref < 0) return;
-    be_getglobal(vm, ".refs");
-    if (be_isnil(vm, -1)) { be_pop(vm, 1); return; }
+    be_getglobal(vm, REFS_GLOBAL);
+    if (!be_islist(vm, -1)) { be_pop(vm, 1); return; }
     be_pushint(vm, ref);
     be_pushnil(vm);
-    be_setindex(vm, -3);
+    be_setindex(vm, -3);   /* fails past the end: there is nothing to free */
     be_pop(vm, 3);
 }
 
 static bool refs_push(bvm *vm, int ref)
 {
-    be_getglobal(vm, ".refs");
-    if (be_isnil(vm, -1)) { be_pop(vm, 1); return false; }
+    be_getglobal(vm, REFS_GLOBAL);
+    if (!be_islist(vm, -1)) { be_pop(vm, 1); return false; }
     be_pushint(vm, ref);
     be_getindex(vm, -2);
     be_remove(vm, -2);
@@ -154,6 +197,7 @@ typedef struct {
     int      script_id;
     uint32_t next_fire_ms;
     uint32_t period_ms;     /* 0 = one-shot */
+    uint32_t epoch;         /* bumped on every reuse of this slot */
 } timer_entry_t;
 
 /* Registry of all active timers. Index == handle returned to Berry. */
@@ -170,6 +214,7 @@ static int alloc_timer(int ref, const char *binding, uint32_t period_ms, uint32_
                 .script_id = s_current_script_id,
                 .next_fire_ms = now_ms + period_ms,
                 .period_ms = period_ms,
+                .epoch = s_timers[i].epoch + 1,
             };
             return i;
         }
@@ -242,10 +287,11 @@ void berry_timer_tick(uint32_t now_ms)
         if (!t->in_use) continue;
         if ((int32_t)(now_ms - t->next_fire_ms) < 0) continue;
 
-        /* Snapshot owner/ref before the call: a one-shot frees its slot and
-         * the callback may reuse it. */
+        /* Snapshot the entry's identity before the call: the callback may
+         * cancel this timer, reuse its s_timers slot, or take back its ref. */
         int ref = t->ref;
         int owner = t->script_id;
+        uint32_t epoch = t->epoch;
         bool one_shot = (t->period_ms == 0);
         if (one_shot) {
             t->in_use = false;
@@ -255,23 +301,31 @@ void berry_timer_tick(uint32_t now_ms)
 
         int base = be_top(s_vm);
         if (refs_push(s_vm, ref)) {
+            /* A one-shot owes nothing past this line: refs_push rooted the
+             * closure on the value stack, so release the slot before user code
+             * runs. Whatever reuses the index next owns it outright, and this
+             * tick never frees it a second time. */
+            if (one_shot) refs_free(s_vm, ref);
             int prev_ctx = script_ctx_enter(owner);
             int rc = be_pcall(s_vm, 0);
             script_ctx_leave(prev_ctx);
             if (rc != 0) {
                 const char *err_type = be_tostring(s_vm, -2);
                 const char *err_msg  = be_tostring(s_vm, -1);
-                if (!one_shot) t->in_use = false;
-                refs_free(s_vm, ref);
-                ref = -1;
+                /* A repeating timer keeps its ref across the call, but the
+                 * callback may have cancelled it (which already released the
+                 * ref) or reused this very slot for a new timer. Only release
+                 * the ref when this entry still owns both. */
+                if (!one_shot && t->in_use && t->epoch == epoch) {
+                    t->in_use = false;
+                    refs_free(s_vm, ref);
+                }
                 if (s_timer_error_handler) {
                     s_timer_error_handler(owner, err_type, err_msg);
                 }
             }
             berry_stack_restore(s_vm, base);
         }
-
-        if (one_shot && ref >= 0) refs_free(s_vm, ref);
     }
 }
 
