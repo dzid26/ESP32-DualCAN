@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Switch, AlertDialog } from 'bits-ui';
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import { dbcStore } from '../../dbcStore.svelte';
   import type { ScriptInfo } from '../../transport/protocol';
   import { allExamples as examples } from '../../examples';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import { SAMPLE_EVENTS, type EventTile } from '../../lib/sampleData';
   import type { SignalUpdate, SignalValue } from '../../transport/protocol';
   import { dbcStore } from '../../dbcStore.svelte';

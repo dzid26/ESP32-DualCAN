@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../lib/store.svelte';
+  import { app } from '../lib/app';
   import { NAV_ITEMS } from '../lib/nav';
   import { modKey, isIOS } from '../lib/platform';
   import Icon from './Icon.svelte';

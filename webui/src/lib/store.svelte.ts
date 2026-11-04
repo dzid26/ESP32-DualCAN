@@ -1,8 +1,8 @@
 // Global app state — Svelte 5 runes shared across components.
-// Wires the real BleTransport + Protocol from ../transport/* through to the
-// status strip, banners, and views. Per-view local state stays in the views.
+// Drives a BleTransport + Protocol from ../transport/* through to the status
+// strip, banners, and views. Per-view local state stays in the views.
 
-import { BleTransport, type DisconnectKind } from '../transport/ble';
+import type { BleTransport, DisconnectKind } from '../transport/ble';
 import { Protocol } from '../transport/protocol';
 import type { BusStatus, LogLevel } from '../transport/protocol';
 
@@ -84,10 +84,10 @@ function nowTs(): string {
 /** Backoff schedule (ms) between automatic reconnect attempts after an unexpected drop. */
 export const RECONNECT_BACKOFF_MS: readonly number[] = [1500, 2500, 4000, 6000, 8000];
 
-/** Injectable dependencies for {@link AppState}. Production uses the defaults. */
+/** Injectable dependencies for {@link AppState}. */
 export interface AppStateDeps {
-  /** Transport to drive. Defaults to a real {@link BleTransport}. */
-  ble?: BleTransport;
+  /** Transport to drive. */
+  ble: BleTransport;
   /** Delay primitive used between automatic reconnect attempts (overridable in tests). */
   sleep?: (ms: number) => Promise<void>;
 }
@@ -328,8 +328,8 @@ export class AppState {
      (navigator as any).standalone === true),
   );
 
-  constructor(deps: AppStateDeps = {}) {
-    this.ble = deps.ble ?? new BleTransport();
+  constructor(deps: AppStateDeps) {
+    this.ble = deps.ble;
     this.proto = new Protocol(this.ble);
     this.sleep = deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.ble.onConnectionChange((c) => this.onConnChange(c));
@@ -801,5 +801,3 @@ export class AppState {
     else if (bus === 1) { this.bus1Status = status; this.bus1Rate = rate; }
   }
 }
-
-export const app = new AppState();

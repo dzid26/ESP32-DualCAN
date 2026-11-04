@@ -1,6 +1,7 @@
 import type { Transport } from './types';
-import { BleClient, type BleDevice, type RequestBleDeviceOptions } from '@capacitor-community/bluetooth-le';
-import { Capacitor } from '@capacitor/core';
+// Type-only: the client is injected by the app, so the Node test tier runs
+// without node_modules.
+import type { BleDevice, RequestBleDeviceOptions } from '@capacitor-community/bluetooth-le';
 
 // Nordic UART Service UUIDs (must match firmware ble_transport.c)
 const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
@@ -28,14 +29,8 @@ interface PersistedDevice {
   name: string | null;
 }
 
-/** True when running in a browser (as opposed to the Capacitor native shell). */
-function isWebPlatform(): boolean {
-  try {
-    return Capacitor.getPlatform() === 'web';
-  } catch {
-    return true;
-  }
-}
+/** True in a browser; injected so this module needs no Capacitor import. */
+type IsWebPlatform = () => boolean;
 
 /** Exposed for tests
  *  The slice of the plugin's client that `BleTransport` actually calls. Derived
@@ -45,10 +40,12 @@ function isWebPlatform(): boolean {
 type BleClientMethod =
   | 'initialize' | 'requestDevice' | 'getDevices' | 'connect' | 'disconnect'
   | 'writeWithoutResponse' | 'startNotifications' | 'stopNotifications';
-export type BleClientPort = Pick<typeof BleClient, BleClientMethod>;
+type BleClientCtor = typeof import('@capacitor-community/bluetooth-le').BleClient;
+export type BleClientPort = Pick<BleClientCtor, BleClientMethod>;
 
 export class BleTransport implements Transport {
   private readonly client: BleClientPort;
+  private readonly isWeb: IsWebPlatform;
   private deviceId: string | null = null;
   private deviceName_: string | null = null;
   /** Last successfully-connected device, durable across disconnects + reloads.
@@ -72,8 +69,9 @@ export class BleTransport implements Transport {
    *  upcoming disconnect via a [0xFD, reason] notification. */
   private pendingDisconnectReason: DisconnectKind | null = null;
 
-  constructor(client: BleClientPort = BleClient) {
+  constructor(client: BleClientPort, isWeb: IsWebPlatform) {
     this.client = client;
+    this.isWeb = isWeb;
     const saved = BleTransport.loadPersistedDevice();
     this.lastDeviceId = saved?.deviceId ?? null;
     this.lastDeviceName = saved?.name ?? null;
@@ -200,7 +198,7 @@ export class BleTransport implements Transport {
   /** Web Bluetooth's getDevices() is not implemented in every browser and the
    *  Capacitor plugin does not guard it on web, so feature-detect before use. */
   private canGetDevices(): boolean {
-    if (!isWebPlatform()) return true;
+    if (!this.isWeb()) return true;
     if (typeof navigator === 'undefined') return false;
     const bt = (navigator as unknown as { bluetooth?: { getDevices?: unknown } }).bluetooth;
     return !!bt && typeof bt.getDevices === 'function';

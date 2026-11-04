@@ -1,7 +1,7 @@
 <script lang="ts">
   // Web Audio engine-sound gimmick — phone speaker noisemaker driven by
   // a sim slider or a stub "live signal" stream.
-  import { app } from '../../lib/store.svelte';
+  import { app } from '../../lib/app';
   import SectionHead from '../SectionHead.svelte';
   import Icon from '../Icon.svelte';
   import { onDestroy } from 'svelte';
