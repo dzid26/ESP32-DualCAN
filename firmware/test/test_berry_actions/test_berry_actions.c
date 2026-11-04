@@ -25,6 +25,10 @@ void setUp(void)
     berry_register_registry(vm);
     stack_base = be_top(vm);
     stub_set_now_ms(0);
+    /* The action table is process-wide, not VM-wide: a leftover here means a
+     * previous case registered outside the swept owner. Fail at the source
+     * instead of somewhere down the next test. */
+    TEST_ASSERT_EQUAL_INT(0, berry_actions_snapshot(NULL, 0));
 }
 
 void tearDown(void)
@@ -55,15 +59,6 @@ static int refs_live(bvm *vm)
     return live;
 }
 
-/* Number of registered actions, and the name of the first one if any. */
-static int action_count(const char **first)
-{
-    const char *names[8] = {0};
-    int found = berry_actions_snapshot(names, 8);
-    if (first) *first = names[0];
-    return found;
-}
-
 void test_reregistering_a_name_replaces_the_entry_and_frees_the_old_ref(void)
 {
     static const char *SCRIPT =
@@ -82,9 +77,9 @@ void test_reregistering_a_name_replaces_the_entry_and_frees_the_old_ref(void)
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, OWNER, SCRIPT));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
-    const char *name = NULL;
-    TEST_ASSERT_EQUAL_INT(1, action_count(&name));
-    TEST_ASSERT_EQUAL_STRING("dup", name);
+    const char *names[1] = {0};
+    TEST_ASSERT_EQUAL_INT(1, berry_actions_snapshot(names, 1));
+    TEST_ASSERT_EQUAL_STRING("dup", names[0]);
     /* Two refs: the captured setup() plus the surviving action. The first
      * body's ref must be nil, not a third live entry. */
     TEST_ASSERT_EQUAL_INT(2, refs_live(vm));
@@ -108,13 +103,13 @@ void test_invoke_after_disable_returns_minus_one(void)
         "end\n";
 
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, OWNER, SCRIPT));
-    TEST_ASSERT_EQUAL_INT(1, action_count(NULL));
+    TEST_ASSERT_EQUAL_INT(1, berry_actions_snapshot(NULL, 0));
     TEST_ASSERT_EQUAL_INT(0, berry_action_invoke("gone"));
     TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "hits"));
 
     berry_cleanup_script(OWNER);
 
-    TEST_ASSERT_EQUAL_INT(0, action_count(NULL));
+    TEST_ASSERT_EQUAL_INT(0, berry_actions_snapshot(NULL, 0));
     TEST_ASSERT_EQUAL_INT(-1, berry_action_invoke("gone"));
     TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "hits"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
@@ -135,11 +130,11 @@ void test_action_registers_another_action_owned_by_the_same_script(void)
         "end\n";
 
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, OWNER, SCRIPT));
-    TEST_ASSERT_EQUAL_INT(1, action_count(NULL));
+    TEST_ASSERT_EQUAL_INT(1, berry_actions_snapshot(NULL, 0));
 
     TEST_ASSERT_EQUAL_INT(0, berry_action_invoke("outer"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
-    TEST_ASSERT_EQUAL_INT(2, action_count(NULL));
+    TEST_ASSERT_EQUAL_INT(2, berry_actions_snapshot(NULL, 0));
 
     TEST_ASSERT_EQUAL_INT(0, berry_action_invoke("inner"));
     TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "hits"));
@@ -147,7 +142,7 @@ void test_action_registers_another_action_owned_by_the_same_script(void)
     /* The action registered from inside a callback inherited the owner, so
      * disabling the script takes it down too. */
     berry_cleanup_script(OWNER);
-    TEST_ASSERT_EQUAL_INT(0, action_count(NULL));
+    TEST_ASSERT_EQUAL_INT(0, berry_actions_snapshot(NULL, 0));
     TEST_ASSERT_EQUAL_INT(-1, berry_action_invoke("inner"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 }
@@ -170,7 +165,7 @@ void test_action_reregisters_itself_during_invocation(void)
         "end\n";
 
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, OWNER, SCRIPT));
-    TEST_ASSERT_EQUAL_INT(1, action_count(NULL));
+    TEST_ASSERT_EQUAL_INT(1, berry_actions_snapshot(NULL, 0));
 
     /* The running body replaces its own entry mid-call. The invocation must
      * finish on the snapshot it started with and leave one entry behind. */
@@ -178,9 +173,9 @@ void test_action_reregisters_itself_during_invocation(void)
     TEST_ASSERT_EQUAL_INT(1, berry_test_global_int(vm, "hits"));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
 
-    const char *name = NULL;
-    TEST_ASSERT_EQUAL_INT(1, action_count(&name));
-    TEST_ASSERT_EQUAL_STRING("self", name);
+    const char *names[1] = {0};
+    TEST_ASSERT_EQUAL_INT(1, berry_actions_snapshot(names, 1));
+    TEST_ASSERT_EQUAL_STRING("self", names[0]);
 
     /* The replacement is what the next invocation runs. */
     TEST_ASSERT_EQUAL_INT(0, berry_action_invoke("self"));
@@ -205,9 +200,10 @@ void test_snapshot_below_count_returns_the_found_total(void)
     TEST_ASSERT_EQUAL_INT(3, berry_actions_snapshot(one, 1));
     TEST_ASSERT_NOT_NULL(one[0]);
 
-    const char *none[1] = {0};
-    TEST_ASSERT_EQUAL_INT(3, berry_actions_snapshot(none, 0));
-    TEST_ASSERT_NULL(none[0]);
+    /* max == 0 writes nothing at all, and still reports the total. */
+    const char *untouched[1] = {0};
+    TEST_ASSERT_EQUAL_INT(3, berry_actions_snapshot(untouched, 0));
+    TEST_ASSERT_NULL(untouched[0]);
 
     const char *all[8] = {0};
     TEST_ASSERT_EQUAL_INT(3, berry_actions_snapshot(all, 8));

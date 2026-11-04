@@ -31,6 +31,9 @@ void setUp(void)
     berry_register_registry(vm);
     stack_base = be_top(vm);
     stub_set_now_ms(0);
+    /* The action table is process-wide: fail here, not in whatever test the
+     * leftover lands on. */
+    TEST_ASSERT_EQUAL_INT(0, berry_actions_snapshot(NULL, 0));
 }
 
 void tearDown(void)
@@ -41,32 +44,35 @@ void tearDown(void)
     vm = NULL;
 }
 
-/* Read the probe script off the host filesystem. Returns its length, or -1. */
+/* Read the probe script off the host filesystem. Returns its length, or -1 if
+ * it cannot be read whole: a truncated chunk would compile to a Berry error
+ * at a meaningless line, or silently drop the tail of the probe. */
 static int load_probe(void)
 {
     FILE *f = fopen(PROBE_PATH, "rb");
     if (!f) return -1;
     size_t n = fread(probe_src, 1, sizeof(probe_src) - 1, f);
+    int complete = !ferror(f) && feof(f);
     fclose(f);
+    if (!complete) return -1;
     probe_src[n] = '\0';
     return (int)n;
 }
 
-static int action_count(void)
-{
-    const char *names[8] = {0};
-    return berry_actions_snapshot(names, 8);
-}
-
 void test_probe_timers_stop_after_disable(void)
 {
-    TEST_ASSERT_MESSAGE(load_probe() > 0,
-                        "cannot read " PROBE_PATH " - CWD must be firmware/");
+    /* Unity does not abort a test on a failed assertion in this harness
+     * (unity_config.h excludes setjmp), so bail out by hand: the next call
+     * would enable an empty script. */
+    if (load_probe() <= 0) {
+        TEST_FAIL_MESSAGE("cannot read " PROBE_PATH " - CWD must be firmware/");
+        return;
+    }
 
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, OWNER, probe_src));
     TEST_ASSERT_EQUAL_INT(stack_base, be_top(vm));
     /* setup() registers the "arm" action plus the one-shot arming the beat. */
-    TEST_ASSERT_EQUAL_INT(1, action_count());
+    TEST_ASSERT_EQUAL_INT(1, berry_actions_snapshot(NULL, 0));
 
     stub_set_now_ms(1000);
     berry_timer_tick(1000);         /* one-shot fires arm_inner() */
@@ -83,7 +89,7 @@ void test_probe_timers_stop_after_disable(void)
     /* Disable: the timer armed from inside the callback must be revoked
      * along with the action the script registered. */
     berry_cleanup_script(OWNER);
-    TEST_ASSERT_EQUAL_INT(0, action_count());
+    TEST_ASSERT_EQUAL_INT(0, berry_actions_snapshot(NULL, 0));
 
     stub_set_now_ms(3600);
     berry_timer_tick(3600);
