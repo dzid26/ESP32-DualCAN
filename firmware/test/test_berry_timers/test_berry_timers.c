@@ -452,12 +452,11 @@ void test_timer_every_zero_behaves_as_one_shot(void)
 }
 
 /* ---- .refs growth on register/cancel churn ------------------------------ */
-/* refs_alloc() appends and refs_free() only nils the hole, so each cycle grows
- * .refs by one slot: 20 cycles took it from 2 to 22 entries. Fix in #33; drop
- * the ignore once it is merged. */
+/* refs_alloc() reuses a freed nil slot, so churn must not grow .refs: 20
+ * register/cancel cycles leave both the list length and the live-entry count
+ * unchanged. */
 void test_refs_do_not_grow_on_register_cancel_churn(void)
 {
-    TEST_IGNORE_MESSAGE(".refs is append-only: freed slots are never reused");
     TEST_ASSERT_EQUAL_INT(0, berry_test_enable(vm, 38,
         "def cb()\n"
         "end\n"
