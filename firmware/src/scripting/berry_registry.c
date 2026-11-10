@@ -110,6 +110,25 @@ int berry_capture_global(bvm *vm, const char *global_name)
     return ref;
 }
 
+/* Capture `map[key]` as a function ref. Used by the loader on the small map
+ * returned by the per-script epilogue (setup/teardown/loop). Map instances
+ * keep their entries under `.p`, so index that like can_msg_send does. */
+int berry_capture_map_function(bvm *vm, int map_index, const char *key)
+{
+    int idx = map_index < 0 ? be_top(vm) + map_index + 1 : map_index;
+    be_getmember(vm, idx, ".p");
+    int pidx = be_top(vm);
+    be_pushstring(vm, key);
+    be_getindex(vm, pidx);
+    if (!be_isfunction(vm, -1)) {
+        be_pop(vm, 3);   /* value + key + .p */
+        return -1;
+    }
+    int ref = refs_alloc(vm, -1);
+    be_pop(vm, 3);       /* value + key + .p */
+    return ref;
+}
+
 void berry_release_ref(bvm *vm, int ref)
 {
     refs_free(vm, ref);
@@ -423,6 +442,11 @@ void berry_cleanup_script(int script_id)
 void berry_register_registry(bvm *vm)
 {
     s_vm = vm;
+    s_current_script_id = SCRIPT_ID_NONE;
+    /* A fresh VM starts with no timers or actions. Clearing here also keeps
+     * host suites that create one VM per test isolated from each other. */
+    memset(s_timers, 0, sizeof(s_timers));
+    memset(s_actions, 0, sizeof(s_actions));
     be_regfunc(vm, "timer_after", l_timer_after);
     be_regfunc(vm, "timer_every", l_timer_every);
     be_regfunc(vm, "timer_cancel", l_timer_cancel);

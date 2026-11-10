@@ -30,6 +30,11 @@ void berry_cleanup_script(int script_id);
  * clear the global, and return its ref id. Returns -1 if not a function. */
 int  berry_capture_global(bvm *vm, const char *global_name);
 
+/* If map[key] is a function, store it in the refs list and return its ref id.
+ * map_index is a be_top()-style index; negative values are relative to the
+ * current top. Returns -1 when the key is missing or not a function. */
+int  berry_capture_map_function(bvm *vm, int map_index, const char *key);
+
 /* Release a previously captured ref (no-op if ref < 0). */
 void berry_release_ref(bvm *vm, int ref);
 

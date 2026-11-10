@@ -154,7 +154,14 @@ int can_read(can_t *c, uint32_t msg_id, uint8_t *out_data, uint8_t *out_dlc, uin
 int can_send(can_t *c, uint32_t id, const uint8_t *data, uint8_t dlc)
 {
     uint32_t now_us = (uint32_t)(esp_timer_get_time());
-    if (!rate_limiter_allow(&c->rate_limiter, id, now_us)) {
+
+    /* If a script has mirrored this ID, allow at most one TX per received
+     * frame. Scripts that send unsolicited IDs keep the per-ID limiter. */
+    int slot = cache_find(c->msg_cache, id);
+    bool have_rx = slot >= 0 && c->msg_cache[slot].count > 0;
+    uint32_t rx_us = have_rx ? c->msg_cache[slot].last_us : 0;
+
+    if (!rate_limiter_allow_frame(&c->rate_limiter, id, now_us, rx_us, have_rx)) {
         ESP_LOGD(TAG, "bus%d: rate-limited id=0x%03" PRIx32, c->bus_id, id);
         return -1;
     }

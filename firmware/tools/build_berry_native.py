@@ -37,7 +37,8 @@ if env.subst("$PIOENV") == "tests-native-berry":
     env.BuildSources(
         os.path.join("$BUILD_DIR", "scripting"),
         os.path.join(project_dir, "src"),
-        "+<scripting/berry_registry.c> +<scripting/script_loader.c>",
+        "+<scripting/berry_registry.c> +<scripting/script_loader.c> "
+        "+<scripting/berry_bindings.c> +<can/msg_codec.c>",
     )
     env.BuildSources(
         os.path.join("$BUILD_DIR", "test_support"),

@@ -34,8 +34,10 @@ export type { Diagnostic, Span } from './berry/diagnostic.ts';
 
 /* ---- Scripting API version ---- */
 // The firmware reports scripting_api_version in system.info; the web UI warns
-// before uploading a script when versions don't match.
-export const SCRIPTING_API_VERSION = 1;
+// before uploading a script when versions don't match. Version 2: top-level
+// names are private to each script (compiled as locals) instead of sharing the
+// VM global table.
+export const SCRIPTING_API_VERSION = 2;
 
 /** Result of preprocessing one script. */
 export interface PreprocessResult {

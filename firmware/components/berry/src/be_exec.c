@@ -219,6 +219,18 @@ BERRY_API int be_loadbuffer(bvm *vm,
     return be_protectedparser(vm, name, _sgets, &sbuf, bfalse);
 }
 
+/* Compile a buffer with top-level declarations as locals instead of globals.
+ * Scripts loaded this way cannot see or mutate another script's top-level
+ * variables through the shared global table. */
+BERRY_API int be_loadbuffer_local(bvm *vm,
+    const char *name, const char *buffer, size_t length)
+{
+    struct strbuf sbuf;
+    sbuf.s = buffer;
+    sbuf.len = length;
+    return be_protectedparser(vm, name, _sgets, &sbuf, btrue);
+}
+
 static int fileparser(bvm *vm, const char *name, bbool islocal)
 {
     int res = BE_IO_ERROR;

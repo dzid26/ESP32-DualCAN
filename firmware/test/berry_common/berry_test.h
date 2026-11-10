@@ -5,6 +5,8 @@
  * own binary, so the static functions are per-TU.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -13,6 +15,14 @@
 
 /* Implemented by berry_common/stubs.c; moves the clock the registry reads. */
 void stub_set_now_ms(unsigned ms);
+
+/* CAN cache / TX recorder behind the real berry_bindings.c surface. */
+void    stub_can_reset(void);
+void    stub_can_push(int bus, uint32_t id, const uint8_t *data, uint8_t dlc);
+int     stub_can_send_count(int bus, uint32_t id);
+int     stub_can_total_sends(int bus);
+uint8_t stub_can_last_dlc(int bus, uint32_t id);
+bool    stub_can_last_data(int bus, uint32_t id, uint8_t out[8]);
 
 /* Load and run a chunk. On error prints the Berry message and restores the
  * value stack. Returns 0 or -1. */
