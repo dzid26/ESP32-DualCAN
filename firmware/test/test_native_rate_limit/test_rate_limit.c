@@ -99,6 +99,37 @@ void test_zero_default_means_unlimited(void)
     TEST_ASSERT_TRUE(rate_limiter_allow(&rl, 0x123, 1000002));
 }
 
+/* A mirrored ID may answer each received frame at most once, even when the
+ * polls between frames would pass the normal per-ID interval. */
+void test_rx_gate_allows_one_tx_per_frame(void)
+{
+    rate_limiter_t rl;
+    rate_limiter_init(&rl, 100);                /* default 10 ms */
+
+    TEST_ASSERT_TRUE(rate_limiter_allow_frame(&rl, 0x334, 1000000, 500000, true));
+    /* Same car frame, well past the interval: still blocked. */
+    TEST_ASSERT_FALSE(rate_limiter_allow_frame(&rl, 0x334, 1050000, 500000, true));
+    TEST_ASSERT_FALSE(rate_limiter_allow_frame(&rl, 0x334, 1100000, 500000, true));
+
+    /* A new car frame is allowed once. */
+    TEST_ASSERT_TRUE(rate_limiter_allow_frame(&rl, 0x334, 1200000, 900000, true));
+    TEST_ASSERT_FALSE(rate_limiter_allow_frame(&rl, 0x334, 1250000, 900000, true));
+
+    /* A new frame arriving faster than the per-ID interval is still capped. */
+    TEST_ASSERT_FALSE(rate_limiter_allow_frame(&rl, 0x334, 1201000, 950000, true));
+}
+
+/* IDs without a received frame keep the old per-ID behaviour. */
+void test_rx_gate_falls_back_without_frame(void)
+{
+    rate_limiter_t rl;
+    rate_limiter_init(&rl, 100);
+
+    TEST_ASSERT_TRUE(rate_limiter_allow_frame(&rl, 0x123, 1000000, 0, false));
+    TEST_ASSERT_FALSE(rate_limiter_allow_frame(&rl, 0x123, 1005000, 0, false));
+    TEST_ASSERT_TRUE(rate_limiter_allow_frame(&rl, 0x123, 1010000, 0, false));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -108,5 +139,7 @@ int main(void)
     RUN_TEST(test_per_id_override_looser);
     RUN_TEST(test_overflow_returns_false_for_new_ids);
     RUN_TEST(test_zero_default_means_unlimited);
+    RUN_TEST(test_rx_gate_allows_one_tx_per_frame);
+    RUN_TEST(test_rx_gate_falls_back_without_frame);
     return UNITY_END();
 }
