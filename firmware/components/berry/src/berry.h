@@ -2203,6 +2203,24 @@ BERRY_API bctypefunc be_get_ctype_func_hanlder(bvm *vm);
 BERRY_API int be_loadbuffer(bvm *vm, const char *name, const char *buffer, size_t length);
 
 /**
+ * @fn int be_loadbuffer_local(bvm*, const char*, const char*, size_t)
+ * @note code load API
+ * @brief Compile a buffer where top-level declarations become locals.
+ *
+ * Same as be_loadbuffer(), but the chunk is parsed as if it were a function
+ * body: `var`, `def` and top-level assignments bind local variables instead of
+ * entries in the shared VM global table. Used to load independent scripts
+ * without letting them share mutable state.
+ *
+ * @param vm virtual machine instance
+ * @param name string, which is usually used to mark the source of the source code
+ * @param buffer buffer for storing the source code
+ * @param length length of the buffer
+ * @return (???) same error codes as be_loadbuffer()
+ */
+BERRY_API int be_loadbuffer_local(bvm *vm, const char *name, const char *buffer, size_t length);
+
+/**
  * @fn int be_loadmode(bvm *vm, const char *name, bbool islocal)
  * @note code load API
  * @brief (???)

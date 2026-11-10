@@ -189,8 +189,9 @@ void test_enable_syntax_error_reports_and_balances_stack(void)
 void test_enable_setup_error_revokes_partial_registrations(void)
 {
     int idx = write_and_scan("lifecycle_setup_raise.be",
-        "var beats = 0 "
-        "def tick() beats += 1 end "
+        "import global "
+        "global.setmember('beats', 0) "
+        "def tick() global.setmember('beats', global.member('beats') + 1) end "
         "def setup() "
         "  timer_every(100, tick) "
         "  raise 'boom', 'setup failed' "
@@ -220,15 +221,16 @@ void test_enable_setup_error_revokes_partial_registrations(void)
 void test_teardown_error_still_cleans_up(void)
 {
     int idx = write_and_scan("lifecycle_teardown_raise.be",
-        "var beats = 0 "
-        "var teardown_ran = 0 "
-        "def tick() beats += 1 end "
+        "import global "
+        "global.setmember('beats', 0) "
+        "global.setmember('teardown_ran', 0) "
+        "def tick() global.setmember('beats', global.member('beats') + 1) end "
         "def setup() "
         "  timer_every(100, tick) "
         "  action_register('lifecycle_ping', tick) "
         "end "
         "def teardown() "
-        "  teardown_ran += 1 "
+        "  global.setmember('teardown_ran', global.member('teardown_ran') + 1) "
         "  raise 'boom', 'teardown failed' "
         "end");
     TEST_ASSERT_TRUE(idx >= 0);

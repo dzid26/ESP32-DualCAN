@@ -18,18 +18,23 @@
 static bupval* findupval(bvm *vm, bvalue *level)
 {
     bupval *node = vm->upvalist;
-    while (node != NULL && node->value > level) {
+    /* Scan the whole list: closures can capture the same parent slot in any
+     * order, so the list is not guaranteed to be sorted by address. The old
+     * early-exit walk missed duplicates and gave sibling closures separate
+     * cells for the same variable. */
+    while (node != NULL) {
+        if (node->value == level) {
+            return node;
+        }
         node = node->u.next;
     }
-    if (!node || node->value != level) {
-        /* not found */
-        node = be_malloc(vm, sizeof(bupval));
-        node->value = level;
-        node->refcnt = 0;
-        /* insert to list head */
-        node->u.next = vm->upvalist;
-        vm->upvalist = node;
-    }
+    /* not found */
+    node = be_malloc(vm, sizeof(bupval));
+    node->value = level;
+    node->refcnt = 0;
+    /* insert to list head */
+    node->u.next = vm->upvalist;
+    vm->upvalist = node;
     return node;
 }
 

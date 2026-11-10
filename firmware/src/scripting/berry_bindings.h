@@ -1,9 +1,11 @@
 #pragma once
 
 /* Bump when the Berry C binding set changes incompatibly (add/remove/change
- * a be_regfunc call in berry_bindings.c or berry_registry.c). The web UI warns
- * before uploading scripts validated against a different version. */
-#define SCRIPTING_API_VERSION 1
+ * a be_regfunc call in berry_bindings.c or berry_registry.c) or when script
+ * semantics change. Version 2: top-level names are private to each script
+ * (compiled as locals) instead of sharing the VM global table. The web UI
+ * warns before uploading scripts validated against a different version. */
+#define SCRIPTING_API_VERSION 2
 
 #include "berry.h"
 #include "can/can.h"

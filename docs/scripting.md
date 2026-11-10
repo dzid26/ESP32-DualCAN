@@ -33,6 +33,18 @@ end
 
 Metadata fields (`@name`, `@description`, `@bus`) appear in the web UI.
 
+### Script-local state
+
+Top-level `var` and `def` names belong to the script, not to the firmware or
+to other scripts. Two scripts may both define `poll`, `last_counter`, or
+`POLL_MS` without affecting each other. Define helpers before the function
+that uses them (for example, define `poll` before `setup`), because top-level
+names are resolved in source order.
+
+Use `state_set` / `state_get` or a registered action when two scripts need to
+coordinate on purpose. `import global` still exposes the VM's shared global
+table, but normal scripts should not need it.
+
 
 ## Function reference
 

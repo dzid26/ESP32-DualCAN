@@ -43,6 +43,28 @@ static bool source_to_runtime_path(const char *filename, char *path, size_t path
     return true;
 }
 
+/* Appended to every script before compilation. Because the chunk is parsed
+ * with top-level names as locals, setup/teardown are locals that disappear
+ * when the chunk returns; this epilogue hands them back in a map without
+ * touching the shared global table. The try/except lets scripts omit either
+ * hook (an undefined name raises). */
+static const char LOADER_EPILOGUE[] =
+    "\n"
+    "var __dorky_script_api__ = {}\n"
+    "try __dorky_script_api__[\"setup\"] = setup except .. end\n"
+    "try __dorky_script_api__[\"teardown\"] = teardown except .. end\n"
+    "try __dorky_script_api__[\"loop\"] = loop except .. end\n"
+    "return __dorky_script_api__\n";
+
+/* Drop a stale global before loading: the epilogue only wants this script's
+ * local hooks, never a value left behind by another chunk. */
+static void clear_global(bvm *vm, const char *name)
+{
+    be_pushnil(vm);
+    be_setglobal(vm, name);
+    be_pop(vm, 1);
+}
+
 static const script_entry_t *find_existing_script(
     const script_entry_t *scripts, int count, const char *filename)
 {
@@ -131,17 +153,18 @@ int script_loader_enable(script_loader_t *loader, int idx)
     fseek(f, 0, SEEK_END);
     long fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
-    if (fsize <= 0 || fsize > 32 * 1024) {
+    const size_t epilogue_len = sizeof(LOADER_EPILOGUE) - 1;
+    if (fsize <= 0 || (size_t)fsize + epilogue_len > 32 * 1024) {
         fclose(f);
         snprintf(s->error, sizeof(s->error), "file too large or empty");
         s->errored = true;
         return -1;
     }
 
-    code = malloc(fsize + 1);
+    code = malloc((size_t)fsize + epilogue_len + 1);
     if (!code) { fclose(f); return -1; }
     fread(code, 1, fsize, f);
-    code[fsize] = '\0';
+    memcpy(code + fsize, LOADER_EPILOGUE, epilogue_len + 1);
     fclose(f);
 
     bvm *vm = loader->vm;
@@ -151,9 +174,16 @@ int script_loader_enable(script_loader_t *loader, int idx)
     s->script_id = s_next_script_id++;
     berry_set_current_script(s->script_id);
 
-    /* Execute the script (defines its functions). */
+    /* Execute the script (defines its functions and locals), then collect
+     * setup/teardown from the epilogue map. Parsing with islocal=true keeps
+     * every top-level `var`, `def` and assignment private to this chunk. */
     int stack_base = be_top(vm);
-    if (be_loadbuffer(vm, path, code, strlen(code)) != 0 || be_pcall(vm, 0) != 0) {
+    clear_global(vm, "setup");
+    clear_global(vm, "teardown");
+    clear_global(vm, "loop");
+    int rc = be_loadbuffer_local(vm, path, code, strlen(code));
+    if (rc == 0) rc = be_pcall(vm, 0);
+    if (rc != 0) {
         const char *msg = be_tostring(vm, -1);
         const char *etype = be_tostring(vm, -2);
         const char *func_name = NULL;
@@ -173,17 +203,27 @@ int script_loader_enable(script_loader_t *loader, int idx)
         free(code);
         return -1;
     }
-    berry_stack_restore(vm, stack_base);
-    free(code);
 
-    /* Capture setup/teardown into refs and clear the globals. This isolates
-     * scripts from each other (the global namespace is shared by all). */
-    s->setup_ref    = berry_capture_global(vm, "setup");
-    s->teardown_ref = berry_capture_global(vm, "teardown");
+    if (!be_ismapinstance(vm, -1)) {
+        snprintf(s->error, sizeof(s->error),
+                 "script ended before the loader epilogue (top-level return is not supported)");
+        berry_stack_restore(vm, stack_base);
+        s->errored = true;
+        ESP_LOGE(TAG, "%s", s->error);
+        berry_set_current_script(prev_ctx);
+        berry_cleanup_script(s->script_id);
+        free(code);
+        return -1;
+    }
+
+    /* Capture setup/teardown into refs. They are locals of the chunk, kept
+     * alive by the returned map and then by the refs list. */
+    s->setup_ref    = berry_capture_map_function(vm, -1, "setup");
+    s->teardown_ref = berry_capture_map_function(vm, -1, "teardown");
 
     /* The legacy `loop` global is no longer polled — warn if a script defines
-     * it, since the user probably intended timer_every. Clear it either way. */
-    int loop_ref = berry_capture_global(vm, "loop");
+     * it, since the user probably intended timer_every. */
+    int loop_ref = berry_capture_map_function(vm, -1, "loop");
     if (loop_ref >= 0) {
         char warn[160];
         snprintf(warn, sizeof(warn),
@@ -194,6 +234,9 @@ int script_loader_enable(script_loader_t *loader, int idx)
         berry_log_push(warn);
         berry_release_ref(vm, loop_ref);
     }
+
+    berry_stack_restore(vm, stack_base);
+    free(code);
 
     ESP_LOGI(TAG, "Enabled: %s (script_id=%d)", s->filename, s->script_id);
 
