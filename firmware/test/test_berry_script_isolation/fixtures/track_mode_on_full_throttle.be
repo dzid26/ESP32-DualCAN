@@ -1,0 +1,146 @@
+# @name Track mode on full throttle
+# @description When the accelerator pedal sits at 100% for >1s, request track
+#              mode ON. Answers each UI_trackModeSettings frame the car sends
+#              with a patched copy (request bits + counter+1 + recomputed
+#              checksum) until a tile is tapped or the request window closes.
+# @bus 0
+#
+# Requires: Tesla Model 3/Y DBC loaded on bus 0.
+#
+# Signals:
+#   DI_accelPedalPos    (DI_systemStatus,      ID 0x118 / 280): pedal 0-100%
+#   UI_trackModeRequest (UI_trackModeSettings, ID 0x313 / 787): 0=IDLE 1=ON 2=OFF
+#   UI_trackModeSettingsCounter  (bits 52-55, 4 bit)
+#   UI_trackModeSettingsChecksum (bits 56-63, 8 bit = byte 7)
+#
+# Verify UI_trackModeRequest's bit position (0|2 here) against a capture.
+
+var TRACK_REQ_ON = 1
+var TRACK_REQ_OFF = 2
+
+# DI_trackModeState (VAL_ 280) - logged only, never gates anything.
+var TRACK_STATE_NAMES = ["UNAVAILABLE", "AVAILABLE", "ON"]
+
+var FULL_THROTTLE = 99.5    # % physical; DI_accelPedalPos scale 0.4
+var PEDAL_SNA = 102         # 255 raw * 0.4 = SNA
+var HOLD_MS = 1000
+var BURST_MS = 10000        # upper bound on how long we keep asking
+var POLL_MS = 10
+
+var throttle_start_ms = 0
+var want_on = false
+var want_off = false
+var send_until_ms = 0
+var last_counter = -1
+var prev_track_state = -1
+
+# DI_trackModeState is a 2-bit field: it can read 3, which has no name. List
+# indexing raises in Berry, and a throw in poll() disables the whole script.
+def state_name(s)
+  if s == nil || s < 0 || s >= TRACK_STATE_NAMES.size()
+    return "?"
+  end
+  return TRACK_STATE_NAMES[s]
+end
+
+# Tesla checksum: sum of the CAN id bytes plus every payload byte except the
+# checksum byte itself.
+def tesla_checksum(addr, csum_idx, payload)
+  var s = (addr & 0xFF) + ((addr >> 8) & 0xFF)
+  for i : 0..payload.size() - 1
+    if i != csum_idx
+      s += payload[i]
+    end
+  end
+  return s & 0xFF
+end
+
+# Answer one car frame with the request patched, counter+1 and fresh checksum.
+def mirror(msg, request)
+  var counter = (int(msg_sig_get(msg, "UI_trackModeSettingsCounter")) + 1) % 16
+  msg_sig_set(msg, "UI_trackModeRequest", request)
+  msg_sig_set(msg, "UI_trackModeSettingsCounter", counter)
+  msg_sig_set(msg, "UI_trackModeSettingsChecksum", 0)
+  msg_sig_set(msg, "UI_trackModeSettingsChecksum",
+              tesla_checksum(msg["id"], 7, msg["data"]))
+  can_msg_send(0, msg)
+end
+
+def set_on()
+  want_off = false
+  want_on = true
+  send_until_ms = millis() + BURST_MS
+  print("Track mode ON requested (tile)")
+end
+
+# Stop requesting. The OFF frame goes out on the next NEW car frame, so the
+# counter we send is always that frame's + 1 - never a repeat.
+def release()
+  want_on = false
+  want_off = true
+  print("Track mode OFF requested")
+end
+
+def poll()
+  var now = millis()
+
+  # Pedal: arm after 1s at full throttle; log state changes meanwhile.
+  var sys = can_msg_get(0, "DI_systemStatus")
+  if sys != nil
+    var pedal = msg_sig_get(sys, "DI_accelPedalPos")
+    if pedal != nil && pedal < PEDAL_SNA
+      if pedal >= FULL_THROTTLE
+        if throttle_start_ms == 0
+          throttle_start_ms = now
+        elif !want_on && (now - throttle_start_ms) >= HOLD_MS
+          want_on = true
+          send_until_ms = now + BURST_MS
+          print("Full throttle held for 1s - requesting Track Mode ON")
+        end
+
+        var track_state = int(msg_sig_get(sys, "DI_trackModeState"))
+        if track_state != prev_track_state
+          print("Track mode state: " .. state_name(track_state))
+          prev_track_state = track_state
+        end
+      else
+        throttle_start_ms = 0
+        prev_track_state = -1
+      end
+    end
+  end
+
+  # Close the request window.
+  if want_on && now >= send_until_ms
+    want_on = false
+    throttle_start_ms = 0
+    print("Track mode request window done")
+  end
+
+  # Answer each new car frame on 0x313: ON while wanted, OFF once after release.
+  var msg = can_msg_get(0, "UI_trackModeSettings")
+  if msg != nil
+    var c = int(msg_sig_get(msg, "UI_trackModeSettingsCounter"))
+    if c != last_counter
+      last_counter = c
+      var stock = int(msg_sig_get(msg, "UI_trackModeRequest"))
+      if want_off
+        if stock != TRACK_REQ_OFF
+          mirror(msg, TRACK_REQ_OFF)
+        end
+        want_off = false
+      elif want_on && stock != TRACK_REQ_ON
+        mirror(msg, TRACK_REQ_ON)
+      end
+    end
+  end
+end
+
+def setup()
+  can_msg_get(0, "DI_systemStatus")
+  can_msg_get(0, "UI_trackModeSettings")
+  action_register("track mode ON", /-> set_on())
+  action_register("track mode OFF", /-> release())
+  timer_every(POLL_MS, poll)
+  print("track mode on full throttle ready")
+end
