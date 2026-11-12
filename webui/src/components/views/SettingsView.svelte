@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
   import { isIOS } from '../../lib/platform';
 
-  const GITHUB_REPO = 'dzid26/ESP32-DualCAN';
+  const GITHUB_REPO = 'opencartools/ESP32-DualCAN';
 
   // System info — refresh on connect.
   let protoVersion = $state<number | null>(null);
@@ -570,7 +570,7 @@
                     {ghDownloading ? 'Downloading…' : 'Download & flash'}
                   </button>
                   <a
-                    href={`https://github.com/dzid26/ESP32-DualCAN/releases/download/${ghRelease.tag}/dorky-commander-${ghRelease.tag.slice(1)}.bin`}
+                    href={`https://github.com/opencartools/ESP32-DualCAN/releases/download/${ghRelease.tag}/dorky-commander-${ghRelease.tag.slice(1)}.bin`}
                     class="btn btn--sm"
                     download
                     title="Download .bin file to upload manually"

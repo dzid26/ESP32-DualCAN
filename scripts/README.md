@@ -64,5 +64,5 @@ New scripts will appear in the gallery. No store update needed — Vite automati
 
 ## Tips
 
-- Point external AI agents to [`docs/scripting.md`](../docs/scripting.md) (raw: `https://raw.githubusercontent.com/dzid26/ESP32-DualCAN/main/docs/scripting.md`) — same guide the in-app AI edit tool uses.
+- Point external AI agents to [`docs/scripting.md`](../docs/scripting.md) (raw: `https://raw.githubusercontent.com/opencartools/ESP32-DualCAN/main/docs/scripting.md`) — same guide the in-app AI edit tool uses.
 - Keep filenames `snake_case.be` — they are saved to the on-device LittleFS `/scripts/` path.

@@ -354,7 +354,7 @@ export class AppState {
         toast.show({
           severity: 'error',
           message: 'Dorky rejected the connection. Maybe you reconnected too quickly. Or the OS has a stale bond — remove "Dorky" from your Bluetooth settings, then reconnect.',
-          link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
+          link: { href: 'https://github.com/opencartools/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
           duration: 12000,
         });
       } else if (kind === 'replaced') {
@@ -509,7 +509,7 @@ export class AppState {
       toast.show({
         severity: 'error',
         message,
-        link: { href: 'https://github.com/dzid26/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
+        link: { href: 'https://github.com/opencartools/ESP32-DualCAN/blob/main/docs/ble.md', text: 'More info' },
         duration: 90000,
       });
     }

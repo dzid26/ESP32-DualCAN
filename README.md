@@ -17,15 +17,15 @@ See [`hardware/README.md`](hardware/README.md) for detailed spec and schematics.
 ### Option A: Web UI (wireless OTA update)
 
 1. Connect via BLE (see [Connect over BLE](#connect-over-ble)).
-2. Go to **Settings → Firmware** in the [Dorky Commander web UI](https://dzid26.github.io/ESP32-DualCAN/).
-3. Click **Upload .bin** and select a firmware `.bin` from disk (download from [GitHub Releases](https://github.com/dzid26/ESP32-DualCAN/releases) if needed).
+2. Go to **Settings → Firmware** in the [Dorky Commander web UI](https://opencartools.github.io/ESP32-DualCAN/).
+3. Click **Upload .bin** and select a firmware `.bin` from disk (download from [GitHub Releases](https://github.com/opencartools/ESP32-DualCAN/releases) if needed).
 4. The progress bar shows transfer status. The device reboots automatically when done.
 
 ### Option B: USB
 
 **Download prebuilt binary:**
 
-1. Download the latest `dorky-commander-vX.Y.Z.bin` from [GitHub Releases](https://github.com/dzid26/ESP32-DualCAN/releases).
+1. Download the latest `dorky-commander-vX.Y.Z.bin` from [GitHub Releases](https://github.com/opencartools/ESP32-DualCAN/releases).
 2. Connect the board via USB-C. Easiest: open the [Espressif Web Flasher](https://espressif.github.io/esptool-js/) in Chrome and flash the `.bin` — no install needed.
 
    CLI alternative:
@@ -41,7 +41,7 @@ To build from source, see [firmware/README.md — Development — Build & Flash]
 
 ## Connect over BLE
 
-1. Open the [Dorky Commander web UI](https://dzid26.github.io/ESP32-DualCAN/) in Chrome.
+1. Open the [Dorky Commander web UI](https://opencartools.github.io/ESP32-DualCAN/) in Chrome.
    *(Or install it as an app: Settings → Install app → Add to home screen.)*
 2. Click **Connect** in the status bar.
 3. Select **Dorky Commander** from the Bluetooth pairing dialog.

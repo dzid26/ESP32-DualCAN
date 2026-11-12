@@ -28,7 +28,7 @@ See [../README.md](../README.md) for the first-use walkthrough (flashing, BLE co
 Clone with submodules (required — the BLE and Berry components are git submodules):
 
 ```bash
-git clone https://github.com/dzid26/ESP32-DualCAN.git --recurse-submodules
+git clone https://github.com/opencartools/ESP32-DualCAN.git --recurse-submodules
 ```
 
 Or update submodules later:
