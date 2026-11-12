@@ -1,7 +1,7 @@
 # Dorky Commander WebUI
 
 Svelte 5 + Vite PWA (`webui/`) that talks to the firmware over BLE. This is the
-app published at <https://dzid26.github.io/ESP32-DualCAN/>. See the
+app published at <https://opencartools.github.io/ESP32-DualCAN/>. See the
 [repo README](../README.md) for what the product does.
 
 ## Quick start

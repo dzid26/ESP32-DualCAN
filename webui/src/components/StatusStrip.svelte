@@ -74,7 +74,7 @@
 
   async function checkLatestStable() {
     try {
-      const resp = await fetch('https://api.github.com/repos/dzid26/ESP32-DualCAN/releases');
+      const resp = await fetch('https://api.github.com/repos/opencartools/ESP32-DualCAN/releases');
       if (!resp.ok) return;
       const releases: any[] = await resp.json();
       const stable = releases.find((r: any) => !r.prerelease);
@@ -297,7 +297,7 @@
   <a
     class="btn btn--sm btn--ghost status__github"
     bind:this={githubEl}
-    href="https://github.com/dzid26/ESP32-DualCAN"
+    href="https://github.com/opencartools/ESP32-DualCAN"
     target="_blank"
     rel="noreferrer"
     title="View on GitHub"
